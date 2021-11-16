@@ -1,5 +1,5 @@
 
-files: ^src/ # just check the files under src/ 
+files: ^blackops/ # just check the files under src/ 
 default_stages: [commit, push] # run on commit and push 
 repos:
   - repo: https://github.com/pre-commit/mirrors-mypy
