@@ -1,7 +1,7 @@
 from binance import AsyncClient, BinanceSocketManager
 
 
-async def binance_stream_generator(symbol: str, stream_id:str):
+async def binance_stream_generator(symbol: str, stream_id: str):
     client = await AsyncClient.create()
     bm = BinanceSocketManager(client)
     # start any sockets here, i.e a trade socket
@@ -16,9 +16,9 @@ async def binance_stream_generator(symbol: str, stream_id:str):
             yield res
 
 
-
 def currency_bridge(target: str, bridge: str):
     ...
+
 
 if __name__ == "__main__":
     ...

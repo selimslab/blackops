@@ -12,6 +12,7 @@ class Asset:
     def __str__(self):
         return f"{self.symbol} {self.balance}"
 
+
 @dataclass
 class AssetPair:
     base: Asset
@@ -28,18 +29,21 @@ class AssetPair:
 @dataclass
 class Exchange:
     name: str
-    def get_balance(self, symbol:str)->Optional[Decimal]:
+
+    def get_balance(self, symbol: str) -> Optional[Decimal]:
         ...
+
 
 @dataclass
 class Client(ABC):
     ...
 
+
 @dataclass
 class Strategy(ABC):
-    pair: AssetPair # base and quote currencies 
+    pair: AssetPair  # base and quote currencies
 
-    start_quote_balance:Decimal = Decimal(0) 
+    start_quote_balance: Decimal = Decimal(0)
 
     def start(self):
         ...
@@ -55,16 +59,15 @@ class Strategy(ABC):
 class TwoExchangeStrategy(Strategy):
     ...
 
+
 @dataclass
 class LeaderFollowerStrategy(TwoExchangeStrategy):
-    """ orders only on the follower """
+    """orders only on the follower"""
+
     ...
+
 
 @dataclass
 class Trader(ABC):
     strategy: Strategy
     client: Client
-
-
-
-

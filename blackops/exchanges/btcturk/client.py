@@ -8,8 +8,5 @@ load_dotenv()
 apiKey = os.getenv("BTCTURK_PUBLIC_KEY")
 apiSecret = os.getenv("BTCTURK_PRIVATE_KEY")
 
-# singleton 
-btcturk_client = Client(api_key = apiKey, api_secret = apiSecret)
-
-
-     
+# singleton
+btcturk_client = Client(api_key=apiKey, api_secret=apiSecret)

@@ -1,12 +1,12 @@
-
-
 import asyncio
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional, Any
 
-from blackops.domain.models import (Asset, AssetPair,
-                                    )
+from blackops.domain.models import (
+    Asset,
+    AssetPair,
+)
 
 from .sliding_window import SlidingWindows
 
@@ -15,7 +15,7 @@ from .sliding_window import SlidingWindows
 class SlidingWindowsWithBridge(SlidingWindows):
     bridge: Asset = Asset("none")
 
-    bridge_quote = Decimal(1)   
+    bridge_quote = Decimal(1)
 
     def start(self):
         self.init_bridge()
@@ -30,21 +30,18 @@ class SlidingWindowsWithBridge(SlidingWindows):
         if mid:
             return mid * self.bridge_quote
 
-
     async def run_streams(self):
 
-        consumers:Any = [
-                self.leader_exchange.book_ticker_stream(self.bridge_base_pair.symbol),
-                self.update_bridge_quote(self.bridge_quote_pair.symbol),
-                self.follower_exchange.orderbook_stream(self.pair.symbol)
-            ]
-        # aws.append(self.periodic_report(10))  # optional 
+        consumers: Any = [
+            self.leader_exchange.book_ticker_stream(self.bridge_base_pair.symbol),
+            self.update_bridge_quote(self.bridge_quote_pair.symbol),
+            self.follower_exchange.orderbook_stream(self.pair.symbol),
+        ]
+        # aws.append(self.periodic_report(10))  # optional
         await asyncio.gather(*consumers)
-
 
     async def update_bridge_quote(self, symbol: str):
         async for book in self.leader_exchange.book_ticker_stream(symbol):
-            new_quote =  self.leader_exchange.get_mid(book)
+            new_quote = self.leader_exchange.get_mid(book)
             if new_quote:
                 self.bridge_quote = new_quote
-

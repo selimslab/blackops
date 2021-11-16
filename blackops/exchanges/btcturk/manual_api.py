@@ -85,5 +85,6 @@ def submit_order(qty, price, order_type):
     result = result.json()
     print(json.dumps(result, indent=2))
 
+
 def buy(qty, price):
     submit_order(qty, price, "buy")

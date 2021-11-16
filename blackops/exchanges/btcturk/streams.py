@@ -25,16 +25,18 @@ def create_orderbook_gen(symbol: str):
 
     gen = ws_stream(uri, message)
 
-    return gen 
+    return gen
 
 
-def create_book_stream(symbol:str):
+def create_book_stream(symbol: str):
     gen_factory = lambda: create_orderbook_gen(symbol)
     return reconnecting_generator(gen_factory)
 
+
 async def test_orderbook_stream():
-    async for book in create_book_stream('USDTTRY'):
+    async for book in create_book_stream("USDTTRY"):
         print(book)
+
 
 if __name__ == "__main__":
     asyncio.run(test_orderbook_stream())

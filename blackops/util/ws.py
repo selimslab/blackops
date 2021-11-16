@@ -4,7 +4,7 @@ import websockets
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 
 
-async def ws_stream(uri:str, message:str):
+async def ws_stream(uri: str, message: str):
     async with websockets.connect(uri=uri) as websocket:
         while True:
             await websocket.send(message)
@@ -12,7 +12,7 @@ async def ws_stream(uri:str, message:str):
             yield data
 
 
-async def reconnecting_generator(generator_factory:Callable):
+async def reconnecting_generator(generator_factory: Callable):
     gen = generator_factory()
 
     while True:
@@ -21,7 +21,7 @@ async def reconnecting_generator(generator_factory:Callable):
                 if data:
                     yield data
         except ConnectionClosedError as e:
-            # recover from network errors, 
+            # recover from network errors,
             # for example connection lost
             # continue where you left
 

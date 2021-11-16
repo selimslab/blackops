@@ -1,10 +1,8 @@
-
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional
 
-from blackops.domain.models import (Asset, AssetPair, Exchange,
-                                    LeaderFollowerStrategy)
+from blackops.domain.models import Asset, AssetPair, Exchange, LeaderFollowerStrategy
 from blackops.util.decimal import decimal_division, decimal_mid
 from blackops.util.logger import logger
 
@@ -13,13 +11,13 @@ from .streams import binance_stream_generator
 
 @dataclass
 class Binance(Exchange):
-    name:str = "binance"
+    name: str = "binance"
 
     @staticmethod
-    def get_mid(order_book: dict)->Optional[Decimal]:
-        """ get mid price from binance orderbook  """
+    def get_mid(order_book: dict) -> Optional[Decimal]:
+        """get mid price from binance orderbook"""
         if not order_book:
-            return 
+            return
 
         try:
             order_book = order_book.get("data", {})
@@ -31,7 +29,6 @@ class Binance(Exchange):
 
         except Exception as e:
             logger.info(e)
-
 
     @staticmethod
     async def book_ticker_stream(symbol: str):

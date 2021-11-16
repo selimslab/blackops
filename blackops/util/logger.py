@@ -5,9 +5,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 
 def get_plain_text_formatter() -> logging.Formatter:
-    return logging.Formatter(
-        """%(levelname)s: %(asctime)s: %(message)s """
-    )
+    return logging.Formatter("""%(levelname)s: %(asctime)s: %(message)s """)
 
 
 def create_console_handler(level: int) -> logging.StreamHandler:
@@ -18,6 +16,7 @@ def create_console_handler(level: int) -> logging.StreamHandler:
     ch.setLevel(level)
 
     return ch
+
 
 def create_rotating_handler(level: int, filename: str) -> TimedRotatingFileHandler:
 
@@ -43,7 +42,7 @@ def create_logger(name: str) -> logging.Logger:
 
     # trace is the most inclusive level
     trace_path = os.path.join(logs_dir, "debug.log")
-    
+
     trace_handler = create_rotating_handler(logging.INFO, trace_path)
     logger.addHandler(trace_handler)
 
