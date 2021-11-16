@@ -1,5 +1,4 @@
 import asyncio
-from decimal import Decimal
 
 import blackops.domain.symbols as symbols
 from blackops.domain.models import Asset, AssetPair

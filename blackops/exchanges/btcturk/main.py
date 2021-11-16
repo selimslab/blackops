@@ -1,23 +1,15 @@
-import asyncio
-import collections
 import json
-import operator
-import pprint
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Callable, Iterable, List, Optional
+from typing import List, Optional
 
-from aiostream import async_, stream
+from blackops.domain.models import (Asset, AssetPair, Exchange,
+                                    LeaderFollowerStrategy)
+from blackops.util.decimal import decimal_division, decimal_mid
+from blackops.util.logger import logger
 
-from blackops.clients.binance.stream import ws_generator_binance
-from blackops.clients.btcturk.main import Client, btcturk_client
-from blackops.clients.btcturk.stream import ws_generator_bt
-from blackops.domain.models import Asset, AssetPair, Exchange, LeaderFollowerStrategy
-from blackops.logger import logger
-from blackops.util import decimal_division, decimal_mid
-
-
+from .client import btcturk_client
+from .streams import create_book_stream
 
 
 @dataclass
@@ -56,27 +48,29 @@ class Btcturk(Exchange):
             return  balance_list[0]
   
 
-    async def long(self, price, qty):
-        cost = self.best_seller * self.buy_with_fee
-        qty = decimal_division(self.quote_step_amount, cost)
-        self.base_step_amount = min(self.base_step_amount, qty)
+    async def long(self, price:float, qty:float, symbol:str):
+        """ the order may or may not be executed """
 
+        logger.info(f"buying {qty} {symbol} at {price}")
 
-        self.client.submit_limit_order(
+        await self.client.submit_limit_order(
             quantity=float(qty),
-            price=float(self.best_seller),
+            price=float(price),
             order_type='buy',
-            pair_symbol=self.pair.bt_order_symbol
+            pair_symbol=symbol
         )
 
-    async def short(self, price,qty):
-        self.client.submit_limit_order(
-            quantity=float(self.base_step_amount),
-            price=float(self.best_buyer),
+    async def short(self, price:float, qty:float, symbol:str):
+        """ the order may or may not be executed """
+
+        logger.info(f"selling {qty} {symbol} at {price}")
+
+        await self.client.submit_limit_order(
+            quantity=float(qty),
+            price=float(price),
             order_type='sell',
-            pair_symbol=self.pair.bt_order_symbol
+            pair_symbol=symbol
         )
-
 
 
     @staticmethod
@@ -86,7 +80,7 @@ class Btcturk(Exchange):
             return 
         
         sorted_purchase_orders = sorted(
-            purchase_orders, key=operator.itemgetter("P"), reverse=True
+            purchase_orders, key=lambda d: float(d["P"]), reverse=True
         )
         if not sorted_purchase_orders:
             return
@@ -103,7 +97,8 @@ class Btcturk(Exchange):
         if not sales_orders:
             return 
 
-        sorted_sales_orders = sorted(sales_orders, key=operator.itemgetter("P"))
+        sorted_sales_orders = sorted(sales_orders, key=lambda d: float(d["P"]) )
+
         if not sorted_sales_orders:
             return
 
@@ -148,18 +143,21 @@ class Btcturk(Exchange):
         if not orders:
             return 
 
-        sales_orders = self.get_sales_orders(orders)
-        if sales_orders:
-            best_seller = self.get_best_seller(sales_orders)
-            if best_seller and best_seller < self.best_seller:
-                self.best_seller = best_seller
+        try:
+            sales_orders = self.get_sales_orders(orders)
+            if sales_orders:
+                best_seller = self.get_best_seller(sales_orders)
+                if best_seller and best_seller < self.best_seller:
+                    self.best_seller = best_seller
 
-        purchase_orders = self.get_purchase_orders(orders)
-        if purchase_orders:
-            best_buyer = self.get_best_buyer(purchase_orders)
-            if best_buyer and best_buyer > self.best_buyer:
-                self.best_buyer = best_buyer
+            purchase_orders = self.get_purchase_orders(orders)
+            if purchase_orders:
+                best_buyer = self.get_best_buyer(purchase_orders)
+                if best_buyer and best_buyer > self.best_buyer:
+                    self.best_buyer = best_buyer
 
+        except Exception as e:
+            logger.info(e)
 
     def process_order_book(self, orderbook: str):
         orders = self.parse_orderbook(orderbook)
@@ -185,4 +183,7 @@ class Btcturk(Exchange):
             logger.info(e)
             
     
-
+    @staticmethod
+    async def orderbook_stream(symbol: str):
+        async for book in create_book_stream(symbol):
+            yield book
