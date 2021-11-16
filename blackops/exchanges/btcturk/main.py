@@ -4,8 +4,8 @@ from decimal import Decimal
 from typing import List, Optional
 
 from blackops.domain.models import Asset, AssetPair, Exchange, LeaderFollowerStrategy
-from blackops.util.decimal import decimal_division, decimal_mid
 from blackops.util.logger import logger
+from blackops.util.numbers import decimal_division, decimal_mid
 
 from .client import btcturk_client
 from .streams import create_book_stream
@@ -18,9 +18,9 @@ class Btcturk(Exchange):
 
     name: str = "btcturk"
 
-    fee_percent = Decimal(
-        0.0018
-    )  # we pay Decimal(1 + 0.0018) to buy, we get Decimal(1 - 0.0018) when we sell
+    # we pay Decimal(1 + 0.0018) to buy, we get Decimal(1 - 0.0018) when we
+    # sell
+    fee_percent = Decimal(0.0018)
     buy_with_fee = Decimal(1 + fee_percent)
     sell_with_fee: Decimal = Decimal(1 - fee_percent)
 
@@ -44,6 +44,7 @@ class Btcturk(Exchange):
         balance_list = self.get_balance_multiple([symbol])
         if balance_list:
             return balance_list[0]
+        return None
 
     async def long(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed"""
@@ -73,35 +74,23 @@ class Btcturk(Exchange):
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
         # find best_buyer
         if not purchase_orders:
-            return
+            return None
 
         sorted_purchase_orders = sorted(
             purchase_orders, key=lambda d: float(d["P"]), reverse=True
         )
-        if not sorted_purchase_orders:
-            return
 
-        best_buyer = sorted_purchase_orders[0].get("P")
-        if not best_buyer:
-            return
-
+        best_buyer = sorted_purchase_orders[0].get("P", "")
         return Decimal(best_buyer)
 
     @staticmethod
     def get_best_seller(sales_orders: List[dict]) -> Optional[Decimal]:
         # find best_seller
         if not sales_orders:
-            return
+            return None
 
         sorted_sales_orders = sorted(sales_orders, key=lambda d: float(d["P"]))
-
-        if not sorted_sales_orders:
-            return
-
-        best_seller = sorted_sales_orders[0].get("P")
-        if not best_seller:
-            return
-
+        best_seller = sorted_sales_orders[0].get("P", "")
         return Decimal(best_seller)
 
     @staticmethod
@@ -125,8 +114,7 @@ class Btcturk(Exchange):
     @staticmethod
     def parse_orderbook(orderbook: str) -> dict:
         try:
-            orders = json.loads(orderbook)
-            orders: dict = orders[1]
+            orders: dict = json.loads(orderbook)[1]
             return orders
         except Exception as e:
             logger.info(e)
@@ -176,6 +164,7 @@ class Btcturk(Exchange):
             return quote_balance + approximate_sales_gain - start_quote_balance
         except Exception as e:
             logger.info(e)
+            return None
 
     @staticmethod
     async def orderbook_stream(symbol: str):

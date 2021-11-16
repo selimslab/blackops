@@ -1,11 +1,11 @@
-from .main import Btcturk
-import json
-from dataclasses import dataclass, field
 import collections
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
 from blackops.util.logger import logger
+
+from .main import Btcturk
 
 
 @dataclass

@@ -6,9 +6,8 @@ from typing import Any, Optional
 from blackops.domain.models import LeaderFollowerStrategy
 from blackops.exchanges.binance.main import Binance
 from blackops.exchanges.btcturk.dummy import BtcturkTestClient
-
-from blackops.util.decimal import decimal_division, decimal_mid
 from blackops.util.logger import logger
+from blackops.util.numbers import decimal_division, decimal_mid
 
 
 @dataclass
@@ -30,13 +29,13 @@ class SlidingWindows(LeaderFollowerStrategy):
 
     steps = 20  # divide your money into 20
     step_size_constant = Decimal(0.2)  # k
-    step_size_constant_percent = Decimal(
-        0.001
-    )  # if we don't have a manual step_size_constant, step_size_constant = mid * step_size_constant_percent
+    # if we don't have a manual step_size_constant, step_size_constant = mid *
+    # step_size_constant_percent
+    step_size_constant_percent = Decimal(0.001)
 
-    credit = Decimal(
-        0.75
-    )  # if we don't have a manual credit, credit could be fee_percent * Decimal(1.5)
+    # if we don't have a manual credit, credit could be fee_percent *
+    # Decimal(1.5)
+    credit = Decimal(0.75)
 
     # fee_percent * Decimal(1.5)
     # Decimal(0.001)

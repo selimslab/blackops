@@ -9,5 +9,5 @@ def hello():
 
 
 @app.route("/update_params")
-def hello():
+def update_params():
     return "Hello, World!"

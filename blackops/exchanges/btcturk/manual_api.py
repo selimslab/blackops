@@ -14,14 +14,14 @@ load_dotenv()
 
 def get_headers() -> dict:
     apiKey = os.getenv("BTCTURK_PUBLIC_KEY")
-    apiSecret = os.getenv("BTCTURK_PRIVATE_KEY")
-    apiSecret = base64.b64decode(apiSecret)
+    apiSecret = os.getenv("BTCTURK_PRIVATE_KEY", "")
+    apiSecret = base64.b64decode(apiSecret)  # type: ignore
 
     stamp = str(int(time.time()) * 1000)
 
     data = "{}{}".format(apiKey, stamp).encode("utf-8")
 
-    signature = hmac.new(apiSecret, data, hashlib.sha256).digest()
+    signature = hmac.new(apiSecret, data, hashlib.sha256).digest()  # type: ignore
     signature = base64.b64encode(signature)
 
     headers = {

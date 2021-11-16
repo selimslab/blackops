@@ -1,9 +1,6 @@
 import asyncio
 import json
 
-import websockets
-from websockets.exceptions import ConnectionClosedError, WebSocketException
-
 from blackops.util.logger import logger
 from blackops.util.ws import reconnecting_generator, ws_stream
 
@@ -29,7 +26,9 @@ def create_orderbook_gen(symbol: str):
 
 
 def create_book_stream(symbol: str):
-    gen_factory = lambda: create_orderbook_gen(symbol)
+    def gen_factory():
+        return create_orderbook_gen(symbol)
+
     return reconnecting_generator(gen_factory)
 
 

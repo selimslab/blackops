@@ -1,12 +1,9 @@
 import asyncio
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Optional, Any
+from typing import Any, Optional
 
-from blackops.domain.models import (
-    Asset,
-    AssetPair,
-)
+from blackops.domain.models import Asset, AssetPair
 
 from .sliding_window import SlidingWindows
 
@@ -29,6 +26,7 @@ class SlidingWindowsWithBridge(SlidingWindows):
         mid = self.leader_exchange.get_mid(book)
         if mid:
             return mid * self.bridge_quote
+        return None
 
     async def run_streams(self):
 
