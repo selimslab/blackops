@@ -1,4 +1,4 @@
-from dataclasses import astuple, dataclass, field
+from dataclasses import asdict, astuple, dataclass, field
 from decimal import Decimal
 from enum import Enum
 from typing import List, Mapping, Optional, OrderedDict, Union
@@ -13,6 +13,7 @@ import blackops.taskq.tasks as taskq
 from blackops.taskq.redis import redis
 
 from .stg import STG_MAP, Strategy
+import hashlib 
 
 app = FastAPI()
 
@@ -23,6 +24,10 @@ async def validation_exception_handler(request, exc: Exception):
         status_code=500,
         content={"error": str(exc)},
     )
+
+
+def dict_to_hash(d:dict)->str:
+    return hashlib.sha1(json.dumps(d).encode()).hexdigest()
 
 
 async def get_stg(hash: str):
@@ -50,57 +55,9 @@ async def read_root():
     return taskq.greet(name="selim")
 
 
+# REST 
 
-@app.put("/stg/", response_model=Strategy)
-async def create_stg(stg: Strategy):
-    """Create a new stg. A stg is immutable. Creating will not run it yet. Review and run"""
-
-    stg.is_valid()
-    
-    st = await redis.hexists(STG_MAP, stg.hash)
-    print(st, stg.hash, type(stg.hash))
-    if st:
-        raise HTTPException(status_code=403, detail="stg already exists")
-
-    await redis.hset(STG_MAP, stg.hash, stg.to_json_str())
-
-    return stg
-
-
-@app.get("/stg/{hash}")
-async def read_stg(hash: str):
-    """View the stg with this id"""
-    return await get_stg(hash)
-
-@app.delete("/stg/{hash}")
-async def delete_stg(hash: str):
-    """Delete the stg with this id"""
-    await redis.hdel(STG_MAP, hash)
-    taskq.revoke(hash)
-    return JSONResponse(content={"message": f"removed {hash}"})
-
-
-@app.put("/stg/{hash}", response_model=Strategy)
-async def run_stg(hash: str):
-    stg = await get_stg(hash)
-
-    def task():
-        return taskq.run_stg.delay(json.loads(stg))
-
-    task_id = taskq.start_task(hash, task)
-
-    return task_id
-
-
-@app.put("/stg/{hash}")
-async def stop_stg(hash: str):
-    taskq.revoke(hash)
-    return JSONResponse(content={"message": f"stopped {hash}"})
-
-
-## Multiples
-
-@app.get("/stgs/", response_model=List[Union[Strategy, dict]])
+@app.get("/stg/", response_model=List[Union[Strategy, dict]], tags=["read"])
 async def list_strategies():
     """View all strategies"""
     stgs = await list_stgs()
@@ -109,17 +66,70 @@ async def list_strategies():
     raise HTTPException(status_code=404, detail="no stg yet")
 
 
+@app.get("/stg/{hash}", tags=["read"])
+async def read_stg(hash: str):
+    """View the stg with this id"""
+    return await get_stg(hash)
 
-@app.delete("/stgs/")
+
+@app.put("/stg/", response_model=dict, tags=["create"])
+async def create_stg(stg: Strategy):
+    """Create a new stg. A stg is immutable. Creating will not run it yet. Review and run"""
+
+    stg.is_valid()
+
+    d = dict(stg)
+    hash = dict_to_hash(d)
+    d["hash"] = hash 
+
+    if await redis.hexists(STG_MAP, hash):
+        raise HTTPException(status_code=403, detail="stg already exists")
+
+    await redis.hset(STG_MAP, hash, json.dumps(d))
+
+    return d
+
+
+
+@app.delete("/stg/{hash}",tags=["remove"] )
+async def delete_stg(hash: str):
+    """Delete the stg with this id, also stop it if its running"""
+    await redis.hdel(STG_MAP, hash)
+    taskq.revoke(hash)
+    return JSONResponse(content={"message": f"removed {hash}"})
+
+@app.delete("/stg/", tags=["remove"])
 async def delete_all_strategies():
-    """Delete all strategies"""
+    """Delete all strategies, this also stops any running ones """
     await redis.hdel(STG_MAP)
     await stop_all()
     return JSONResponse(content={"message": "removed all"})
 
 
-@app.put("/stgs/stop_all")
+
+# RPC 
+
+@app.put("/stg/run/{hash}", tags=["run"])
+async def run(hash: str)->str:
+    stg = await get_stg(hash)
+
+    def task():
+        return taskq.run_stg.delay(json.loads(stg))
+
+    task_id = await taskq.start_task(hash, task)
+
+    return task_id
+
+
+@app.put("/stg/stop/{hash}", tags=["stop"])
+async def stop_stg(hash: str):
+    taskq.revoke(hash)
+    return JSONResponse(content={"message": f"stopped {hash}"})
+
+
+@app.put("/stg/stop/all", tags=["stop"])
 async def stop_all_strategies():
     await stop_all()
     return JSONResponse(content={"message": "stopped all"})
+
 

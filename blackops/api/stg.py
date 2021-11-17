@@ -19,31 +19,9 @@ class ImmutableModel(BaseModel):
     class Config:
         allow_mutation = False
 
-class ImmutableWithHash(ImmutableModel):
-    """
-    Create a hash with the data in the object
-    So a factory could avoid initializing another object with the same data
 
-    The hash is the hash of the model's data after init 
-    """
-
-    hash = NO_HASH
-
-    def __init__(__pydantic_self__, **data: Any) -> None:
-        super().__init__(**data)
-        __pydantic_self__.set_hash()
-
-    def set_hash(self):
-        raise NotImplementedError
-
-class StrategyBase(ImmutableWithHash):
+class StrategyBase(ImmutableModel):
     type: str
-
-    def to_dict(self) -> dict:
-        raise NotImplementedError
-
-    def to_json_str(self) -> str:
-        raise NotImplementedError
 
     def is_valid(self):
         raise NotImplementedError
@@ -89,31 +67,6 @@ class SlidingWindowStrategy(StrategyBase):
 
     description: Optional[str] = "slide down as you buy, slide up as you sell"
 
-
-    def set_hash(self):
-        if self.hash == NO_HASH:
-            json_str = self.to_json_str()
-            self.hash = hashlib.sha1(json_str.encode()).hexdigest()
-
-    def to_dict(self) -> dict:
-        # return once with no hash, then with hash 
-        d = {
-            "type": self.type,
-            "testnet": self.testnet,
-            "use_real_money": self.use_real_money,
-            "base": self.base,
-            "quote": self.quote,
-            "bridge": self.bridge,
-            "max_usable_quote_amount": self.max_usable_quote_amount,
-            "max_spend_per_step": self.max_spend_per_step,
-        }
-        if self.hash != NO_HASH:
-            d["hash"] = self.hash
-
-        return d
-
-    def to_json_str(self) -> str:
-        return json.dumps(self.to_dict())
 
     def is_valid(self):
         if self.max_spend_per_step > self.max_usable_quote_amount:
