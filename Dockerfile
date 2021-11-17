@@ -1,26 +1,29 @@
-FROM python:3.10.0-slim-bullseye
+FROM python:3.8.12-slim-bullseye
  
-# RUN apt clean && apt-get update && apt-get -y install curl
+RUN apt-get update && apt-get -y install curl
  
 # ENV POETRY_VERSION 1.1.11
-# RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py  | python 
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py  | python - 
 
-RUN python3 -m pip install --user --upgrade pip
 
-RUN pip3 install poetry 
+# RUN export PATH="/root/.local/bin:"$PATH
+# RUN python3 -m pip install --user --upgrade pip
+
+# RUN pip3 install poetry 
 
 # do not create venv since we are in the container already 
-RUN poetry config virtualenvs.create false 
+# RUN /root/.local/bin/poetry config virtualenvs.create false 
 
 COPY poetry.lock pyproject.toml /blackops/
 WORKDIR /blackops
 
-RUN poetry install 
+RUN /root/.local/bin/poetry install 
+
+RUN /root/.local/bin/poetry shell 
 
 # copy venv 
 COPY . /blackops/
 WORKDIR /blackops
 
-ENV FLASK_APP=blackops/api/app:app
-
-CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]
+ENTRYPOINT [ "/blackops/docker-entrypoint.sh" ]
+CMD ["uvicorn", "blackops.api.main:app", "--host", "0.0.0.0"]

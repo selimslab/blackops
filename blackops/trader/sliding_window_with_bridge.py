@@ -4,12 +4,13 @@ from decimal import Decimal
 from typing import Any, Optional
 
 from blackops.domain.models import Asset, AssetPair
+from blackops.exchanges.binance.consumers import get_binance_book_mid
 
-from .sliding_window import SlidingWindows
+from .sliding_window import SlidingWindow
 
 
 @dataclass
-class SlidingWindowsWithBridge(SlidingWindows):
+class SlidingWindowsWithBridge(SlidingWindow):
     bridge: Asset = Asset("none")
 
     bridge_quote = Decimal(1)
@@ -23,7 +24,7 @@ class SlidingWindowsWithBridge(SlidingWindows):
         self.bridge_quote = Decimal(1)
 
     def get_window_mid(self, book: dict) -> Optional[Decimal]:
-        mid = self.leader_exchange.get_mid(book)
+        mid = get_binance_book_mid(book)
         if mid:
             return mid * self.bridge_quote
         return None
@@ -40,6 +41,6 @@ class SlidingWindowsWithBridge(SlidingWindows):
 
     async def update_bridge_quote(self, symbol: str):
         async for book in self.leader_exchange.book_ticker_stream(symbol):
-            new_quote = self.leader_exchange.get_mid(book)
+            new_quote = get_binance_book_mid(book)
             if new_quote:
                 self.bridge_quote = new_quote

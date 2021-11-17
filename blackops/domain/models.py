@@ -1,7 +1,7 @@
-from abc import ABC
-from dataclasses import dataclass
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional
+from typing import AsyncIterator, Dict, List, Optional
 
 
 @dataclass
@@ -30,7 +30,39 @@ class AssetPair:
 class Exchange:
     name: str
 
+    @abstractmethod
     def get_balance(self, symbol: str) -> Optional[Decimal]:
+        ...
+
+    @abstractmethod
+    async def short(self, price: float, qty: float, symbol: str):
+        ...
+
+    @abstractmethod
+    async def long(self, price: float, qty: float, symbol: str):
+        ...
+
+    @abstractmethod
+    def get_balance_multiple(self, symbols: list) -> List[Decimal]:
+        ...
+
+    @abstractmethod
+    @staticmethod
+    def get_sales_orders(orders: dict) -> list:
+        ...
+
+    @abstractmethod
+    @staticmethod
+    def get_purchase_orders(orders: dict) -> list:
+        ...
+
+    @abstractmethod
+    async def orderbook_stream(self, symbol: str) -> AsyncIterator[dict]:
+        ...
+
+    @abstractmethod
+    @staticmethod
+    async def book_ticker_stream(symbol: str) -> AsyncIterator[dict]:
         ...
 
 
@@ -41,9 +73,12 @@ class Client(ABC):
 
 @dataclass
 class Strategy(ABC):
-    pair: AssetPair  # base and quote currencies
 
-    start_quote_balance: Decimal = Decimal(0)
+    # pair: AssetPair  # base and quote currencies
+
+    # a stg may use many pairs, many streams, many exchanges to make a decision
+
+    name: str
 
     def start(self):
         ...
@@ -53,18 +88,6 @@ class Strategy(ABC):
 
     def should_short(self):
         return ...
-
-
-@dataclass
-class TwoExchangeStrategy(Strategy):
-    ...
-
-
-@dataclass
-class LeaderFollowerStrategy(TwoExchangeStrategy):
-    """orders only on the follower"""
-
-    ...
 
 
 @dataclass

@@ -1,17 +1,16 @@
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
-from blackops.domain.models import LeaderFollowerStrategy
-from blackops.exchanges.binance.main import Binance
-from blackops.exchanges.btcturk.dummy import BtcturkTestClient
+from blackops.domain.models import AssetPair, Exchange, Strategy
+from blackops.exchanges.binance.consumers import get_binance_book_mid
 from blackops.util.logger import logger
 from blackops.util.numbers import decimal_division, decimal_mid
 
 
 @dataclass
-class SlidingWindows(LeaderFollowerStrategy):
+class SlidingWindow(Strategy):
     """
     Move down the window as you buy,
 
@@ -21,8 +20,16 @@ class SlidingWindows(LeaderFollowerStrategy):
 
     """
 
-    leader_exchange: Binance = Binance()
-    follower_exchange: BtcturkTestClient = BtcturkTestClient()
+    pair: AssetPair
+
+    exchanges: dict
+
+    leader_exchange: Exchange
+    follower_exchange: Exchange
+
+    name = "sliding_window"
+
+    balances: Dict[str, Decimal] = field(default_factory=dict)
 
     theo_buy = Decimal("-inf")  # buy lower then theo_buy
     theo_sell = Decimal("inf")  # sell higher than theo_sell
@@ -44,18 +51,23 @@ class SlidingWindows(LeaderFollowerStrategy):
         "inf"
     )  # initially we don't know how much base coin we can get for 100 try
 
+    best_seller = Decimal("inf")
+    best_buyer = Decimal("-inf")
+
     def __post_init__(self):
         self.set_start_balance()
         self.set_step_info()
 
     def set_start_balance(self):
-        balance = self.follower_exchange.get_balance(self.pair.quote.symbol)
-        if balance:
-            self.start_quote_balance = balance
+        symbols = [self.pair.base.symbol, self.pair.quote.symbol]
+        balances = self.follower_exchange.get_balance_multiple(symbols)
+        if balances:
+            for s, b in zip(symbols, balances):
+                self.balances[s] = b
 
     def set_step_info(self):
         self.quote_step_qty = (
-            self.start_quote_balance / self.steps
+            self.balances.get(self.pair.quote.symbol, 0) / self.steps
         )  # spend 1/step TRY per step
         self.quote_step_count = decimal_division(
             self.pair.quote.balance, self.quote_step_qty
@@ -100,9 +112,6 @@ class SlidingWindows(LeaderFollowerStrategy):
             self.pair.bt_order_symbol,
         )
 
-    def get_window_mid(self, order_book: dict) -> Optional[Decimal]:
-        return self.leader_exchange.get_mid(order_book)
-
     def get_step_count(self) -> Decimal:
         return self.quote_step_count - decimal_division(
             self.pair.quote.balance, self.quote_step_qty
@@ -114,7 +123,7 @@ class SlidingWindows(LeaderFollowerStrategy):
         if not order_book:
             return
 
-        window_mid = self.get_window_mid(order_book)
+        window_mid = get_binance_book_mid(order_book)
 
         if not window_mid:
             return
@@ -146,4 +155,47 @@ class SlidingWindows(LeaderFollowerStrategy):
 
     async def update_best_buyers_and_sellers(self, symbol: str):
         async for book in self.follower_exchange.orderbook_stream(symbol):
-            self.follower_exchange.update_best_prices(book)
+            self.update_best_prices(book)
+
+    @staticmethod
+    def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
+        # find best_buyer
+        if not purchase_orders:
+            return None
+
+        sorted_purchase_orders = sorted(
+            purchase_orders, key=lambda d: float(d["P"]), reverse=True
+        )
+
+        best_buyer = sorted_purchase_orders[0].get("P", "")
+        return Decimal(best_buyer)
+
+    @staticmethod
+    def get_best_seller(sales_orders: List[dict]) -> Optional[Decimal]:
+        # find best_seller
+        if not sales_orders:
+            return None
+
+        sorted_sales_orders = sorted(sales_orders, key=lambda d: float(d["P"]))
+        best_seller = sorted_sales_orders[0].get("P", "")
+        return Decimal(best_seller)
+
+    def update_best_prices(self, book: dict):
+        if not book:
+            return
+
+        try:
+            sales_orders = self.follower_exchange.get_sales_orders(book)
+            if sales_orders:
+                best_seller = self.get_best_seller(sales_orders)
+                if best_seller and best_seller < self.best_seller:
+                    self.best_seller = best_seller
+
+            purchase_orders = self.follower_exchange.get_purchase_orders(book)
+            if purchase_orders:
+                best_buyer = self.get_best_buyer(purchase_orders)
+                if best_buyer and best_buyer > self.best_buyer:
+                    self.best_buyer = best_buyer
+
+        except Exception as e:
+            logger.info(e)

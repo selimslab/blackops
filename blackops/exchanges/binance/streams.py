@@ -1,13 +1,14 @@
 from binance import AsyncClient, BinanceSocketManager
 
+from blackops.util.ws import reconnecting_generator
 
-async def binance_stream_generator(symbol: str, stream_id: str):
+
+async def binance_stream_generator(symbol: str, stream_type: str):
     client = await AsyncClient.create()
     bm = BinanceSocketManager(client)
-    # start any sockets here, i.e a trade socket
     # ts = bm.kline_socket(symbol, interval)
     # ts = bm.symbol_ticker_socket(symbol)
-    ts = bm.multiplex_socket([f"{symbol.lower()}{stream_id}"])
+    ts = bm.multiplex_socket([f"{symbol.lower()}{stream_type}"])
 
     # then start receiving messages
     async with ts as tscm:
@@ -16,8 +17,8 @@ async def binance_stream_generator(symbol: str, stream_id: str):
             yield res
 
 
-def currency_bridge(target: str, bridge: str):
-    ...
+def create_book_stream(symbol: str, stream_type: str):
+    return binance_stream_generator(symbol, stream_type)
 
 
 if __name__ == "__main__":

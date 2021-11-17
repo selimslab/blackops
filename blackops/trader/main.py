@@ -1,20 +1,12 @@
 from dataclasses import dataclass
 
-from blackops.domain.models import (
-    Asset,
-    AssetPair,
-    Exchange,
-    LeaderFollowerStrategy,
-    Trader,
-)
+from blackops.domain.models import Asset, AssetPair, Exchange, Trader
 
 
 @dataclass
-class DummyTrader(Trader):
-    ...
-
-
-@dataclass
-class RealTrader(Trader):
+class AlgoTrader(Trader):
 
     ...
+
+    # pubsub
+    #

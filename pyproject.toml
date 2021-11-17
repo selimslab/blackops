@@ -5,7 +5,7 @@ description = ""
 authors = ["selim"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8.12"
 requests = "^2.26.0"
 python-dotenv = "^0.19.2"
 python-binance = "^1.0.15"
@@ -14,6 +14,12 @@ Autologging = "^1.3.2"
 btcturk-api = "^1.8.1"
 Flask = "^2.0.2"
 websockets="^9.1"
+fastapi = "^0.70.0"
+beartype = "^0.9.1"
+uvicorn = {extras = ["standard"], version = "^0.15.0"}
+aioredis = "^2.0.0"
+celery = "^5.2.1"
+simplejson = "^3.17.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
