@@ -20,32 +20,33 @@ class SlidingWindow(Strategy):
 
     """
 
-    pair: AssetPair
+    name = "sliding_window"
 
-    exchanges: dict
+    pair: AssetPair
 
     leader_exchange: Exchange
     follower_exchange: Exchange
 
-    name = "sliding_window"
+    max_usable_quote_amount_y: Decimal
 
-    balances: Dict[str, Decimal] = field(default_factory=dict)
+    step_count: Decimal  # divide your money into 20
+
+    credit = Decimal(0.75)
+
+    step_constant_k = Decimal(0.001)
 
     theo_buy = Decimal("-inf")  # buy lower then theo_buy
     theo_sell = Decimal("inf")  # sell higher than theo_sell
 
-    steps = 20  # divide your money into 20
-    step_size_constant = Decimal(0.2)  # k
     # if we don't have a manual step_size_constant, step_size_constant = mid *
-    # step_size_constant_percent
-    step_size_constant_percent = Decimal(0.001)
 
     # if we don't have a manual credit, credit could be fee_percent *
     # Decimal(1.5)
-    credit = Decimal(0.75)
 
     # fee_percent * Decimal(1.5)
     # Decimal(0.001)
+
+    balances: Dict[str, Decimal] = field(default_factory=dict)
 
     base_step_qty = Decimal(
         "inf"
@@ -66,12 +67,15 @@ class SlidingWindow(Strategy):
                 self.balances[s] = b
 
     def set_step_info(self):
+        quote_balance = self.balances.get(self.pair.quote.symbol, 0)
+        if self.max_usable_quote_amount_y < quote_balance:
+            raise Exception(
+                f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {quote_balance}"
+            )
+
         self.quote_step_qty = (
-            self.balances.get(self.pair.quote.symbol, 0) / self.steps
-        )  # spend 1/step TRY per step
-        self.quote_step_count = decimal_division(
-            self.pair.quote.balance, self.quote_step_qty
-        )  # 2000 try / 100 = 20 steps
+            self.max_usable_quote_amount_y / self.step_count
+        )  # spend 100 TRY in 10 steps, max 1000
 
     async def should_transact(self):
         if self.should_long():
@@ -82,38 +86,38 @@ class SlidingWindow(Strategy):
 
     def should_long(self):
         return (
-            self.pair.quote.balance > self.quote_step_qty
-            and self.follower_exchange.best_seller < self.theo_buy
+            self.pair.quote.balance >= self.quote_step_qty
+            and self.best_seller <= self.theo_buy
         )
 
     def should_short(self):
         return (
-            self.pair.base.balance > self.base_step_qty
-            and self.follower_exchange.best_buyer > self.theo_sell
+            self.pair.base.balance >= self.base_step_qty
+            and self.best_buyer >= self.theo_sell
         )
 
     async def long(self):
-        cost = self.follower_exchange.best_seller * self.follower_exchange.buy_with_fee
+        cost = self.best_seller * self.follower_exchange.buy_with_fee
         qty = decimal_division(self.quote_step_qty, cost)
 
         if qty < self.base_step_qty:
             self.base_step_qty = qty
 
         await self.follower_exchange.long(
-            float(self.follower_exchange.best_seller),
+            float(self.best_seller),
             float(qty),
             self.pair.bt_order_symbol,
         )
 
     async def short(self):
         await self.follower_exchange.short(
-            float(self.follower_exchange.best_buyer),
+            float(self.best_buyer),
             float(self.quote_step_qty),
             self.pair.bt_order_symbol,
         )
 
     def get_step_count(self) -> Decimal:
-        return self.quote_step_count - decimal_division(
+        return self.step_count - decimal_division(
             self.pair.quote.balance, self.quote_step_qty
         )
 

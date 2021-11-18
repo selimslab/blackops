@@ -14,9 +14,7 @@ from .streams import create_book_stream
 
 
 @dataclass
-@beartype
 class BtcturkReal(BtcturkBase):
-    # TODO stateless exchange
 
     name = "btcturk_real"
 

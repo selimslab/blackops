@@ -12,8 +12,9 @@ from pydantic.errors import DataclassTypeError
 import blackops.taskq.tasks as taskq
 from blackops.taskq.redis import redis
 
-from .stg import STG_MAP, Strategy
-import hashlib 
+from blackops.api.stg import STG_MAP, Strategy
+import hashlib
+import uuid
 
 app = FastAPI()
 
@@ -26,7 +27,7 @@ async def validation_exception_handler(request, exc: Exception):
     )
 
 
-def dict_to_hash(d:dict)->str:
+def dict_to_hash(d: dict) -> str:
     return hashlib.sha1(json.dumps(d).encode()).hexdigest()
 
 
@@ -55,7 +56,8 @@ async def read_root():
     return taskq.greet(name="selim")
 
 
-# REST 
+# REST
+
 
 @app.get("/stg/", response_model=List[Union[Strategy, dict]], tags=["read"])
 async def list_strategies():
@@ -79,8 +81,11 @@ async def create_stg(stg: Strategy):
     stg.is_valid()
 
     d = dict(stg)
+    uid = str(uuid.uuid4())
+    d["uid"] = uid
+
     hash = dict_to_hash(d)
-    d["hash"] = hash 
+    d["hash"] = hash
 
     if await redis.hexists(STG_MAP, hash):
         raise HTTPException(status_code=403, detail="stg already exists")
@@ -90,27 +95,27 @@ async def create_stg(stg: Strategy):
     return d
 
 
-
-@app.delete("/stg/{hash}",tags=["remove"] )
+@app.delete("/stg/{hash}", tags=["remove"])
 async def delete_stg(hash: str):
     """Delete the stg with this id, also stop it if its running"""
     await redis.hdel(STG_MAP, hash)
     taskq.revoke(hash)
     return JSONResponse(content={"message": f"removed {hash}"})
 
+
 @app.delete("/stg/", tags=["remove"])
 async def delete_all_strategies():
-    """Delete all strategies, this also stops any running ones """
+    """Delete all strategies, this also stops any running ones"""
     await redis.hdel(STG_MAP)
     await stop_all()
     return JSONResponse(content={"message": "removed all"})
 
 
+# RPC
 
-# RPC 
 
 @app.put("/stg/run/{hash}", tags=["run"])
-async def run(hash: str)->str:
+async def run(hash: str) -> str:
     stg = await get_stg(hash)
 
     def task():
@@ -131,5 +136,3 @@ async def stop_stg(hash: str):
 async def stop_all_strategies():
     await stop_all()
     return JSONResponse(content={"message": "stopped all"})
-
-
