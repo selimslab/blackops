@@ -20,6 +20,12 @@ jobs:
     - name: Push image
       run: |
         docker push ${{ secrets.ACR_LOGIN_SERVER }}/blackops:${{ github.run_number }}
+    - name: Login to the Container  Instances
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
     - name: 'Deploy to Azure Container Instances'
       uses: 'azure/aci-deploy@v1'
       with:
