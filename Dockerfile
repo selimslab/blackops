@@ -13,7 +13,7 @@ ENV PATH="/root/.local/bin/poetry:${PATH}"
 # do not create venv since we are in the container already 
 RUN /root/.local/bin/poetry config virtualenvs.create false 
 
-RUN /root/.local/bin/poetry install 
+RUN /root/.local/bin/poetry install --no-dev
 
 # RUN source .venv/bin/activate
 
