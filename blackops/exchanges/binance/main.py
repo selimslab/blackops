@@ -1,17 +1,36 @@
 from dataclasses import dataclass
-from typing import AsyncIterator
+from decimal import Decimal
+from typing import Optional
 
-from blackops.domain.models import Exchange
-
-from .streams import binance_stream_generator
+from blackops.domain.models.exchange import ExchangeBase
+from blackops.util.logger import logger
 
 
 @dataclass
-class Binance(Exchange):
+class Binance(ExchangeBase):
     name: str = "binance"
 
+    fee_percent = Decimal(0.009)
+
     @staticmethod
-    async def book_ticker_stream(symbol: str) -> AsyncIterator[dict]:
-        async for book in binance_stream_generator(symbol, "@bookTicker"):
-            if book:
-                yield book
+    def get_best_bid(book: dict) -> Optional[Decimal]:
+        try:
+            best_bid = book.get("data", {}).get("b")
+            if best_bid:
+                return Decimal(best_bid)
+            return None
+        except Exception as e:
+            logger.info(e)
+            return None
+
+    @staticmethod
+    def get_best_ask(book: dict) -> Optional[Decimal]:
+
+        try:
+            best_ask = book.get("data", {}).get("a")
+            if best_ask:
+                return Decimal(best_ask)
+            return None
+        except Exception as e:
+            logger.info(e)
+            return None

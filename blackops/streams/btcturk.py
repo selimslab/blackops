@@ -25,7 +25,7 @@ def create_orderbook_gen(symbol: str):
     return gen
 
 
-def create_book_stream(symbol: str):
+def create_book_stream_btcturk(symbol: str):
     def gen_factory():
         return create_orderbook_gen(symbol)
 
@@ -33,7 +33,7 @@ def create_book_stream(symbol: str):
 
 
 async def test_orderbook_stream():
-    async for book in create_book_stream("USDTTRY"):
+    async for book in create_book_stream_btcturk("USDTTRY"):
         print(book)
 
 

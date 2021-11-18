@@ -1,6 +1,4 @@
-from binance import AsyncClient, BinanceSocketManager
-
-from blackops.util.ws import reconnecting_generator
+from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
 
 async def binance_stream_generator(symbol: str, stream_type: str):
@@ -17,8 +15,8 @@ async def binance_stream_generator(symbol: str, stream_type: str):
             yield res
 
 
-def create_book_stream(symbol: str, stream_type: str):
-    return binance_stream_generator(symbol, stream_type)
+def create_book_stream_binance(symbol: str):
+    return binance_stream_generator(symbol, "@bookTicker")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,10 @@
-import hashlib
-import uuid
 from decimal import Decimal
-from enum import Enum
-from typing import Any, List, Mapping, Optional, OrderedDict, Union
+from typing import Union
 
 import simplejson as json
 from pydantic import BaseModel, Field
 
-from blackops.domain.symbols import BTCTURK_TRY_BASES, ALL_SYMBOLS, SUPPORTED_BRIDDGES
-
+from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 
 STG_MAP = "STG_MAP"
 
@@ -24,11 +20,10 @@ class ImmutableModel(BaseModel):
 
 class StrategyBase(ImmutableModel):
     type: str
-    # uid: str = Field(default_factory=lambda: str(uuid.uuid4()), const=True, description="unique id")
+    # uid: str = Field(default_factory=lambda: str(uuid.uuid4()), const=True, description="unique id")
 
     def is_valid(self):
         raise NotImplementedError
-
 
 
 class SlidingWindow(StrategyBase):
@@ -51,9 +46,17 @@ class SlidingWindow(StrategyBase):
         description="eg. spend your max_usable_quote_amount in 20 steps", example="20"
     )
 
-    step_constant_k: Decimal = Field(..., example="0.001", description="slide down by this amount after every buy, slide up by this amount after every sell")
+    step_constant_k: Decimal = Field(
+        ...,
+        example="0.001",
+        description="slide down by this amount after every buy, slide up by this amount after every sell",
+    )
 
-    credit: Decimal = Field(..., example="0.001", description="defines window height, high=mid + credit, low = mid-credit")
+    credit: Decimal = Field(
+        ...,
+        example="0.001",
+        description="defines window height, high=mid + credit, low = mid-credit",
+    )
 
     leader_exchange = "binance"
     follower_exchange = "btcturk"
@@ -64,14 +67,17 @@ class SlidingWindow(StrategyBase):
         if self.base not in ALL_SYMBOLS:
             raise ValueError(f"{self.base} is not a valid symbol")
 
-        if self.quote not in ALL_SYMBOLS:   
+        if self.quote not in ALL_SYMBOLS:
             raise ValueError(f"{self.quote} is not a valid symbol")
 
         if self.base == self.quote:
             raise ValueError(f"{self.base} and {self.quote} cannot be the same")
 
         if self.base not in BTCTURK_TRY_BASES:
-            raise ValueError(f"BTC has no {self.base} / TRY pair ")  
+            raise ValueError(f"{self.follower_exchange} has no {self.base} / TRY pair ")
+
+        if self.base not in BTCTURK_TRY_BASES:
+            raise ValueError(f"{self.follower_exchange} has no {self.base} / TRY pair ")
 
         if self.leader_exchange != "binance":
             raise ValueError(f"{self.leader_exchange} is not supported")
@@ -80,10 +86,13 @@ class SlidingWindow(StrategyBase):
             raise ValueError(f"{self.follower_exchange} is not supported")
 
         if self.max_usable_quote_amount_y >= MAX_SPEND_ALLOWED:
-            raise Exception(f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?")
+            raise Exception(
+                f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
+            )
 
         if self.testnet == self.use_real_money:
             return Exception("test or real money ? this is very important")
+
 
 class SlidingWindowWithBridge(SlidingWindow):
     type = Field("sliding_window_with_bridge", const=True)

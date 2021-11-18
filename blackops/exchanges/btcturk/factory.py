@@ -1,16 +1,14 @@
-from .real import BtcturkReal
-from .real_api import btcturk_api_client_real
-from .testnet import BtcturkTestnet
-from .testnet_api import btcturk_api_client_testnet
+from .api_clients.real import btcturk_api_client_real
+from .api_clients.testnet import create_btcturk_api_client_testnet
+from .exchanges.real import BtcturkReal
+from .exchanges.testnet import BtcturkTestnet
 
 
-def create_btcturk_client(testnet=True):
-    if testnet is True:
-        return BtcturkTestnet(api_client=btcturk_api_client_testnet)
-    else:
-        return BtcturkReal(api_client=btcturk_api_client_real)
+def create_testnet_client(balances):
+    btcturk_client_testnet = BtcturkTestnet(
+        api_client=create_btcturk_api_client_testnet(balances)
+    )
+    return btcturk_client_testnet
 
 
-btcturk_client_testnet = create_btcturk_client()
-
-btcturk_client_real = create_btcturk_client(testnet=False)
+btcturk_client_real = BtcturkReal(api_client=btcturk_api_client_real)

@@ -1,13 +1,15 @@
+import asyncio
 from typing import Callable
 
 import websockets
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 
 
-async def ws_stream(uri: str, message: str):
+async def ws_stream(uri: str, message: str, sleep=0.5):
     async with websockets.connect(uri=uri) as websocket:
         while True:
             await websocket.send(message)
+            await asyncio.sleep(sleep)
             data = await websocket.recv()
             yield data
 

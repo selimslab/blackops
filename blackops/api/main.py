@@ -1,7 +1,6 @@
-from dataclasses import asdict, astuple, dataclass, field
-from decimal import Decimal
-from enum import Enum
-from typing import List, Mapping, Optional, OrderedDict, Union
+import hashlib
+import uuid
+from typing import List, OrderedDict, Union
 
 import simplejson as json
 from fastapi import FastAPI, HTTPException
@@ -9,12 +8,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from pydantic.errors import DataclassTypeError
 
-import blackops.taskq.tasks as taskq
+import blackops.taskq.main as taskq
+import blackops.taskq.tasks as tasks
+from blackops.api.models.stg import STG_MAP, Strategy
 from blackops.taskq.redis import redis
-
-from blackops.api.stg import STG_MAP, Strategy
-import hashlib
-import uuid
 
 app = FastAPI()
 
@@ -53,7 +50,7 @@ async def stop_all():
 
 @app.get("/")
 async def read_root():
-    return taskq.greet(name="selim")
+    return {"ping": "pong"}
 
 
 # REST
@@ -119,7 +116,7 @@ async def run(hash: str) -> str:
     stg = await get_stg(hash)
 
     def task():
-        return taskq.run_stg.delay(json.loads(stg))
+        return tasks.run_stg.delay(json.loads(stg))
 
     task_id = await taskq.start_task(hash, task)
 

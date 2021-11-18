@@ -20,6 +20,8 @@ uvicorn = {extras = ["standard"], version = "^0.15.0"}
 aioredis = "^2.0.0"
 celery = "^5.2.1"
 simplejson = "^3.17.6"
+fastapi-websocket-pubsub = "^0.1.21"
+flower = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

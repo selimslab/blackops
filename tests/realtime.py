@@ -2,37 +2,39 @@ import asyncio
 from decimal import Decimal
 
 import blackops.domain.symbols as symbols
-from blackops.domain.models import Asset, AssetPair
-from blackops.strategies import SlidingWindow
+from blackops.trader.factory import create_trader_from_strategy
+from blackops.api.models.stg import SlidingWindow, SlidingWindowWithBridge
+
+import cProfile
+from pstats import Stats
 
 
-def create_strategy(base_symbol, quote_symbol, bridge_symbol=None):
-    pair = AssetPair(Asset(base_symbol), Asset(quote_symbol, Decimal(2000)))
-    
-    bridge_asset = None 
-    if bridge_symbol:
-        bridge_asset = Asset(bridge_symbol)
+async def test_sliding_window():
+    sw = SlidingWindowWithBridge(
+        base='BTC',
+        quote='TRY',
+        bridge='USDT',
+        max_usable_quote_amount_y=5000,
+        step_count=20,
+        step_constant_k=0.001,
+        credit=0.75,
+    )
 
-    stg = SlidingWindow(pair=pair, bridge=bridge_asset)
-    return stg 
+    trader = create_trader_from_strategy(sw)
 
-async def test_multiple():
-    test_pairs = [
-        (symbols.MANA, symbols.TRY),
-        (symbols.DOGE, symbols.TRY),
-        (symbols.CHZ, symbols.TRY),
-        (symbols.SHIB, symbols.TRY, symbols.USDT),
-        (symbols.LRC, symbols.TRY, symbols.USDT),
-        (symbols.UMA, symbols.TRY, symbols.USDT),
-    ]
+    await asyncio.gather(trader.run())
 
-    stgs = [create_strategy(*pair) for pair in test_pairs]
-    aws = [stg.run() for stg in stgs]
-    await asyncio.gather(*aws)
+
+def profile():
+    pr = cProfile.Profile()
+    pr.enable()
+
+    asyncio.run(test_sliding_window())
+
+    pr.disable()
+    stats = Stats(pr)
+    stats.sort_stats('time').print_stats(10)
 
 
 if __name__ == "__main__":
-    asyncio.run(test_multiple())
-
-
-
+    asyncio.run(test_sliding_window())

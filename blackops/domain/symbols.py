@@ -46,3 +46,5 @@ ALL_SYMBOLS = BTCTURK_TRY_BASES.union(set(["TRY"]))
 
 
 SUPPORTED_BRIDDGES = set(["USDT"])
+
+BINANCE_TRY_BASES = set(["ETH", "DOGE"])
