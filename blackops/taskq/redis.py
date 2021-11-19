@@ -4,7 +4,7 @@ import redis  # type: ignore
 
 from blackops.util.logger import logger
 
-redis_host = os.environ["REDIS_HOST"]
+redis_host = os.environ.get("REDIS_HOST", "http://localhost")
 
 logger.info(f"redis_host: {redis_host}")
 
