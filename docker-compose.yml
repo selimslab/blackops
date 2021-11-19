@@ -1,17 +1,10 @@
 version: "3.2"
 services:
 
-  web:
-    image: conreg0.azurecr.io/blackops
-    build: .
-    ports:
-      - "7846:7846"
-      - "5555:5555"
-
   redis: # rename to redis_server
     image: "redis:alpine"
 
-    command: redis-server 
+    command: ["redis-server", "--bind", "0.0.0.0", "--port", "6379"]
 
     ports:
       - "6379:6379"
@@ -22,3 +15,11 @@ services:
 
     environment:
       - REDIS_REPLICATION_MODE=master
+
+  web:
+    image: conreg0.azurecr.io/blackops
+    build: .
+    ports:
+      - "7846:7846"
+      - "5555:5555"
+
