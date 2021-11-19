@@ -1,12 +1,12 @@
-from blackops.api.models.stg import Strategy
+from blackops.api.models.stg import SlidingWindowWithBridge, Strategy
 from blackops.domain.models.asset import Asset, AssetPair
 from blackops.exchanges.binance.factory import binance_client_testnet
 from blackops.exchanges.btcturk.factory import (
     btcturk_client_real,
     create_testnet_client,
 )
-from blackops.stgs.sliding_window import SlidingWindow
-from blackops.stgs.sliding_window_with_bridge import SlidingWindowsWithBridge
+from blackops.stgs.sliding_window import SlidingWindowTrader
+from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
 from blackops.streams.binance import create_book_stream_binance
 from blackops.streams.btcturk import create_book_stream_btcturk
 
@@ -28,8 +28,8 @@ SLIDING_WINDOW = "sliding_window"
 SLIDING_WINDOW_WITH_BRIDGE = "sliding_window_with_bridge"
 
 STRATEGY_CLASSES = {
-    SLIDING_WINDOW: SlidingWindow,
-    SLIDING_WINDOW_WITH_BRIDGE: SlidingWindowsWithBridge,
+    SLIDING_WINDOW: SlidingWindowTrader,
+    SLIDING_WINDOW_WITH_BRIDGE: SlidingWindowWithBridgeTrader,
 }
 
 
@@ -54,6 +54,9 @@ def create_followers_exchange_client(stg: Strategy):
 
 
 def sliding_window_with_bridge_factory(stg: Strategy):
+    if not isinstance(stg, SlidingWindowWithBridge):
+        raise ValueError(f"unknown strategy type: {stg.type}")
+
     bridge: str = stg.bridge
     if not bridge:
         raise ValueError(f"bridge is not set for strategy: {stg}")
@@ -66,7 +69,7 @@ def sliding_window_with_bridge_factory(stg: Strategy):
     bridge_quote_symbol = bridge + stg.quote
     base_bridge_symbol = stg.base + bridge
 
-    trader = SlidingWindowsWithBridge(
+    trader = SlidingWindowWithBridgeTrader(
         bridge=Asset(bridge),
         leader_exchange=leader_exchange_client,
         follower_exchange=followers_exchange_client,
@@ -90,7 +93,7 @@ def sliding_window_factory(stg: Strategy):
 
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
-    trader = SlidingWindow(
+    trader = SlidingWindowTrader(
         leader_exchange=leader_exchange_client,
         follower_exchange=followers_exchange_client,
         pair=pair,

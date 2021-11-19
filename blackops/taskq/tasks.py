@@ -3,7 +3,7 @@ import asyncio
 from blackops.api.models.stg import Strategy
 from blackops.trader.factory import create_trader_from_strategy
 
-from .main import app
+from .taskq import app
 
 
 @app.task

@@ -6,11 +6,11 @@ from typing import Any, AsyncGenerator, Optional
 from blackops.domain.models.asset import Asset
 from blackops.util.logger import logger
 
-from .sliding_window import SlidingWindow
+from .sliding_window import SlidingWindowTrader
 
 
 @dataclass
-class SlidingWindowsWithBridge(SlidingWindow):
+class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     bridge: Asset = Asset("None")
 
     leader_bridge_quote_stream: Optional[AsyncGenerator] = None

@@ -11,7 +11,7 @@ from blackops.util.numbers import DECIMAL_2
 
 
 @dataclass
-class SlidingWindow(StrategyBase):
+class SlidingWindowTrader(StrategyBase):
     """
     Move down the window as you buy,
 

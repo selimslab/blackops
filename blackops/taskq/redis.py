@@ -1,7 +1,7 @@
 import os
 
 import aioredis
-import redis
+import redis  # type: ignore
 
 from blackops.util.logger import logger
 
