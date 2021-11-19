@@ -19,7 +19,7 @@ app = FastAPI()
 security = HTTPBasic()
 
 
-def auth(credentials: HTTPBasicCredentials = Depends(security)):
+def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
     correct_username = secrets.compare_digest(credentials.username, "admin")
     correct_password = secrets.compare_digest(credentials.password, "3924")
     if not (correct_username and correct_password):
@@ -28,7 +28,7 @@ def auth(credentials: HTTPBasicCredentials = Depends(security)):
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Basic"},
         )
-    return credentials.username
+    return True
 
 
 @app.exception_handler(Exception)
@@ -69,10 +69,8 @@ async def read_root():
 
 
 # REST
-
-
 @app.get("/stg/", response_model=List[Union[Strategy, dict]], tags=["read"])
-async def list_strategies():
+async def list_strategies(auth: bool = Depends(auth)):
     """View all strategies"""
     stgs = await list_stgs()
     if stgs:
@@ -81,13 +79,13 @@ async def list_strategies():
 
 
 @app.get("/stg/{hash}", tags=["read"])
-async def read_stg(hash: str):
+async def read_stg(hash: str, auth: bool = Depends(auth)):
     """View the stg with this id"""
     return await get_stg(hash)
 
 
 @app.put("/stg/", response_model=dict, tags=["create"])
-async def create_stg(stg: Strategy, username: str = Depends(auth)):
+async def create_stg(stg: Strategy, auth: bool = Depends(auth)):
     """Create a new stg. A stg is immutable. Creating will not run it yet. Review and run"""
 
     stg.is_valid()
@@ -108,7 +106,7 @@ async def create_stg(stg: Strategy, username: str = Depends(auth)):
 
 
 @app.delete("/stg/{hash}", tags=["remove"])
-async def delete_stg(hash: str):
+async def delete_stg(hash: str, auth: bool = Depends(auth)):
     """Delete the stg with this id, also stop it if its running"""
     await redis.hdel(STG_MAP, hash)
     taskq.revoke(hash)
@@ -116,7 +114,7 @@ async def delete_stg(hash: str):
 
 
 @app.delete("/stg/", tags=["remove"])
-async def delete_all_strategies():
+async def delete_all_strategies(auth: bool = Depends(auth)):
     """Delete all strategies, this also stops any running ones"""
     await redis.hdel(STG_MAP)
     await stop_all()
@@ -127,7 +125,7 @@ async def delete_all_strategies():
 
 
 @app.put("/stg/run/{hash}", tags=["run"])
-async def run(hash: str) -> str:
+async def run(hash: str, auth: bool = Depends(auth)) -> str:
     stg = await get_stg(hash)
 
     def task():
@@ -139,12 +137,12 @@ async def run(hash: str) -> str:
 
 
 @app.put("/stg/stop/{hash}", tags=["stop"])
-async def stop_stg(hash: str):
+async def stop_stg(hash: str, auth: bool = Depends(auth)):
     taskq.revoke(hash)
     return JSONResponse(content={"message": f"stopped {hash}"})
 
 
 @app.put("/stg/stop/all", tags=["stop"])
-async def stop_all_strategies():
+async def stop_all_strategies(auth: bool = Depends(auth)):
     await stop_all()
     return JSONResponse(content={"message": "stopped all"})
