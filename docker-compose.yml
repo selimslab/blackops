@@ -7,9 +7,9 @@ services:
     ports:
       - "7846:7846"
       - "5555:5555"
-      
+
     environment:
-      REDIS_HOST:redis://redis_server
+      - REDIS_HOST:redis://redis_server
 
   redis_server: # rename to redis_server
     image: "redis:alpine"
