@@ -1,10 +1,12 @@
 import hashlib
+import secrets
 import uuid
 from typing import List, OrderedDict, Union
 
 import simplejson as json
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field
 from pydantic.errors import DataclassTypeError
 
@@ -14,6 +16,19 @@ from blackops.api.models.stg import STG_MAP, Strategy
 from blackops.taskq.redis import redis
 
 app = FastAPI()
+security = HTTPBasic()
+
+
+def auth(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "3924")
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 
 @app.exception_handler(Exception)
@@ -72,7 +87,7 @@ async def read_stg(hash: str):
 
 
 @app.put("/stg/", response_model=dict, tags=["create"])
-async def create_stg(stg: Strategy):
+async def create_stg(stg: Strategy, username: str = Depends(auth)):
     """Create a new stg. A stg is immutable. Creating will not run it yet. Review and run"""
 
     stg.is_valid()
