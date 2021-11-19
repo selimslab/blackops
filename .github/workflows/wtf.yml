@@ -19,11 +19,11 @@ jobs:
 
     - name: Build and Tag image
       run: |
-        docker build -f ./Dockerfile -t ${{ secrets.ACR_LOGIN_SERVER }}/blackops:${{ github.sha }} .    
+        docker-compose build    
 
     - name: Push image
       run: |
-        docker push ${{ secrets.ACR_LOGIN_SERVER }}/blackops:${{ github.sha }}
+        docker push com.blackops:latest
 
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
@@ -35,7 +35,7 @@ jobs:
       with:
         resource-group: ${{ secrets.RESOURCE_GROUP }}
         dns-name-label: ${{ secrets.RESOURCE_GROUP }}
-        image: ${{ secrets.ACR_LOGIN_SERVER }}/blackops:${{ github.sha }}
+        image: com.blackops:latest
         registry-login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
         registry-username: ${{ secrets.REGISTRY_USERNAME }}
         registry-password: ${{ secrets.REGISTRY_PASSWORD }}
