@@ -1,3 +1,5 @@
+import asyncio
+
 from blackops.api.models.stg import Strategy
 from blackops.trader.factory import create_trader_from_strategy
 
@@ -10,7 +12,7 @@ def greet(name: str) -> str:
 
 
 @app.task
-async def run_stg(stg: Strategy):
+def run_stg(stg: Strategy):
     trader = create_trader_from_strategy(stg)
     if trader:
-        await trader.run()
+        asyncio.run(trader.run())
