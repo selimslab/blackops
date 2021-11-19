@@ -2,7 +2,7 @@ version: "3.2"
 services:
 
   web:
-    image: com.blackops
+    image: conreg0.azurecr.io/blackops
     build: .
     ports:
       - "7846:7846"
