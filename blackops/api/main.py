@@ -10,7 +10,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field
 from pydantic.errors import DataclassTypeError
 
-import blackops.taskq.main as taskq
+import blackops.taskq.taskq as taskq
 import blackops.taskq.tasks as tasks
 from blackops.api.models.stg import STG_MAP, Strategy
 from blackops.taskq.redis import redis_client
