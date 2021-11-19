@@ -134,16 +134,10 @@ class SlidingWindowTrader(StrategyBase):
             await self.short()
 
     def should_long(self):
-        return (
-            self.pair.quote.balance >= self.quote_step_qty
-            and self.best_seller <= self.theo_buy
-        )
+        return self.best_seller <= self.theo_buy
 
     def should_short(self):
-        return (
-            self.pair.base.balance >= self.base_step_qty
-            and self.best_buyer >= self.theo_sell
-        )
+        return self.best_buyer >= self.theo_sell
 
     def get_current_step(self) -> Decimal:
         # for example 20
@@ -190,7 +184,7 @@ class SlidingWindowTrader(StrategyBase):
 
     @staticmethod
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
-        # find best_buyer
+        #  best_buyer is the best price we can sell at
         if not purchase_orders:
             return None
 
@@ -203,7 +197,7 @@ class SlidingWindowTrader(StrategyBase):
 
     @staticmethod
     def get_best_seller(sales_orders: List[dict]) -> Optional[Decimal]:
-        # find best_seller
+        # best_seller has the lowest price we can buy at
         if not sales_orders:
             return None
 
@@ -233,6 +227,8 @@ class SlidingWindowTrader(StrategyBase):
             logger.info(e)
 
     async def long(self):
+        # we buy and sell at the quantized steps
+        # so we buy or sell a quantum
         cost = self.best_seller * self.follower_exchange.buy_with_fee
         base_qty = self.quote_step_qty / cost
 

@@ -21,7 +21,7 @@ COPY . /blackops/
 WORKDIR /blackops
 
 EXPOSE 7846
-EXPOSE 5555
+EXPOSE 5566
 
 
 ENTRYPOINT [ "bash","/blackops/docker-entrypoint.sh" ]
