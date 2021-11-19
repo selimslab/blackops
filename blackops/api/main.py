@@ -13,7 +13,7 @@ from pydantic.errors import DataclassTypeError
 import blackops.taskq.main as taskq
 import blackops.taskq.tasks as tasks
 from blackops.api.models.stg import STG_MAP, Strategy
-from blackops.taskq.redis import redis
+from blackops.taskq.redis import redis_client
 
 app = FastAPI()
 security = HTTPBasic()
@@ -45,14 +45,14 @@ def dict_to_hash(d: dict) -> str:
 
 async def get_stg(hash: str):
     print(hash, type(hash))
-    stg = await redis.hget(STG_MAP, hash)
+    stg = redis_client.hget(STG_MAP, hash)
     if not stg:
         raise HTTPException(status_code=404, detail="no such stg")
     return json.loads(stg, object_pairs_hook=OrderedDict)
 
 
 async def list_stgs() -> List[dict]:
-    stgs = await redis.hvals(STG_MAP)
+    stgs = redis_client.hvals(STG_MAP)
     return [json.loads(s) for s in stgs]
 
 
@@ -97,10 +97,10 @@ async def create_stg(stg: Strategy, auth: bool = Depends(auth)):
     hash = dict_to_hash(d)
     d["hash"] = hash
 
-    if await redis.hexists(STG_MAP, hash):
+    if redis_client.hexists(STG_MAP, hash):
         raise HTTPException(status_code=403, detail="stg already exists")
 
-    await redis.hset(STG_MAP, hash, json.dumps(d))
+    redis_client.hset(STG_MAP, hash, json.dumps(d))
 
     return d
 
@@ -108,7 +108,7 @@ async def create_stg(stg: Strategy, auth: bool = Depends(auth)):
 @app.delete("/stg/{hash}", tags=["remove"])
 async def delete_stg(hash: str, auth: bool = Depends(auth)):
     """Delete the stg with this id, also stop it if its running"""
-    await redis.hdel(STG_MAP, hash)
+    redis_client.hdel(STG_MAP, hash)
     taskq.revoke(hash)
     return JSONResponse(content={"message": f"removed {hash}"})
 
@@ -116,7 +116,7 @@ async def delete_stg(hash: str, auth: bool = Depends(auth)):
 @app.delete("/stg/", tags=["remove"])
 async def delete_all_strategies(auth: bool = Depends(auth)):
     """Delete all strategies, this also stops any running ones"""
-    await redis.hdel(STG_MAP)
+    redis_client.hdel(STG_MAP)
     await stop_all()
     return JSONResponse(content={"message": "removed all"})
 

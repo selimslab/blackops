@@ -22,6 +22,7 @@ celery = "^5.2.1"
 simplejson = "^3.17.6"
 fastapi-websocket-pubsub = "^0.1.21"
 flower = "^1.0.0"
+redis = "^4.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
