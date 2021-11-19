@@ -17,3 +17,11 @@ follow order status
 cancel or wait for execution 
 
 repeat 
+
+
+
+uvicorn blackops.api.main:app 
+
+docker run -d -p 7846:7846 -p 5555:5555 blackops    
+
+ docker build . -t blackops  
