@@ -41,6 +41,6 @@ jobs:
         registry-password: ${{ secrets.REGISTRY_PASSWORD }}
         name: blackops
         ports: '7846 5555' 
-        environment-variables: BTCTURK_PUBLIC_KEY=172a56d1-6e33-4b81-882b-3aad5288fe3e
-        secure-environment-variables: BTCTURK_PRIVATE_KEY=${{ secrets.BTCTURK_PRIVATE_KEY }}
+        environment-variables: 'BTCTURK_PUBLIC_KEY'=172a56d1-6e33-4b81-882b-3aad5288fe3e
+        secure-environment-variables: 'BTCTURK_PRIVATE_KEY'=${{ secrets.BTCTURK_PRIVATE_KEY }}
         location: 'west europe'
