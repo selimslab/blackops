@@ -1,9 +1,15 @@
+import os
+
 import aioredis
 import redis
 
-redis_url = "redis://redis:6379"
+from blackops.util.logger import logger
+
+redis_host = os.getenv("REDIS_URL", "NO REDIS")
+
+logger.info(f"redis_url: {redis_host}")
 
 # single instance
 # aio_redis_client: aioredis.Redis = aioredis.from_url(redis_url)
 
-redis_client = redis.Redis(host="redis://redis", port=6379)
+redis_client = redis.Redis(host=redis_host, port=6379)
