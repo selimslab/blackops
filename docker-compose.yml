@@ -22,4 +22,5 @@ services:
     ports:
       - "7846:7846"
       - "5555:5555"
-
+    environment:
+      - REDIS_HOST=http://redis_server

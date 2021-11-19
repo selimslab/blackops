@@ -23,8 +23,6 @@ WORKDIR /blackops
 EXPOSE 7846
 EXPOSE 5555
 
-ENV REDIS_URL=redis://redis_server
-
 
 ENTRYPOINT [ "bash","/blackops/docker-entrypoint.sh" ]
 CMD ["python", "-m", "uvicorn", "blackops.api.main:app", "--host", "0.0.0.0", "--port", "7846", "--workers", "2"]
