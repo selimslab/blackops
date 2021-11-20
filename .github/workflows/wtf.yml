@@ -19,7 +19,7 @@ jobs:
 
     - name: Build and Tag image
       run: |
-        docker-compose build    
+        docker build -f ./Dockerfile -t ${{ secrets.ACR_LOGIN_SERVER }}/blackops:latest .    
 
     - name: Push image
       run: |

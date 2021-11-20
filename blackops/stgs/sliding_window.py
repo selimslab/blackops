@@ -188,7 +188,6 @@ class SlidingWindowTrader(StrategyBase):
         if not book:
             return
         try:
-            logger.info(book)
             sales_orders = self.follower_exchange.get_sales_orders(book)
             if sales_orders:
                 best_seller = self.get_best_seller(sales_orders)

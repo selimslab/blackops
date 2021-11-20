@@ -6,7 +6,12 @@
     href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
   />
 </head>
-<body>
+
+<body class="has-background-dark">
+
+
+
+<div class="container">
 
   <nav class="navbar" role="navigation" aria-label="main navigation">
     <div class="navbar-brand">
@@ -16,24 +21,30 @@
     </div>
 </nav>
 
+<p class="is-family-monospace is-size-4 has-text-primary">Wake up, Neo...</p>
 
-<div class="container">
-
-  <a href="/docs" target="_blank">Click to enter strategy params and run it</a>
-
-  <p>View logs here as it's running</p>
+<br>
 
   <div id="app">
     <div class="columns">
       <div class="column">
-        <h2>Logs</h2>
+        <h1 class="is-family-monospace is-bold is-size-4">Logs</h1>
+
+        <p>You will see logs when you run a strategy</p>
+
+        <a href="/docs" target="_blank">Click to enter strategy params and run it</a>
+
+
         <ul>
           <li v-for="message in messages">{{message}}</li>
         </ul>
       </div>
 
       <div class="column">
-        <h2>Orders</h2>
+        <h1 class="is-family-monospace is-bold is-size-4">Orders</h1>
+
+        <p>You will see orders here</p>
+
         <ul>
           <li v-for="order in orders">{{order}}</li>
         </ul>

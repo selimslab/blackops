@@ -24,9 +24,10 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     name: str = "Sliding Window With Bridge"
 
     async def run(self):
-        pusher_client.trigger(channel, event.update, {"start": str(self.name)})
+        message = {"start": str(self)}
+        pusher_client.trigger(channel, event.update, message)
 
-        logger.info(f"Starting {self.name}")
+        logger.info(message)
         logger.info(self)
         await self.set_step_info()
         await self.run_streams()
