@@ -76,7 +76,7 @@ class SlidingWindowTrader(StrategyBase):
     async def set_step_info(self):
         quote_balance = await self.follower_exchange.get_balance(self.pair.quote.symbol)
 
-        if not quote_balance:
+        if quote_balance is None:
             raise Exception("Could not get quote balance")
 
         self.start_quote_balance = quote_balance
