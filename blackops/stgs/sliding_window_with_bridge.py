@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Optional
 
+import blackops.util.push_events as event
 from blackops.domain.models.asset import Asset
 from blackops.util.logger import logger
+from blackops.util.push import channel, pusher_client
 
-from .push import channel, event, pusher_client
 from .sliding_window import SlidingWindowTrader
 
 
@@ -55,6 +56,8 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    message = f"New bridge quote: {self.bridge_quote}"
+                    message = f"bridge: {self.bridge_quote}"
                     logger.info(message)
-                    pusher_client.trigger("finance", "update", {"message": message})
+                    pusher_client.trigger(
+                        channel, event.update, {"bridge": self.bridge_quote}
+                    )

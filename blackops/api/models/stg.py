@@ -30,7 +30,7 @@ class SlidingWindow(StrategyBase):
 
     type = Field("sliding_window", const=True, example="sliding_window")
 
-    base: str = Field(..., example="BTC")
+    base: str = Field(..., example="UMA")
     quote: str = Field(..., example="TRY")
 
     testnet = True
@@ -48,13 +48,13 @@ class SlidingWindow(StrategyBase):
 
     step_constant_k: Decimal = Field(
         ...,
-        example="0.001",
+        example="0.2",
         description="slide down by this amount after every buy, slide up by this amount after every sell",
     )
 
     credit: Decimal = Field(
         ...,
-        example="0.001",
+        example="0.75",
         description="defines window height, high=mid + credit, low = mid-credit",
     )
 
@@ -113,7 +113,7 @@ class SlidingWindowWithBridge(SlidingWindow):
         "sliding_window_with_bridge", const=True, example="sliding_window_with_bridge"
     )
 
-    bridge: str
+    bridge: str = Field(..., example="USDT")
 
     def is_valid_bridge(self):
         if self.bridge not in SUPPORTED_BRIDDGES:

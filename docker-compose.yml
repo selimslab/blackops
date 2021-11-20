@@ -1,25 +1,24 @@
 version: "3"
 services:
 
-  redis_server: # rename to redis_server
-    image: "redis:alpine"
-    container_name: redis
-    command: ["redis-server", "--bind", "127.0.0.1", "--port", "6379"]
+  # redis_server: # rename to redis_server
+  #   image: "redis:alpine"
+  #   container_name: redis
+  #   command: ["redis-server", "--bind", "127.0.0.1", "--port", "6379"]
 
-    ports:
-      - "6379:6379"
+  #   ports:
+  #     - "6379:6379"
 
-    volumes:
-      - $PWD/redis-data:/var/lib/redis
-      - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
+  #   volumes:
+  #     - $PWD/redis-data:/var/lib/redis
+  #     - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
 
   web:
     image: conreg0.azurecr.io/blackops
     build: .
     container_name: web
     ports:
-      - "7846:7846"
-      - "5566:5566"
+      - "8000:8000"
 
-    environment:
-      REDIS_HOST: redis_server
+    # environment:
+    #   REDIS_HOST: redis_server

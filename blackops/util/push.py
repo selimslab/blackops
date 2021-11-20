@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import pusher
 
 pusher_client = pusher.Pusher(
@@ -8,5 +10,4 @@ pusher_client = pusher.Pusher(
     ssl=True,
 )
 
-channel = "finance"
-event = "update"
+channel = "ops"

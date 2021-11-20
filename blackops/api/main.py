@@ -1,9 +1,10 @@
+import asyncio
 import hashlib
 import secrets
 from typing import List, OrderedDict, Union
 
 import simplejson as json
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.param_functions import File
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -13,12 +14,12 @@ from pydantic.errors import DataclassTypeError
 
 import blackops.taskq.tasks as taskq
 from blackops.api.models.stg import STG_MAP, Strategy
-from blackops.taskq.redis import redis_client
+from blackops.trader.factory import create_trader_from_strategy
 
 app = FastAPI()
 security = HTTPBasic()
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 
 def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
@@ -49,109 +50,53 @@ def str_to_json(s: str) -> dict:
     return json.loads(s, object_pairs_hook=OrderedDict)
 
 
-# REST
+class BackgroundRunner:
+    def __init__(self):
+        self.tasks = {}
+
+    async def start_task(self, stg: dict):
+        sha = stg.get("sha")
+        if sha in self.tasks:
+            raise Exception("Task already running")
+        trader = await create_trader_from_strategy(stg)
+        task = asyncio.create_task(trader.run())
+        self.tasks[sha] = task
+        await task
+
+    async def cancel_task(self, sha):
+        if sha in self.tasks:
+            self.tasks[sha].cancel()
+            del self.tasks[sha]
+        else:
+            raise Exception("Task not found")
 
 
-async def list_stgs() -> List[dict]:
-    stgs = await redis_client.hvals(STG_MAP)
-    return [json.loads(s) for s in stgs]
+runner = BackgroundRunner()
 
 
-@app.get("/stg/", response_model=List[Union[Strategy, dict]], tags=["read"])
-async def list_strategies(auth: bool = Depends(auth)):
-    """View all strategies"""
-    stgs = await list_stgs()
-    if stgs:
-        return stgs
-    raise HTTPException(status_code=404, detail="no stg yet")
-
-
-async def get_stg(sha: str) -> dict:
-    stg = await redis_client.hget(STG_MAP, sha)
-    if stg:
-        return json.loads(stg)
-    else:
-        raise HTTPException(status_code=404, detail="Strategy not found")
-
-
-@app.get("/stg/{sha}", tags=["read"])
-async def read_stg(sha: str, auth: bool = Depends(auth)):
-    """View the stg with this id"""
-    return await get_stg(sha)
-
-
-@app.put("/stg/", response_model=dict, tags=["create"])
-async def create_stg(stg: Strategy, auth: bool = Depends(auth)):
-    """Create a new stg.
-    A stg is immutable.
-    Creating will not run it yet.
-    Make sure its correct,
-    then use the sha to run it
-    """
+@app.put(
+    "/stg/run/",
+    tags=["run"],
+)
+async def run_stg(
+    stg: Strategy, background_tasks: BackgroundTasks, auth: bool = Depends(auth)
+):
+    # stg = await get_stg(sha)
 
     stg.is_valid()
 
-    d = dict(stg)
+    stg_dict = dict(stg)
 
-    sha = dict_to_hash(d)
-    d["sha"] = sha
+    sha = dict_to_hash(stg_dict)
+    stg_dict["sha"] = sha
 
-    # if you ever need a uid ,its important to hash it without uid for the idempotency of stg
-    # uid = str(uuid.uuid4())
-    # d["uid"] = uid
+    background_tasks.add_task(runner.start_task, stg_dict)
 
-    if await redis_client.hexists(STG_MAP, sha):
-        raise HTTPException(status_code=403, detail="stg already exists")
-
-    await redis_client.hset(STG_MAP, sha, json.dumps(d))
-
-    return d
+    return JSONResponse(content={"ok": f"task started with id {sha}"})
 
 
-@app.put("/stg/run/{sha}", tags=["run"])
-async def run_stg(sha: str, auth: bool = Depends(auth)) -> str:
-    stg = await get_stg(sha)
-
-    def task():
-        return taskq.run_stg.delay(stg)
-
-    task_id = await taskq.start_task(sha, task)
-
-    return task_id
-
-
-@app.put("/stg/stop/{task_id}", tags=["stop"])
-async def stop_stg(task_id: str, auth: bool = Depends(auth)):
-    taskq.revoke(task_id)
-    return JSONResponse(content={"message": f"stopped {task_id}"})
-
-
-async def stop_all():
-    # BUG
-    stgs = await list_stgs()
-    if stgs:
-        hashes = [s.get("sha", "") for s in stgs]
-        task_ids = await redis_client.mget(hashes)
-        taskq.revoke(task_ids)
-
-
-@app.put("/stg/stop/all", tags=["stop"])
-async def stop_all_strategies(auth: bool = Depends(auth)):
-    await stop_all()
-    return JSONResponse(content={"message": "stopped all"})
-
-
-@app.delete("/stg/{sha}", tags=["remove"])
-async def delete_stg(sha: str, auth: bool = Depends(auth)):
-    """Delete the stg with this id, also stop it if its running"""
-    await redis_client.hdel(STG_MAP, sha)
-    await stop_stg(sha)
-    return JSONResponse(content={"message": f"removed {sha}"})
-
-
-@app.delete("/stg/", tags=["remove"])
-async def delete_all_strategies(auth: bool = Depends(auth)):
-    """Delete all strategies, this also stops any running ones"""
-    await redis_client.delete(STG_MAP)
-    await stop_all()
-    return JSONResponse(content={"message": "removed all"})
+@app.put("/stg/stop/{sha}", tags=["stop"])
+async def stop_stg(sha: str, auth: bool = Depends(auth)):
+    # taskq.revoke(task_id)
+    await runner.cancel_task(sha)
+    return JSONResponse(content={"message": f"stopped task {sha}"})

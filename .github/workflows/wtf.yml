@@ -23,7 +23,7 @@ jobs:
 
     - name: Push image
       run: |
-        docker-compose push 
+        docker-compose push ${{ secrets.ACR_LOGIN_SERVER }}/blackops:latest
 
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
@@ -41,6 +41,4 @@ jobs:
         registry-password: ${{ secrets.REGISTRY_PASSWORD }}
         name: blackops
         location: 'west europe'
-        ports: '7846 8080 5555 8000' 
-
-
+        ports: '8000' 

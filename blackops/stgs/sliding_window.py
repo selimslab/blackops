@@ -3,13 +3,13 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, AsyncGenerator, List, Optional
 
+import blackops.util.push_events as event
 from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
-
-from .push import channel, event, pusher_client
+from blackops.util.push import channel, pusher_client
 
 
 @dataclass
@@ -158,8 +158,7 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_sell = mid + self.credit
 
         message = f"theo_buy {self.theo_buy}, theo_sell {self.theo_sell}"
-        logger.info(message)
-        pusher_client.trigger(channel, event, {"message": message})
+        # logger.info(message)
 
     @staticmethod
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
@@ -193,14 +192,18 @@ class SlidingWindowTrader(StrategyBase):
                 best_seller = self.get_best_seller(sales_orders)
                 if best_seller and best_seller < self.best_seller:
                     self.best_seller = best_seller
-                    logger.info(f"Best seller updated to {self.best_seller}")
+                    message = f"Best seller updated to {self.best_seller}"
+                    logger.info(message)
+                    pusher_client.trigger(channel, event.update, {"msg": message})
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
                 best_buyer = self.get_best_buyer(purchase_orders)
                 if best_buyer and best_buyer > self.best_buyer:
                     self.best_buyer = best_buyer
-                    logger.info(f"Best buyer updated to {self.best_buyer}")
+                    message = f"Best buyer updated to {self.best_buyer}"
+                    logger.info(message)
+                    pusher_client.trigger(channel, event.update, {"msg": message})
 
         except Exception as e:
             logger.info(e)
@@ -239,6 +242,10 @@ class SlidingWindowTrader(StrategyBase):
 
         self.orders.append(("buy", price, qty, symbol))
 
+        pusher_client.trigger(
+            channel, event.order, {"long": {"price": price, "qty": qty}}
+        )
+
         await self.follower_exchange.long(price, qty, symbol)
 
         await self.report()
@@ -250,6 +257,10 @@ class SlidingWindowTrader(StrategyBase):
         symbol = self.pair.bt_order_symbol
 
         self.orders.append(("sell", price, qty, symbol))
+
+        pusher_client.trigger(
+            channel, event.order, {"short": {"price": price, "qty": qty}}
+        )
 
         await self.follower_exchange.short(price, qty, symbol)
 
