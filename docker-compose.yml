@@ -1,17 +1,6 @@
 version: "3"
 services:
 
-  web:
-    image: conreg0.azurecr.io/blackops
-    build: .
-    container_name: web
-    ports:
-      - "7846:7846"
-      - "5566:5566"
-
-    environment:
-      REDIS_HOST: redis_server
-
   redis_server: # rename to redis_server
     image: "redis:alpine"
     container_name: redis
@@ -24,3 +13,13 @@ services:
       - $PWD/redis-data:/var/lib/redis
       - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
 
+  web:
+    image: conreg0.azurecr.io/blackops
+    build: .
+    container_name: web
+    ports:
+      - "7846:7846"
+      - "5566:5566"
+
+    environment:
+      REDIS_HOST: redis_server
