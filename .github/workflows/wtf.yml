@@ -23,7 +23,7 @@ jobs:
 
     - name: Push image
       run: |
-        docker push ${{ secrets.ACR_LOGIN_SERVER }}/blackops:latest
+        docker-compose push 
 
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
