@@ -1,3 +1,4 @@
+import collections
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -15,7 +16,7 @@ class BtcturkTestnet(BtcturkBase):
     fee_percent: Decimal = Decimal("0.0018")
 
     def __post_init__(self):
-        self.balances = field(default_factory=dict)
+        self.balances: collections.defaultdict = collections.defaultdict(Decimal)
         self.buy_with_fee = Decimal(1) + self.fee_percent
         self.sell_with_fee = Decimal(1) - self.fee_percent
 

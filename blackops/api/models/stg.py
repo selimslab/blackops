@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 from typing import Union
 
@@ -10,7 +11,7 @@ STG_MAP = "STG_MAP"
 
 NO_HASH = "NO_HASH"
 
-MAX_SPEND_ALLOWED = 50000
+MAX_SPEND_ALLOWED = 100000
 
 
 class ImmutableModel(BaseModel):
@@ -63,7 +64,7 @@ class SlidingWindow(StrategyBase):
 
     description: str = "slide down as you buy, slide up as you sell"
 
-    def is_valid(self):
+    def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
             raise ValueError(f"{self.base} is not a valid symbol")
 
@@ -79,19 +80,33 @@ class SlidingWindow(StrategyBase):
         if self.base not in BTCTURK_TRY_BASES:
             raise ValueError(f"{self.follower_exchange} has no {self.base} / TRY pair ")
 
+    def is_valid_exchanges(self):
         if self.leader_exchange != "binance":
             raise ValueError(f"{self.leader_exchange} is not supported")
 
         if self.follower_exchange != "btcturk":
             raise ValueError(f"{self.follower_exchange} is not supported")
 
+    def is_valid_mode(self):
+        if not self.testnet:
+            raise ValueError("real time not supported yet")
+
+        if self.testnet == self.use_real_money:
+            return Exception("test or real money ? this is very important")
+
+    def is_valid_params(self):
+
         if self.max_usable_quote_amount_y >= MAX_SPEND_ALLOWED:
             raise Exception(
                 f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
             )
 
-        if self.testnet == self.use_real_money:
-            return Exception("test or real money ? this is very important")
+    def is_valid(self):
+
+        self.is_valid_mode()
+        self.is_valid_exchanges()
+        self.is_valid_symbols()
+        self.is_valid_params()
 
 
 class SlidingWindowWithBridge(SlidingWindow):
@@ -99,11 +114,13 @@ class SlidingWindowWithBridge(SlidingWindow):
 
     bridge: str
 
-    def is_valid(self):
-        super().is_valid()
-
+    def is_valid_bridge(self):
         if self.bridge not in SUPPORTED_BRIDDGES:
             raise ValueError(f"{self.bridge} is not a supported bridge")
 
+    def is_valid(self):
+        super().is_valid()
+        self.is_valid_bridge()
 
-Strategy = Union[SlidingWindow, SlidingWindowWithBridge]
+
+Strategy = Union[SlidingWindowWithBridge, SlidingWindow]

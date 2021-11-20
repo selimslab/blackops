@@ -48,8 +48,6 @@ class SlidingWindowTrader(StrategyBase):
     theo_buy = Decimal("-inf")  # buy lower then theo_buy
     theo_sell = Decimal("inf")  # sell higher than theo_sell
 
-    balances: Dict[str, Decimal] = field(default_factory=dict)
-
     base_step_qty = Decimal(
         "inf"
     )  # initially we don't know how much base coin we can get for 100 try
@@ -276,6 +274,9 @@ class SlidingWindowTrader(StrategyBase):
 
     async def report(self):
         pnl = await self.calculate_pnl()
-        stats = {"pnl": pnl, "orders": self.orders}
+        stats = {"pnl": pnl}
+
+        # "orders": self.orders}
+        # TODO add orders to API
 
         logger.info(stats)

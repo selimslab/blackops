@@ -1,4 +1,4 @@
-from blackops.api.models.stg import SlidingWindowWithBridge, Strategy
+from blackops.api.models.stg import SlidingWindow, SlidingWindowWithBridge, Strategy
 from blackops.domain.models.asset import Asset, AssetPair
 from blackops.exchanges.binance.factory import binance_client_testnet
 from blackops.exchanges.btcturk.factory import (
@@ -9,6 +9,7 @@ from blackops.stgs.sliding_window import SlidingWindowTrader
 from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
 from blackops.streams.binance import create_book_stream_binance
 from blackops.streams.btcturk import create_book_stream_btcturk
+from blackops.util.logger import logger
 
 # from decimal import getcontext
 # getcontext().prec = 10
@@ -27,7 +28,7 @@ EXCHANGES = {
 SLIDING_WINDOW = "sliding_window"
 SLIDING_WINDOW_WITH_BRIDGE = "sliding_window_with_bridge"
 
-STRATEGY_CLASSES = {
+TRADER_CLASSES = {
     SLIDING_WINDOW: SlidingWindowTrader,
     SLIDING_WINDOW_WITH_BRIDGE: SlidingWindowWithBridgeTrader,
 }
@@ -114,16 +115,27 @@ FACTORIES = {
 }
 
 
-def create_trader_from_strategy(stg: Strategy):
+def create_trader_from_strategy(stg: dict):
+    logger.info(stg)
+    stg_type = stg.get("type")
+    if not stg_type:
+        raise ValueError(f"strategy type is not set: {stg}")
 
-    STRATEGY_CLASS = STRATEGY_CLASSES.get(stg.type)
+    if stg_type == SLIDING_WINDOW:
+        stg = SlidingWindow(**stg)  # type: ignore
+    elif stg_type == SLIDING_WINDOW_WITH_BRIDGE:
+        stg = SlidingWindowWithBridge(**stg)  # type: ignore
+    else:
+        raise ValueError(f"unknown strategy type: {stg_type}")
+
+    STRATEGY_CLASS = TRADER_CLASSES.get(stg_type)
 
     if not STRATEGY_CLASS:
-        raise ValueError(f"unknown strategy type: {stg.type}")
+        raise ValueError(f"unknown strategy type: {stg_type}")
 
-    factory_func = FACTORIES.get(stg.type)
+    factory_func = FACTORIES.get(stg_type)
     if not factory_func:
-        raise ValueError(f"unknown factory function for strategy type: {stg.type}")
+        raise ValueError(f"unknown factory function for strategy type: {stg_type}")
 
     trader = factory_func(stg)
     return trader

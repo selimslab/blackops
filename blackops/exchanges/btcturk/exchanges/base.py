@@ -38,17 +38,19 @@ class BtcturkBase(ExchangeBase):
             logger.info(e)
             return {}
 
-    async def get_balance_multiple(self, symbols: list) -> List[Decimal]:
+    @classmethod
+    async def get_balance_multiple(cls, symbols: list) -> List[Decimal]:
         try:
-            res_list = await self.api_client.get_account_balance(assets=symbols)
+            res_list = await cls.api_client.get_account_balance(assets=symbols)
             decimal_balances = [Decimal(r.get("balance")) for r in res_list]
             return decimal_balances
         except Exception as e:
             logger.info(f"could not read balances: {e}")
             return []
 
-    async def get_balance(self, symbol: str) -> Optional[Decimal]:
-        balance_list = await self.get_balance_multiple([symbol])
+    @classmethod
+    async def get_balance(cls, symbol: str) -> Optional[Decimal]:
+        balance_list = await cls.get_balance_multiple([symbol])
         if balance_list:
             return balance_list[0]
         return None
