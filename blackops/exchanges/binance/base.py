@@ -7,10 +7,10 @@ from blackops.util.logger import logger
 
 
 @dataclass
-class Binance(ExchangeBase):
-    name: str = "binance"
+class BinanceBase(ExchangeBase):
+    name: str
 
-    fee_percent = Decimal(0.009)
+    fee_percent: Decimal = Decimal(0.009)
 
     @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:

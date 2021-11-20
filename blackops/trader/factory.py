@@ -1,11 +1,12 @@
+from typing import Union
+
+import blackops.exchanges.binance.factory as binance_factory
+import blackops.exchanges.btcturk.factory as btcturk_factory
 from blackops.api.models.stg import SlidingWindow, SlidingWindowWithBridge, Strategy
 from blackops.domain.models.asset import Asset, AssetPair
 from blackops.domain.models.exchange import ExchangeBase
-from blackops.exchanges.binance.factory import binance_client_testnet
-from blackops.exchanges.btcturk.factory import (
-    btcturk_client_real,
-    create_testnet_client,
-)
+from blackops.exchanges.binance.base import BinanceBase
+from blackops.exchanges.btcturk.base import BtcturkBase
 from blackops.stgs.sliding_window import SlidingWindowTrader
 from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
 from blackops.streams.binance import create_book_stream_binance
@@ -22,8 +23,14 @@ BINANCE = "binance"
 BTCTURK = "btcturk"
 
 EXCHANGES = {
-    BINANCE: {TESTNET: binance_client_testnet, REAL: binance_client_testnet},
-    BTCTURK: {REAL: btcturk_client_real},
+    BINANCE: {
+        TESTNET: lambda: binance_factory.create_testnet_client,
+        REAL: lambda: binance_factory.create_real_client,
+    },
+    BTCTURK: {
+        TESTNET: lambda: btcturk_factory.create_testnet_client,
+        REAL: lambda: btcturk_factory.create_real_client,
+    },
 }
 
 SLIDING_WINDOW = "sliding_window"
@@ -35,27 +42,14 @@ TRADER_CLASSES = {
 }
 
 
-def create_leader_exchange_client(stg: Strategy):
-    network = TESTNET if stg.testnet else REAL
-    exchange = EXCHANGES.get(stg.leader_exchange, {}).get(network)
-    if not exchange:
-        raise ValueError(f"unknown leader exchange: {stg.leader_exchange}")
-    return exchange
+def create_exchange(ex_type: str, network: str) -> ExchangeBase:
+    factory = EXCHANGES.get(ex_type, {}).get(network)
+    if not factory:
+        raise ValueError(f"unknown exchange: {ex_type}")
+    return factory()
 
 
-def create_followers_exchange_client(stg: Strategy):
-    network = TESTNET if stg.testnet else REAL
-    if network == TESTNET:
-        exchange = create_testnet_client({stg.quote: stg.max_usable_quote_amount_y})
-    else:
-        exchange = EXCHANGES.get(stg.follower_exchange, {}).get(network)
-
-    if not exchange:
-        raise ValueError(f"unknown follower exchange: {stg.follower_exchange}")
-    return exchange
-
-
-def sliding_window_with_bridge_factory(stg: Strategy):
+async def sliding_window_with_bridge_factory(stg: Strategy):
     if not isinstance(stg, SlidingWindowWithBridge):
         raise ValueError(f"unknown strategy type: {stg.type}")
 
@@ -63,8 +57,15 @@ def sliding_window_with_bridge_factory(stg: Strategy):
     if not bridge:
         raise ValueError(f"bridge is not set for strategy: {stg}")
 
-    leader_exchange_client = create_leader_exchange_client(stg)
-    followers_exchange_client = create_followers_exchange_client(stg)
+    network = TESTNET if stg.testnet else REAL
+
+    follower_exchange: ExchangeBase = create_exchange(stg.follower_exchange, network)
+    leader_exchange: ExchangeBase = create_exchange(stg.leader_exchange, network)
+
+    if network == TESTNET:
+        await follower_exchange.api_client.add_balance(  # type:ignore
+            stg.quote, stg.max_usable_quote_amount_y
+        )
 
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
@@ -73,8 +74,8 @@ def sliding_window_with_bridge_factory(stg: Strategy):
 
     trader = SlidingWindowWithBridgeTrader(
         bridge=Asset(bridge),
-        leader_exchange=leader_exchange_client,
-        follower_exchange=followers_exchange_client,
+        leader_exchange=leader_exchange,
+        follower_exchange=follower_exchange,
         pair=pair,
         max_usable_quote_amount_y=stg.max_usable_quote_amount_y,
         step_count=stg.step_count,
@@ -88,16 +89,23 @@ def sliding_window_with_bridge_factory(stg: Strategy):
     return trader
 
 
-def sliding_window_factory(stg: Strategy):
+async def sliding_window_factory(stg: Strategy):
 
-    leader_exchange_client = create_leader_exchange_client(stg)
-    followers_exchange_client = create_followers_exchange_client(stg)
+    network = TESTNET if stg.testnet else REAL
+
+    follower_exchange: BtcturkBase = create_exchange(stg.follower_exchange, network)
+    leader_exchange: BinanceBase = create_exchange(stg.leader_exchange, network)
+
+    if network == TESTNET:
+        await follower_exchange.api_client.add_balance(
+            stg.quote, stg.max_usable_quote_amount_y
+        )  # type:ignore
 
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
     trader = SlidingWindowTrader(
-        leader_exchange=leader_exchange_client,
-        follower_exchange=followers_exchange_client,
+        leader_exchange=leader_exchange,
+        follower_exchange=follower_exchange,
         pair=pair,
         max_usable_quote_amount_y=stg.max_usable_quote_amount_y,
         step_count=stg.step_count,

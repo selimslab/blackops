@@ -255,7 +255,7 @@ class SlidingWindowTrader(StrategyBase):
                 [self.pair.base.symbol, self.pair.quote.symbol]
             )
             approximate_sales_gain: Decimal = (
-                base_balance * self.best_buyer * self.follower_exchange.sell_with_fee
+                base_balance * self.best_buyer * self.follower_exchange.api_client.sell_with_fee  # type: ignore
             )
             return quote_balance + approximate_sales_gain - self.start_quote_balance
         except Exception as e:

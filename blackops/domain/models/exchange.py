@@ -7,13 +7,6 @@ from typing import List, Optional
 @dataclass
 class ExchangeBase(ABC):
     name: str
-    fee_percent: Decimal = Decimal(0)
-    buy_with_fee: Decimal = Decimal(0)
-    sell_with_fee: Decimal = Decimal(0)
-
-    def __post_init__(self):
-        self.buy_with_fee = Decimal(1 + self.fee_percent)
-        self.sell_with_fee = Decimal(1 - self.fee_percent)
 
     async def get_balance(self, symbol: str) -> Optional[Decimal]:
         raise NotImplementedError

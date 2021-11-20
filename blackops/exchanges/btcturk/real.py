@@ -1,6 +1,6 @@
 import os
 
-from btcturk_api.client import Client
+from btcturk_api.client import Client as RealApiClient
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,4 +9,4 @@ apiKey = os.getenv("BTCTURK_PUBLIC_KEY")
 apiSecret = os.getenv("BTCTURK_PRIVATE_KEY")
 
 # singleton
-btcturk_api_client_real = Client(api_key=apiKey, api_secret=apiSecret)
+btcturk_api_client_real = RealApiClient(api_key=apiKey, api_secret=apiSecret)
