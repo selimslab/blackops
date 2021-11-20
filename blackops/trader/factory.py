@@ -115,18 +115,20 @@ FACTORIES = {
 }
 
 
-def create_trader_from_strategy(stg: dict):
-    logger.info(stg)
-    stg_type = stg.get("type")
+def create_trader_from_strategy(stg_dict: dict):
+    logger.info(stg_dict)
+    stg_type = stg_dict.get("type")
     if not stg_type:
-        raise ValueError(f"strategy type is not set: {stg}")
+        raise ValueError(f"strategy type is not set: {stg_dict}")
 
     if stg_type == SLIDING_WINDOW:
-        stg = SlidingWindow(**stg)  # type: ignore
+        stg = SlidingWindow(**stg_dict)  # type: ignore
     elif stg_type == SLIDING_WINDOW_WITH_BRIDGE:
-        stg = SlidingWindowWithBridge(**stg)  # type: ignore
+        stg = SlidingWindowWithBridge(**stg_dict)  # type: ignore
     else:
         raise ValueError(f"unknown strategy type: {stg_type}")
+
+    stg.is_valid()
 
     STRATEGY_CLASS = TRADER_CLASSES.get(stg_type)
 

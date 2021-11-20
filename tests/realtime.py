@@ -9,27 +9,27 @@ import cProfile
 from pstats import Stats
 
 
-async def test_sliding_window():
+async def test_sliding_window_with_bridge():
     sw = SlidingWindowWithBridge(
-        base='BTC',
+        base='UMA',
         quote='TRY',
         bridge='USDT',
         max_usable_quote_amount_y=5000,
         step_count=20,
-        step_constant_k=0.001,
+        step_constant_k=0.2,
         credit=0.75,
     )
 
-    trader = create_trader_from_strategy(sw)
+    trader = create_trader_from_strategy(dict(sw))
 
     await asyncio.gather(trader.run())
 
 
-def profile():
+def profile(func):
     pr = cProfile.Profile()
     pr.enable()
 
-    asyncio.run(test_sliding_window())
+    func()
 
     pr.disable()
     stats = Stats(pr)
@@ -37,4 +37,4 @@ def profile():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_sliding_window())
+    asyncio.run(test_sliding_window_with_bridge())
