@@ -14,13 +14,16 @@ async def test_sliding_window_with_bridge():
         base='UMA',
         quote='TRY',
         bridge='USDT',
-        max_usable_quote_amount_y=5000,
+        max_usable_quote_amount_y=10000,
         step_count=20,
         step_constant_k=0.2,
         credit=0.75,
     )
 
+
     trader = create_trader_from_strategy(dict(sw))
+
+    print(trader)
 
     await asyncio.gather(trader.run())
 

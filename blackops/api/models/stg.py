@@ -110,7 +110,9 @@ class SlidingWindow(StrategyBase):
 
 
 class SlidingWindowWithBridge(SlidingWindow):
-    type = Field("sliding_window_with_bridge", const=True)
+    type = Field(
+        "sliding_window_with_bridge", const=True, example="sliding_window_with_bridge"
+    )
 
     bridge: str
 

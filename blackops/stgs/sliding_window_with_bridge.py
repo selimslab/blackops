@@ -19,24 +19,11 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
     bridge_quote = Decimal(1)
 
+    name: str = "Sliding Window With Bridge"
+
     async def run(self):
         logger.info(f"Starting {self.name}")
-        logger.info(
-            (
-                self.pair,
-                self.bridge,
-                self.max_usable_quote_amount_y,
-                self.step_count,
-                self.credit,
-                self.step_constant_k,
-            )
-        )
-        logger.info(
-            (
-                self.leader_exchange,
-                self.follower_exchange,
-            )
-        )
+        logger.info(self)
         await self.set_step_info()
         await self.run_streams()
 

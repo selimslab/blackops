@@ -5,10 +5,9 @@ from decimal import Decimal
 @dataclass
 class Asset:
     symbol: str
-    balance: Decimal = Decimal(0)
 
     def __str__(self):
-        return f"{self.symbol} {self.balance}"
+        return f"{self.symbol}"
 
 
 @dataclass
@@ -21,4 +20,4 @@ class AssetPair:
         self.bt_order_symbol = self.base.symbol + "_" + self.quote.symbol
 
     def __str__(self):
-        return f"{self.base}, {self.quote}"
+        return f"{self.base}{self.quote}"

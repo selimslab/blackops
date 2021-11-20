@@ -1,5 +1,6 @@
 from blackops.api.models.stg import SlidingWindow, SlidingWindowWithBridge, Strategy
 from blackops.domain.models.asset import Asset, AssetPair
+from blackops.domain.models.exchange import ExchangeBase
 from blackops.exchanges.binance.factory import binance_client_testnet
 from blackops.exchanges.btcturk.factory import (
     btcturk_client_real,
@@ -116,7 +117,6 @@ FACTORIES = {
 
 
 def create_trader_from_strategy(stg_dict: dict):
-    logger.info(stg_dict)
     stg_type = stg_dict.get("type")
     if not stg_type:
         raise ValueError(f"strategy type is not set: {stg_dict}")
