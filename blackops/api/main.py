@@ -1,20 +1,17 @@
-import asyncio
 import hashlib
 import secrets
 from typing import OrderedDict
 
 import simplejson as json
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
-from fastapi.param_functions import File
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from pydantic.errors import DataclassTypeError
 
-import blackops.taskq.tasks as taskq
 from blackops.api.models.stg import STG_MAP, Strategy
-from blackops.trader.factory import create_trader_from_strategy
+
+from .task_ctx import context
 
 app = FastAPI()
 security = HTTPBasic()
@@ -50,39 +47,9 @@ def str_to_json(s: str) -> dict:
     return json.loads(s, object_pairs_hook=OrderedDict)
 
 
-class TaskContext:
-    def __init__(self):
-        self.tasks = {}
-
-    async def start_task(self, stg: dict):
-        sha = stg.get("sha")
-        if sha in self.tasks:
-            raise Exception("Task already running")
-        trader = await create_trader_from_strategy(stg)
-        task = asyncio.create_task(trader.run())
-        self.tasks[sha] = task
-        await task
-
-    async def cancel_task(self, sha):
-        if sha in self.tasks:
-            self.tasks[sha].cancel()
-            del self.tasks[sha]
-        else:
-            raise Exception("Task not found")
-
-    async def cancel_all(self):
-        async for sha in self.tasks:
-            await self.cancel_task(sha)
-
-
-context = TaskContext()
-
-
-@app.get(
-    "/",
-)
+@app.get("/")
 async def index():
-    return JSONResponse(content={"ping": "pong"})
+    return FileResponse("static/index.html")
 
 
 @app.put(
