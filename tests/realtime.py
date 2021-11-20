@@ -11,7 +11,7 @@ from pstats import Stats
 
 async def test_sliding_window_with_bridge():
     sw = SlidingWindowWithBridge(
-        base='UMA',
+        base='MANA',
         quote='TRY',
         bridge='USDT',
         max_usable_quote_amount_y=10000,

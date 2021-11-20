@@ -9,6 +9,8 @@ from blackops.domain.models.stg import StrategyBase
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
 
+from .push import channel, event, pusher_client
+
 
 @dataclass
 class SlidingWindowTrader(StrategyBase):
@@ -155,7 +157,9 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
-        logger.info(f"theo_buy {self.theo_buy}, theo_sell {self.theo_sell}")
+        message = f"theo_buy {self.theo_buy}, theo_sell {self.theo_sell}"
+        logger.info(message)
+        pusher_client.trigger(channel, event, {"message": message})
 
     @staticmethod
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:

@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator, Optional
 from blackops.domain.models.asset import Asset
 from blackops.util.logger import logger
 
+from .push import channel, event, pusher_client
 from .sliding_window import SlidingWindowTrader
 
 
@@ -22,6 +23,9 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     name: str = "Sliding Window With Bridge"
 
     async def run(self):
+        message = f"Starting {self.name}"
+        pusher_client.trigger(channel, event, {"message": message})
+
         logger.info(f"Starting {self.name}")
         logger.info(self)
         await self.set_step_info()
@@ -51,4 +55,6 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    logger.info(f"New bridge quote: {self.bridge_quote}")
+                    message = f"New bridge quote: {self.bridge_quote}"
+                    logger.info(message)
+                    pusher_client.trigger("finance", "update", {"message": message})

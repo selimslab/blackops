@@ -4,8 +4,10 @@ from typing import List, OrderedDict, Union
 
 import simplejson as json
 from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.param_functions import File
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from pydantic.errors import DataclassTypeError
 
@@ -15,6 +17,8 @@ from blackops.taskq.redis import redis_client
 
 app = FastAPI()
 security = HTTPBasic()
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
@@ -43,11 +47,6 @@ def dict_to_hash(d: dict) -> str:
 
 def str_to_json(s: str) -> dict:
     return json.loads(s, object_pairs_hook=OrderedDict)
-
-
-@app.get("/")
-async def welcome():
-    return {"ping": "pong"}
 
 
 # REST
