@@ -37,7 +37,7 @@ def greet(name: str) -> str:
 def run_stg(stg: dict):
     trader = create_trader_from_strategy(stg)
     if trader:
-        asyncio.run(trader.run())
+        asyncio.run(trader.run())  # type: ignore
 
 
 def get_status(task_id: str) -> str:

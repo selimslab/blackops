@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, List, Optional
 
 from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
@@ -45,15 +45,15 @@ class SlidingWindowTrader(StrategyBase):
 
     name: str = "sliding_window"
 
-    theo_buy = Decimal("-inf")  # buy lower then theo_buy
+    theo_buy = Decimal("0")  # buy lower then theo_buy
     theo_sell = Decimal("inf")  # sell higher than theo_sell
 
     base_step_qty = Decimal(
-        "inf"
+        "-inf"
     )  # initially we don't know how much base coin we can get for 100 try
 
-    best_seller = Decimal("inf")
-    best_buyer = Decimal("-inf")
+    best_seller = Decimal("0")
+    best_buyer = Decimal("0")
 
     orders: list = field(default_factory=list)
 
@@ -112,21 +112,6 @@ class SlidingWindowTrader(StrategyBase):
             parsed_book = self.follower_exchange.parse_book(book)
             self.update_best_prices(parsed_book)
 
-    # DECIDE
-
-    async def should_transact(self):
-        if self.should_long():
-            await self.long()
-
-        if self.should_short():
-            await self.short()
-
-    def should_long(self):
-        return self.best_seller <= self.theo_buy
-
-    def should_short(self):
-        return self.best_buyer >= self.theo_sell
-
     def get_current_step(self) -> Decimal:
         # for example 20
         # 20-20 = 0
@@ -170,6 +155,8 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
+        logger.info(f"theo_buy {self.theo_buy}, theo_sell {self.theo_sell}")
+
     @staticmethod
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
         #  best_buyer is the best price we can sell at
@@ -177,7 +164,7 @@ class SlidingWindowTrader(StrategyBase):
             return None
 
         sorted_purchase_orders = sorted(
-            purchase_orders, key=lambda d: float(d["P"]), reverse=True
+            purchase_orders, key=lambda d: Decimal(d["P"]), reverse=True
         )
 
         best_buyer = sorted_purchase_orders[0].get("P", "")
@@ -189,7 +176,7 @@ class SlidingWindowTrader(StrategyBase):
         if not sales_orders:
             return None
 
-        sorted_sales_orders = sorted(sales_orders, key=lambda d: float(d["P"]))
+        sorted_sales_orders = sorted(sales_orders, key=lambda d: Decimal(d["P"]))
         best_seller = sorted_sales_orders[0].get("P", "")
         return Decimal(best_seller)
 
@@ -214,17 +201,35 @@ class SlidingWindowTrader(StrategyBase):
         except Exception as e:
             logger.info(e)
 
+    async def should_transact(self):
+        if self.should_long():
+            await self.long()
+
+        if self.should_short():
+            await self.short()
+
+    def should_long(self):
+        return self.best_seller <= self.theo_buy
+
+    def should_short(self):
+        return self.best_buyer >= self.theo_sell
+
     async def long(self):
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
-        cost = self.best_seller * self.follower_exchange.buy_with_fee
-        base_qty = self.quote_step_qty / cost
 
-        self.base_step_qty = min(base_qty, self.base_step_qty)
+        # TODO: should we consider exchange fees?
+        price = self.best_seller
+        if not price:
+            return
 
-        self.remaining_usable_quote_balance -= cost
+        base_qty = self.quote_step_qty / price
 
-        price = float(self.best_seller)
+        self.base_step_qty = max(base_qty, self.base_step_qty)
+
+        self.remaining_usable_quote_balance -= self.quote_step_qty
+
+        price = float(price)
         qty = float(base_qty)  #  we buy base
         symbol = self.pair.bt_order_symbol
 

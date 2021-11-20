@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.util.logger import logger

@@ -17,7 +17,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
     follower_book_stream: AsyncGenerator
 
-    bridge_quote = Decimal(1)
+    bridge_quote: Optional[Decimal] = None
 
     name: str = "Sliding Window With Bridge"
 
@@ -29,7 +29,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
         mid = super().get_mid(book)
-        if mid:
+        if mid and self.bridge_quote:
             return mid * self.bridge_quote
         return None
 
@@ -49,5 +49,6 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         async for book in self.leader_bridge_quote_stream:
             if book:
                 new_quote = super().get_mid(book)
-                if new_quote:
+                if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
+                    logger.info(f"New bridge quote: {self.bridge_quote}")

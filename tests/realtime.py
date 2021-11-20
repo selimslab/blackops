@@ -21,7 +21,7 @@ async def test_sliding_window_with_bridge():
     )
 
 
-    trader = create_trader_from_strategy(dict(sw))
+    trader = await create_trader_from_strategy(dict(sw))
 
     print(trader)
 

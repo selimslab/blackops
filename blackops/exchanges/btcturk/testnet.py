@@ -26,10 +26,10 @@ class BtcturkTestnetApiClient:
     async def get_account_balance(self, assets: List[str]) -> List[dict]:
         return [{"balance": self.balances[symbol]} for symbol in assets]
 
-    def add_balance(self, symbol: str, val: Decimal):
+    async def add_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] += val
 
-    def subtract_balance(self, symbol: str, val: Decimal):
+    async def subtract_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] -= val
 
     async def submit_limit_order(
@@ -38,12 +38,12 @@ class BtcturkTestnetApiClient:
         (base, quote) = pair_symbol.split("_")
 
         if order_type == "buy":
-            self.add_balance(base, Decimal(quantity))
-            self.subtract_balance(
+            await self.add_balance(base, Decimal(quantity))
+            await self.subtract_balance(
                 quote, Decimal(quantity) * Decimal(price) * self.buy_with_fee
             )
         elif order_type == "sell":
-            self.subtract_balance(base, Decimal(quantity))
-            self.add_balance(
+            await self.subtract_balance(base, Decimal(quantity))
+            await self.add_balance(
                 quote, Decimal(quantity) * Decimal(price) * self.sell_with_fee
             )
