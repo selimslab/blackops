@@ -10,7 +10,7 @@ services:
       - "5566:5566"
 
     environment:
-      REDIS_HOST: redis://redis_server
+      REDIS_HOST: redis_server
 
   redis_server: # rename to redis_server
     image: "redis:alpine"
