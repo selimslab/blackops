@@ -20,7 +20,7 @@ RUN /root/.local/bin/poetry install --no-dev
 COPY . /blackops/
 WORKDIR /blackops
 
-EXPOSE 8000
+EXPOSE 7846
 
 # ENTRYPOINT [ "bash","/blackops/docker-entrypoint.sh" ]
-CMD ["python", "-m", "uvicorn", "blackops.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["python", "-m", "uvicorn", "blackops.api.main:app", "--host", "0.0.0.0", "--port", "7846", "--workers", "1"]

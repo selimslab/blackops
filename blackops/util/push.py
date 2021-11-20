@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import pusher
 
 pusher_client = pusher.Pusher(

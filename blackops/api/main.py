@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 import secrets
-from typing import List, OrderedDict, Union
+from typing import OrderedDict
 
 import simplejson as json
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
@@ -19,7 +19,7 @@ from blackops.trader.factory import create_trader_from_strategy
 app = FastAPI()
 security = HTTPBasic()
 
-app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+app.mount("/logs", StaticFiles(directory="static", html=True), name="static")
 
 
 def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
@@ -70,17 +70,41 @@ class TaskContext:
         else:
             raise Exception("Task not found")
 
+    async def cancel_all(self):
+        async for sha in self.tasks:
+            await self.cancel_task(sha)
+
 
 context = TaskContext()
 
 
+@app.get(
+    "/",
+)
+async def index():
+    return JSONResponse(content={"ping": "pong"})
+
+
 @app.put(
-    "/stg/run/",
+    "/run/",
     tags=["run"],
 )
 async def run_stg(
     stg: Strategy, background_tasks: BackgroundTasks, auth: bool = Depends(auth)
 ):
+    """
+    This will run the strategy with your parameters
+
+    1. Click `try it out` button to open parameter editor.
+
+    2. Edit your params, please do not delete commas or quotes, yet don't worry, if its not valid, it will warn you when you click execute
+
+    3. Click on `execute` button to validate your params and start the strategy.
+
+    4. If ok, you will see a task id in the response.
+
+    5. View logs on `/logs` url
+    """
     # stg = await get_stg(sha)
 
     stg.is_valid()
@@ -99,8 +123,19 @@ async def run_stg(
     return JSONResponse(content={"ok": f"task started with id {sha}"})
 
 
-@app.put("/stg/stop/{sha}", tags=["stop"])
+@app.put("/stop/{sha}", tags=["stop"])
 async def stop_stg(sha: str, auth: bool = Depends(auth)):
-    # taskq.revoke(task_id)
+    """
+    Copy and paste the sha from the response of run_stg to stop the task.
+    """
     await context.cancel_task(sha)
     return JSONResponse(content={"message": f"stopped task {sha}"})
+
+
+@app.put("/stop/all", tags=["stop"])
+async def stop_stg_all(auth: bool = Depends(auth)):
+    """
+    Stop all running tasks
+    """
+    await context.cancel_all()
+    return JSONResponse(content={"message": f"stopped all"})
