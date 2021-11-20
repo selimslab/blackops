@@ -53,7 +53,7 @@
       cluster: "eu",
     });
 
-    var channel = pusher.subscribe("finance");
+    var channel = pusher.subscribe("ops");
     channel.bind("update", function (data) {
       app.messages.push(JSON.stringify(data));
     });

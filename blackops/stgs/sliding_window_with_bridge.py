@@ -24,8 +24,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     name: str = "Sliding Window With Bridge"
 
     async def run(self):
-        message = f"Starting {self.name}"
-        pusher_client.trigger(channel, event, {"message": message})
+        pusher_client.trigger(channel, event.update, {"start": str(self.name)})
 
         logger.info(f"Starting {self.name}")
         logger.info(self)
@@ -56,8 +55,6 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    message = f"bridge: {self.bridge_quote}"
+                    message = {"bridge": str(self.bridge_quote)}
                     logger.info(message)
-                    pusher_client.trigger(
-                        channel, event.update, {"bridge": self.bridge_quote}
-                    )
+                    pusher_client.trigger(channel, event.update, message)

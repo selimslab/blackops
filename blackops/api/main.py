@@ -50,7 +50,7 @@ def str_to_json(s: str) -> dict:
     return json.loads(s, object_pairs_hook=OrderedDict)
 
 
-class BackgroundRunner:
+class TaskContext:
     def __init__(self):
         self.tasks = {}
 
@@ -71,7 +71,7 @@ class BackgroundRunner:
             raise Exception("Task not found")
 
 
-runner = BackgroundRunner()
+context = TaskContext()
 
 
 @app.put(
@@ -88,9 +88,13 @@ async def run_stg(
     stg_dict = dict(stg)
 
     sha = dict_to_hash(stg_dict)
+
+    if sha in context.tasks:
+        raise Exception("Task already running o")
+
     stg_dict["sha"] = sha
 
-    background_tasks.add_task(runner.start_task, stg_dict)
+    background_tasks.add_task(context.start_task, stg_dict)
 
     return JSONResponse(content={"ok": f"task started with id {sha}"})
 
@@ -98,5 +102,5 @@ async def run_stg(
 @app.put("/stg/stop/{sha}", tags=["stop"])
 async def stop_stg(sha: str, auth: bool = Depends(auth)):
     # taskq.revoke(task_id)
-    await runner.cancel_task(sha)
+    await context.cancel_task(sha)
     return JSONResponse(content={"message": f"stopped task {sha}"})

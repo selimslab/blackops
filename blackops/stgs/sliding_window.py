@@ -47,15 +47,15 @@ class SlidingWindowTrader(StrategyBase):
 
     name: str = "sliding_window"
 
-    theo_buy = Decimal("0")  # buy lower then theo_buy
+    theo_buy = Decimal("-inf")  # buy lower then theo_buy
     theo_sell = Decimal("inf")  # sell higher than theo_sell
 
     base_step_qty = Decimal(
         "-inf"
     )  # initially we don't know how much base coin we can get for 100 try
 
-    best_seller = Decimal("0")
-    best_buyer = Decimal("0")
+    best_seller = Decimal("inf")
+    best_buyer = Decimal("-inf")
 
     orders: list = field(default_factory=list)
 
@@ -157,9 +157,6 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
-        message = f"theo_buy {self.theo_buy}, theo_sell {self.theo_sell}"
-        # logger.info(message)
-
     @staticmethod
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
         #  best_buyer is the best price we can sell at
@@ -170,8 +167,10 @@ class SlidingWindowTrader(StrategyBase):
             purchase_orders, key=lambda d: Decimal(d["P"]), reverse=True
         )
 
-        best_buyer = sorted_purchase_orders[0].get("P", "")
-        return Decimal(best_buyer)
+        best_buyer = sorted_purchase_orders[0].get("P")
+        if best_buyer:
+            return Decimal(best_buyer)
+        return None
 
     @staticmethod
     def get_best_seller(sales_orders: List[dict]) -> Optional[Decimal]:
@@ -180,30 +179,41 @@ class SlidingWindowTrader(StrategyBase):
             return None
 
         sorted_sales_orders = sorted(sales_orders, key=lambda d: Decimal(d["P"]))
-        best_seller = sorted_sales_orders[0].get("P", "")
-        return Decimal(best_seller)
+        best_seller = sorted_sales_orders[0].get("P")
+        if best_seller:
+            return Decimal(best_seller)
+        return None
 
     def update_best_prices(self, book: dict):
         if not book:
             return
         try:
+            logger.info(book)
             sales_orders = self.follower_exchange.get_sales_orders(book)
             if sales_orders:
                 best_seller = self.get_best_seller(sales_orders)
-                if best_seller and best_seller < self.best_seller:
-                    self.best_seller = best_seller
-                    message = f"Best seller updated to {self.best_seller}"
-                    logger.info(message)
-                    pusher_client.trigger(channel, event.update, {"msg": message})
+                if best_seller:
+                    message = {
+                        "best seller": str(self.best_seller),
+                        "theo buy": str(self.theo_buy),
+                    }
+                    pusher_client.trigger(channel, event.update, message)
+                    if best_seller < self.best_seller:
+                        self.best_seller = best_seller
+                        logger.info(message)
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
                 best_buyer = self.get_best_buyer(purchase_orders)
-                if best_buyer and best_buyer > self.best_buyer:
-                    self.best_buyer = best_buyer
-                    message = f"Best buyer updated to {self.best_buyer}"
-                    logger.info(message)
-                    pusher_client.trigger(channel, event.update, {"msg": message})
+                if best_buyer:
+                    message = {
+                        "best buyer": str(self.best_buyer),
+                        "theo sell": str(self.theo_sell),
+                    }
+                    pusher_client.trigger(channel, event.update, message)
+                    if best_buyer > self.best_buyer:
+                        self.best_buyer = best_buyer
+                        logger.info(message)
 
         except Exception as e:
             logger.info(e)
@@ -240,27 +250,41 @@ class SlidingWindowTrader(StrategyBase):
         qty = float(base_qty)  #  we buy base
         symbol = self.pair.bt_order_symbol
 
-        self.orders.append(("buy", price, qty, symbol))
-
-        pusher_client.trigger(
-            channel, event.order, {"long": {"price": price, "qty": qty}}
-        )
-
         await self.follower_exchange.long(price, qty, symbol)
+
+        message = {
+            "long": {
+                "price": str(price),
+                "qty": str(qty),
+                "theo_buy": str(self.theo_buy),
+                "symbol": symbol,
+            }
+        }
+
+        self.broadcast_order(message)
 
         await self.report()
 
-    async def short(self):
+    def broadcast_order(self, message):
+        pusher_client.trigger(channel, event.order, message)
+        self.orders.append(message)
+        logger.info(message)
 
+    async def short(self):
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
         symbol = self.pair.bt_order_symbol
 
-        self.orders.append(("sell", price, qty, symbol))
+        message = {
+            "short": {
+                "price": str(price),
+                "qty": str(qty),
+                "theo_buy": str(self.theo_sell),
+                "symbol": symbol,
+            }
+        }
 
-        pusher_client.trigger(
-            channel, event.order, {"short": {"price": price, "qty": qty}}
-        )
+        self.broadcast_order(message)
 
         await self.follower_exchange.short(price, qty, symbol)
 
