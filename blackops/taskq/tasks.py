@@ -12,8 +12,8 @@ from blackops.util.logger import logger
 
 app = Celery(
     "celery-leader",
-    broker=redis_url + "/0",
-    backend=redis_url + "/0",
+    broker=redis_url,
+    backend=redis_url,
     include=["blackops.taskq.tasks"],
 )
 
