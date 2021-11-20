@@ -13,7 +13,7 @@ from blackops.api.models.stg import STG_MAP, Strategy
 
 from .task_ctx import context
 
-app = FastAPI()
+app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 security = HTTPBasic()
 
 app.mount("/logs", StaticFiles(directory="static", html=True), name="static")
