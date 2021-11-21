@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 from typing import Any, Callable, List, Union
 
@@ -12,9 +13,9 @@ from blackops.util.logger import logger
 
 app = Celery(
     "celery-leader",
+    include=["blackops.taskq.tasks"],
     broker=redis_url,
     backend=redis_url,
-    include=["blackops.taskq.tasks"],
 )
 
 
@@ -29,15 +30,32 @@ def get_result(task_id: str) -> Any:
 @app.task
 def greet(name: str) -> str:
     time.sleep(5)
-    # raise Exception("Error")
     return "hello " + name
 
 
 @app.task
-def run_stg(stg: dict):
-    trader = create_trader_from_strategy(stg)
+async def testrun():
+    i = 0
+    while True:
+        asyncio.sleep(1)
+        print(i)
+        i += 1
+
+
+async def run_stg_async(stg: dict):
+    print(stg)
+    trader = await create_trader_from_strategy(stg)
     if trader:
-        asyncio.run(trader.run())  # type: ignore
+        # asyncio.run(trader.run())
+        asyncio.create_task(trader.run())
+
+        return "trader running.."
+    raise ValueError("Trader not created")
+
+
+@app.task(serializer="json")
+def run_stg(stg: dict):
+    asyncio.run(run_stg_async(stg))
 
 
 def get_status(task_id: str) -> str:
@@ -63,6 +81,7 @@ async def start_task(sha: str, start_task_func: Callable) -> str:
 
     started_task = start_task_func()
 
+    print("started_task", started_task, type(started_task), type(started_task.id))
     # add task id to redis
     await redis_client.set(sha, started_task.id)
     return started_task.id

@@ -39,4 +39,4 @@ class TaskContext:
             return trader.get_orders()
 
 
-context = TaskContext()
+task_context = TaskContext()
