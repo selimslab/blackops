@@ -27,20 +27,21 @@
   <div id="app">
     <div class="columns">
       <div class="column">
-        <h1 class="is-family-monospace is-bold is-size-4">Logs</h1>
+        <h1 class="is-size-6">Logs</h1>
 
-        <p class="has-text-primary-light">You will see logs when you run a strategy</p>
+        <p class="has-text-primary-light">You will see logs when you <a href="/docs" target="_blank" class="has-text-success">run a strategy</a></p>
 
-        <a href="/docs" target="_blank" class="has-text-success">Click to enter strategy params and run it</a>
-
+        <br>
+        <br>
 
         <ul>
           <li v-for="message in messages">{{message}}</li>
         </ul>
+        
       </div>
 
-      <div class="column">
-        <h1 class="is-family-monospace is-bold is-size-4">Orders</h1>
+      <!-- <div class="column">
+        <h1 class="is-size-6">Orders</h1>
 
         <p class="has-text-primary-light">You will see orders here</p>
 
@@ -48,7 +49,9 @@
           <li v-for="order in orders">{{order}}</li>
         </ul>
       </div>
-    </div>
+    </div> -->
+
+
   </div>
 
   </div>
@@ -64,6 +67,7 @@
     });
 
     var channel = pusher.subscribe("ops");
+
     channel.bind("update", function (data) {
       app.messages.push(JSON.stringify(data));
     });
@@ -71,8 +75,6 @@
     channel.bind("order", function (data) {
       app.orders.push(JSON.stringify(data));
     });
-
-    window.scrollTo(0, document.body.scrollHeight);
 
     // Vue application
     const app = new Vue({

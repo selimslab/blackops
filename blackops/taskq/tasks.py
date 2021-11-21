@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import time
 from typing import Any, Callable, List, Union
 
@@ -6,7 +7,7 @@ from celery import Celery
 from celery.states import PENDING, SUCCESS, state
 
 from blackops.api.models.stg import Strategy
-from blackops.taskq.redis import redis_client, redis_url
+from blackops.taskq.redis import redis_url
 from blackops.trader.factory import create_trader_from_strategy
 from blackops.util.logger import logger
 
@@ -42,13 +43,14 @@ async def testrun():
 
 
 async def run_stg_async(stg: dict):
-    print(stg)
     trader = await create_trader_from_strategy(stg)
+    print(trader)
     if trader:
         # asyncio.run(trader.run())
-        asyncio.create_task(trader.run())
+        await asyncio.create_task(trader.run())
 
         return "trader running.."
+
     raise ValueError("Trader not created")
 
 
@@ -80,10 +82,27 @@ async def start_task(sha: str, start_task_func: Callable) -> str:
 
     started_task = start_task_func()
 
-    print("started_task", started_task, type(started_task), type(started_task.id))
-    # add task id to redis
-    await redis_client.set(sha, started_task.id)
     return started_task.id
+
+
+def flatten(ll):
+    return list(itertools.chain.from_iterable(ll))
+
+
+def revoke_all():
+    # Inspect all nodes.
+    i = app.control.inspect()
+
+    # Show the items that have an ETA or are scheduled for later processing
+
+    task_lists = [i.scheduled().values(), i.reserved().values(), i.active().values()]
+    task_lists = flatten(task_lists)
+
+    ids = [task.get("id") for tl in task_lists for task in tl]
+    ids = [i for i in ids if i]
+
+    for i in ids:
+        revoke(i)
 
 
 if __name__ == "__main__":

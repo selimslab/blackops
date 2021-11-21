@@ -14,6 +14,13 @@ from blackops.util.push import channel, pusher_client
 
 
 @dataclass
+class Stats:
+    books_seen: int = 0
+    orders_given: int = 0
+    pnl: Decimal = Decimal(0)
+
+
+@dataclass
 class SlidingWindowTrader(StrategyBase):
     """
     Move down the window as you buy,
@@ -260,12 +267,11 @@ class SlidingWindowTrader(StrategyBase):
 
         message = {
             "time": str(datetime.now().time()),
-            "long": {
-                "price": str(price),
-                "qty": str(qty),
-                "theo_buy": str(self.theo_buy),
-                "symbol": symbol,
-            },
+            "type": "long",
+            "price": str(price),
+            "qty": str(qty),
+            "theo_buy": str(self.theo_buy),
+            "symbol": symbol,
         }
 
         self.broadcast_order(message)
@@ -273,7 +279,7 @@ class SlidingWindowTrader(StrategyBase):
         await self.report()
 
     def broadcast_order(self, message):
-        pusher_client.trigger(channel, event.update, message)
+        # pusher_client.trigger(channel, event.update, message)
         pusher_client.trigger(channel, event.order, message)
         self.orders.append(message)
         logger.info(message)
@@ -288,12 +294,11 @@ class SlidingWindowTrader(StrategyBase):
 
         message = {
             "time": str(datetime.now().time()),
-            "short": {
-                "price": str(price),
-                "qty": str(qty),
-                "theo_buy": str(self.theo_sell),
-                "symbol": symbol,
-            },
+            "type": "short",
+            "price": str(price),
+            "qty": str(qty),
+            "theo_buy": str(self.theo_sell),
+            "symbol": symbol,
         }
 
         self.broadcast_order(message)
@@ -320,7 +325,8 @@ class SlidingWindowTrader(StrategyBase):
 
     async def report(self):
         pnl = await self.calculate_pnl()
-        stats = {"pnl": pnl}
+        stats = {"pnl": str(pnl)}
+        pusher_client.trigger(channel, event.update, stats)
 
         # "orders": self.orders}
         # TODO add orders to API

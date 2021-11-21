@@ -6,10 +6,6 @@ from pydantic import BaseModel, Field
 
 from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 
-STG_MAP = "STG_MAP"
-
-NO_HASH = "NO_HASH"
-
 MAX_SPEND_ALLOWED = 100000
 
 

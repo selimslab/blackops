@@ -28,6 +28,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         message = {"start": str(self)}
         pusher_client.trigger(channel, event.update, message)
         pusher_client.trigger(channel, event.order, {"ping": "pong"})
+        pusher_client.trigger(channel, event.update, {"ping": "pong"})
 
         logger.info(message)
         logger.info(self)
