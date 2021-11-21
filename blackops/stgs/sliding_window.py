@@ -194,7 +194,7 @@ class SlidingWindowTrader(StrategyBase):
                 if best_seller:
                     message = {
                         "best seller": str(self.best_seller),
-                        "theo buy": str(self.theo_buy),
+                        "theo buy": str(self.theo_buy.normalize()),
                     }
                     pusher_client.trigger(channel, event.update, message)
                     if best_seller < self.best_seller:
@@ -207,7 +207,7 @@ class SlidingWindowTrader(StrategyBase):
                 if best_buyer:
                     message = {
                         "best buyer": str(self.best_buyer),
-                        "theo sell": str(self.theo_sell),
+                        "theo sell": str(self.theo_sell.normalize()),
                     }
                     pusher_client.trigger(channel, event.update, message)
                     if best_buyer > self.best_buyer:
