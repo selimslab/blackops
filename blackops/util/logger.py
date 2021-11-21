@@ -40,11 +40,11 @@ def create_logger(name: str) -> logging.Logger:
     logs_dir = "logs"
     os.makedirs(logs_dir, exist_ok=True)
 
-    # trace is the most inclusive level
-    trace_path = os.path.join(logs_dir, "debug.log")
+    # # trace is the most inclusive level
+    # trace_path = os.path.join(logs_dir, "debug.log")
 
-    trace_handler = create_rotating_handler(logging.INFO, trace_path)
-    logger.addHandler(trace_handler)
+    # trace_handler = create_rotating_handler(logging.INFO, trace_path)
+    # logger.addHandler(trace_handler)
 
     console_handler = create_console_handler(logging.INFO)
     logger.addHandler(console_handler)

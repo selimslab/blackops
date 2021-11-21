@@ -53,7 +53,7 @@ async def run_stg_async(stg: dict):
     raise ValueError("Trader not created")
 
 
-@app.task(serializer="json")
+@app.task(serializer="json", acks_late=True)
 def run_stg(stg: dict):
     asyncio.run(run_stg_async(stg))
 
