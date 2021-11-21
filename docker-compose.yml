@@ -17,6 +17,8 @@ services:
     image: conreg0.azurecr.io/blackops
     build: .
     container_name: web
-
+    ports:
+      - "80:80"
+      
     # environment:
     #   REDIS_HOST: redis_server
