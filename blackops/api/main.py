@@ -16,7 +16,7 @@ from .task_ctx import context
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 security = HTTPBasic()
 
-app.mount("/logs", StaticFiles(directory="static", html=True), name="static")
+app.mount("/logs", StaticFiles(directory="static", html=True), name="logs")
 
 
 def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
