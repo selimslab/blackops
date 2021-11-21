@@ -6,6 +6,8 @@
 
 # celery  --broker=$REDIS_HOST -A blackops.taskq.tasks worker -l info
 
+ls
+
 echo "Running CMD"
 exec "$@"
 

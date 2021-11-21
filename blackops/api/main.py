@@ -16,7 +16,7 @@ from .task_ctx import context
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 security = HTTPBasic()
 
-app.mount("/logs", StaticFiles(directory="static", html=True), name="logs")
+# app.mount("/logs", StaticFiles(directory="static", html=True), name="logs")
 
 
 def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
@@ -49,7 +49,8 @@ def str_to_json(s: str) -> dict:
 
 @app.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    return JSONResponse(content={"message": "Hello, world!"})
+    # return FileResponse("static/index.html")
 
 
 @app.put(

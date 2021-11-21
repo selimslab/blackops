@@ -18,6 +18,7 @@ services:
     build: .
     container_name: web
     ports:
+      - "8000:8000"
       - "7846:7846"
 
     # environment:
