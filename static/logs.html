@@ -29,10 +29,14 @@
       <div class="column">
         <h1 class="is-size-6">Logs</h1>
 
+        
         <p class="has-text-primary-light">You will see logs when you <a href="/docs" target="_blank" class="has-text-success">run a strategy</a></p>
 
         <br>
         <br>
+
+        <input v-model="sha" placeholder="edit me">
+
 
         <ul>
           <li v-for="message in messages">{{message}}</li>
@@ -59,31 +63,65 @@
   <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
   <script>
+
+    function getParameterByName(name, url = window.location.href) {
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+
     // Enable pusher logging - don't include this in production
     Pusher.logToConsole = true;
 
-    var pusher = new Pusher("7b2411e6822e2f36b872", {
-      cluster: "eu",
-    });
+    function startListeningChannel(sha){
 
-    var channel = pusher.subscribe("ops");
+    }
 
-    channel.bind("update", function (data) {
-      app.messages.push(JSON.stringify(data));
-    });
 
-    channel.bind("order", function (data) {
-      app.orders.push(JSON.stringify(data));
-    });
+
+    // startListeningChannel(sha)
+
 
     // Vue application
     const app = new Vue({
       el: "#app",
       data: {
         messages: [],
+        sha: 'ops'
       },
+      methods: {
+        connect: function (e) {
+          var channel = pusher.subscribe( app.sha );
+
+        channel.bind("update", function (data) {
+          app.messages.push(JSON.stringify(data));
+        });
+
+        channel.bind("order", function (data) {
+          app.orders.push(JSON.stringify(data));
+        });
+
+
+        }
+    }
     });
+
+
+    var pusher = new Pusher("7b2411e6822e2f36b872", {
+        cluster: "eu",
+      });
+
+      // var sha = getParameterByName('sha');
+
+      app.connect()
+
+
+
   </script>
+
 
 
 

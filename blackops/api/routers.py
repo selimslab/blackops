@@ -19,8 +19,8 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/logs/")
 async def logs():
-    return templates.TemplateResponse("logs.html", {"request": {}})
-    # return FileResponse("static/logs.html")
+    # return templates.TemplateResponse("logs.html", {"request": {}, "sha": sha})
+    return FileResponse("static/logs.html")
 
 
 @router.get("/stg/", response_model=list, tags=["read"])

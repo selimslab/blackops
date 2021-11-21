@@ -15,6 +15,9 @@ STG_MAP = "STG_MAP"
 RUNNING_TASKS = "RUNNING_TASKS"
 
 
+LOG_CHANNELS = "LOG_CHANNELS"
+
+
 def dict_to_hash(d: dict) -> str:
     return hashlib.sha1(json.dumps(d).encode()).hexdigest()
 
@@ -66,12 +69,21 @@ async def create_stg(stg: Strategy) -> dict:
     return d
 
 
+async def create_log_channel(sha: str):
+    await redis_client.sadd(LOG_CHANNELS, sha)
+
+
+async def remove_log_channel(sha: str):
+    await redis_client.srem(LOG_CHANNELS, sha)
+
+
 async def run_stg(sha: str) -> str:
     stg: dict = await get_stg(sha)
 
     def task_func():
         return taskq.run_stg.delay(stg)
 
+    await create_log_channel(sha)
     task_id = await taskq.start_task(sha, task_func)
     await redis_client.hset(RUNNING_TASKS, sha, task_id)
     return task_id
@@ -84,6 +96,7 @@ async def stop_stg(sha: str):
         raise ValueError("no tasks found")
 
     taskq.revoke(task_id)
+    await remove_log_channel(sha)
 
 
 async def stop_all():
