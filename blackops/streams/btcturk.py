@@ -33,7 +33,7 @@ def create_book_stream_btcturk(symbol: str):
 
 
 async def test_orderbook_stream():
-    async for book in create_book_stream_btcturk("USDTTRY"):
+    async for book in create_book_stream_btcturk("ANKRTRY"):
         print(book)
 
 

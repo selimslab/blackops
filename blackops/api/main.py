@@ -94,15 +94,6 @@ async def run_stg(
     return JSONResponse(content={"ok": f"task started with id {sha}"})
 
 
-@app.put("/stop/{sha}", tags=["stop"])
-async def stop_stg(sha: str, auth: bool = Depends(auth)):
-    """
-    Copy and paste the sha from the response of run_stg to stop the task.
-    """
-    await context.cancel_task(sha)
-    return JSONResponse(content={"message": f"stopped task {sha}"})
-
-
 @app.put("/stop/all", tags=["stop"])
 async def stop_stg_all(auth: bool = Depends(auth)):
     """
@@ -110,6 +101,15 @@ async def stop_stg_all(auth: bool = Depends(auth)):
     """
     await context.cancel_all()
     return JSONResponse(content={"message": f"stopped all"})
+
+
+@app.put("/stop/{sha}", tags=["stop"])
+async def stop_stg(sha: str, auth: bool = Depends(auth)):
+    """
+    Copy and paste the sha from the response of run_stg to stop the task.
+    """
+    await context.cancel_task(sha)
+    return JSONResponse(content={"message": f"stopped task {sha}"})
 
 
 @app.get("/orders/{sha}", tags=["order history"])

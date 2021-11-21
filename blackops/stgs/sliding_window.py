@@ -159,6 +159,8 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
+        # logger.info(f"theo_buy {self.theo_buy}")
+
     @staticmethod
     def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
         #  best_buyer is the best price we can sell at
@@ -240,17 +242,17 @@ class SlidingWindowTrader(StrategyBase):
         # so we buy or sell a quantum
 
         # TODO: should we consider exchange fees?
-        price = self.best_seller
-        if not price:
+        if not self.best_seller:
             return
 
-        base_qty = self.quote_step_qty / price
+        base_qty = self.quote_step_qty / self.best_seller
 
-        self.base_step_qty = max(base_qty, self.base_step_qty)
+        if self.base_step_qty is None or base_qty < self.base_step_qty:
+            self.base_step_qty = base_qty
 
         self.remaining_usable_quote_balance -= self.quote_step_qty
 
-        price = float(price)
+        price = float(self.best_seller)
         qty = float(base_qty)  #  we buy base
         symbol = self.pair.bt_order_symbol
 

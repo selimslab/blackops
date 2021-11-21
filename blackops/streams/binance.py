@@ -1,3 +1,5 @@
+import asyncio
+
 from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
 
@@ -19,5 +21,10 @@ def create_book_stream_binance(symbol: str):
     return binance_stream_generator(symbol, "@bookTicker")
 
 
+async def test_orderbook_stream(symbol):
+    async for book in create_book_stream_binance(symbol):
+        print(book)
+
+
 if __name__ == "__main__":
-    ...
+    asyncio.run(test_orderbook_stream("ANKRUSDT"))
