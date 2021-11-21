@@ -41,4 +41,3 @@ jobs:
         registry-password: ${{ secrets.REGISTRY_PASSWORD }}
         name: blackops
         location: 'west europe'
-        ports: '80' 
