@@ -110,3 +110,10 @@ async def stop_stg_all(auth: bool = Depends(auth)):
     """
     await context.cancel_all()
     return JSONResponse(content={"message": f"stopped all"})
+
+
+@app.get("/orders/{sha}", tags=["order history"])
+async def order_history(sha: str, auth: bool = Depends(auth)):
+    """ """
+    orders = context.get_orders(sha)
+    return JSONResponse(content={"sha": sha, "history": orders})

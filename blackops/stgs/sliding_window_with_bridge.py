@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Optional
 
@@ -26,6 +27,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     async def run(self):
         message = {"start": str(self)}
         pusher_client.trigger(channel, event.update, message)
+        pusher_client.trigger(channel, event.order, {"ping": "pong"})
 
         logger.info(message)
         logger.info(self)
@@ -56,6 +58,9 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    message = {"bridge": str(self.bridge_quote)}
+                    message = {
+                        "time": str(datetime.now().time()),
+                        "bridge": str(self.bridge_quote),
+                    }
                     logger.info(message)
                     pusher_client.trigger(channel, event.update, message)

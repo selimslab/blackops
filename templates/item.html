@@ -72,6 +72,8 @@
       app.orders.push(JSON.stringify(data));
     });
 
+    window.scrollTo(0, document.body.scrollHeight);
+
     // Vue application
     const app = new Vue({
       el: "#app",

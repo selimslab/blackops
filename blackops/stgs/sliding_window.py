@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, AsyncGenerator, List, Optional
 
@@ -47,15 +48,12 @@ class SlidingWindowTrader(StrategyBase):
 
     name: str = "sliding_window"
 
-    theo_buy = Decimal("-inf")  # buy lower then theo_buy
-    theo_sell = Decimal("inf")  # sell higher than theo_sell
+    theo_buy: Optional[Decimal] = None
+    theo_sell: Optional[Decimal] = None  # sell higher than theo_sell
 
-    base_step_qty = Decimal(
-        "-inf"
-    )  # initially we don't know how much base coin we can get for 100 try
-
-    best_seller = Decimal("inf")
-    best_buyer = Decimal("-inf")
+    base_step_qty: Optional[Decimal] = None
+    best_seller: Optional[Decimal] = None
+    best_buyer: Optional[Decimal] = None
 
     orders: list = field(default_factory=list)
 
@@ -72,8 +70,12 @@ class SlidingWindowTrader(StrategyBase):
     async def run(self):
         logger.info(f"Starting {self.name}")
         logger.info(self)
+
         await self.set_step_info()
         await self.run_streams()
+
+    def get_orders(self):
+        return self.orders
 
     async def set_step_info(self):
         quote_balance = await self.follower_exchange.get_balance(self.pair.quote.symbol)
@@ -192,12 +194,14 @@ class SlidingWindowTrader(StrategyBase):
             if sales_orders:
                 best_seller = self.get_best_seller(sales_orders)
                 if best_seller:
+
                     message = {
+                        "time": str(datetime.now().time()),
                         "best seller": str(self.best_seller),
-                        "theo buy": str(self.theo_buy.normalize()),
+                        "theo buy": str(self.theo_buy),
                     }
                     pusher_client.trigger(channel, event.update, message)
-                    if best_seller < self.best_seller:
+                    if self.best_seller is None or best_seller < self.best_seller:
                         self.best_seller = best_seller
                         logger.info(message)
 
@@ -206,11 +210,12 @@ class SlidingWindowTrader(StrategyBase):
                 best_buyer = self.get_best_buyer(purchase_orders)
                 if best_buyer:
                     message = {
+                        "time": str(datetime.now().time()),
                         "best buyer": str(self.best_buyer),
-                        "theo sell": str(self.theo_sell.normalize()),
+                        "theo sell": str(self.theo_sell),
                     }
                     pusher_client.trigger(channel, event.update, message)
-                    if best_buyer > self.best_buyer:
+                    if self.best_buyer is None or best_buyer > self.best_buyer:
                         self.best_buyer = best_buyer
                         logger.info(message)
 
@@ -225,10 +230,10 @@ class SlidingWindowTrader(StrategyBase):
             await self.short()
 
     def should_long(self):
-        return self.best_seller <= self.theo_buy
+        return self.best_seller and self.theo_buy and self.best_seller <= self.theo_buy
 
     def should_short(self):
-        return self.best_buyer >= self.theo_sell
+        return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
 
     async def long(self):
         # we buy and sell at the quantized steps
@@ -252,12 +257,13 @@ class SlidingWindowTrader(StrategyBase):
         await self.follower_exchange.long(price, qty, symbol)
 
         message = {
+            "time": str(datetime.now().time()),
             "long": {
                 "price": str(price),
                 "qty": str(qty),
                 "theo_buy": str(self.theo_buy),
                 "symbol": symbol,
-            }
+            },
         }
 
         self.broadcast_order(message)
@@ -265,22 +271,27 @@ class SlidingWindowTrader(StrategyBase):
         await self.report()
 
     def broadcast_order(self, message):
+        pusher_client.trigger(channel, event.update, message)
         pusher_client.trigger(channel, event.order, message)
         self.orders.append(message)
         logger.info(message)
 
     async def short(self):
+        if not self.best_buyer or not self.base_step_qty:
+            raise ValueError("best_buyer or base_step_qty is None")
+
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
         symbol = self.pair.bt_order_symbol
 
         message = {
+            "time": str(datetime.now().time()),
             "short": {
                 "price": str(price),
                 "qty": str(qty),
                 "theo_buy": str(self.theo_sell),
                 "symbol": symbol,
-            }
+            },
         }
 
         self.broadcast_order(message)
