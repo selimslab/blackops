@@ -23,4 +23,4 @@ WORKDIR /blackops
 EXPOSE 7846 8000 80 8080
 
 ENTRYPOINT [ "bash","/blackops/docker-entrypoint.sh" ]
-CMD ["python", "-m", "uvicorn", "blackops.api.main:app", "--host", "0.0.0.0", "--port", "7846", "--workers", "1"]
+CMD ["python", "-m", "uvicorn", "blackops.api.main:app", "--host", "0.0.0.0", "--port", "80", "--workers", "1"]

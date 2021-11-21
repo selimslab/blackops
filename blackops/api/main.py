@@ -7,6 +7,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from blackops.api.models.stg import STG_MAP, Strategy
@@ -16,7 +17,8 @@ from .task_ctx import context
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 security = HTTPBasic()
 
-# app.mount("/logs", StaticFiles(directory="static", html=True), name="logs")
+app.mount("/logs", StaticFiles(directory="static", html=True), name="logs")
+templates = Jinja2Templates(directory="templates")
 
 
 def auth(credentials: HTTPBasicCredentials = Depends(security)) -> bool:
@@ -48,9 +50,10 @@ def str_to_json(s: str) -> dict:
 
 
 @app.get("/")
-async def index():
+async def root():
     return JSONResponse(content={"message": "Hello, world!"})
     # return FileResponse("static/index.html")
+    # return templates.TemplateResponse("item.html", {"request": "pong"})
 
 
 @app.put(

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<head>
+  <title>BlackOps</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
+  />
+</head>
+
+<body class="has-background-dark has-text-success" style="min-height: 100rem;">
+
+
+
+<div class="container">
+
+  <nav class="navbar has-background-dark" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+        <a class="navbar-item is-family-monospace is-size-4 is-bold has-text-success">
+          BlackOps
+        </a>
+    </div>
+</nav>
+
+
+<br>
+
+  <div id="app">
+    <div class="columns">
+      <div class="column">
+        <h1 class="is-family-monospace is-bold is-size-4">Logs</h1>
+
+        <p class="has-text-primary-light">You will see logs when you run a strategy</p>
+
+        <a href="/docs" target="_blank" class="has-text-success">Click to enter strategy params and run it</a>
+
+
+        <ul>
+          <li v-for="message in messages">{{message}}</li>
+        </ul>
+      </div>
+
+      <div class="column">
+        <h1 class="is-family-monospace is-bold is-size-4">Orders</h1>
+
+        <p class="has-text-primary-light">You will see orders here</p>
+
+        <ul>
+          <li v-for="order in orders">{{order}}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <script>
+    // Enable pusher logging - don't include this in production
+    Pusher.logToConsole = true;
+
+    var pusher = new Pusher("7b2411e6822e2f36b872", {
+      cluster: "eu",
+    });
+
+    var channel = pusher.subscribe("ops");
+    channel.bind("update", function (data) {
+      app.messages.push(JSON.stringify(data));
+    });
+
+    channel.bind("order", function (data) {
+      app.orders.push(JSON.stringify(data));
+    });
+
+    // Vue application
+    const app = new Vue({
+      el: "#app",
+      data: {
+        messages: [],
+      },
+    });
+  </script>
+
+
+
+</body>
