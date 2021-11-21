@@ -18,6 +18,6 @@ services:
     build: .
     ports:
       - "80:80"
-      
+
     # environment:
     #   REDIS_HOST: redis_server
