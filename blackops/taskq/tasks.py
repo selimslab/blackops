@@ -51,7 +51,7 @@ async def run_stg_async(stg: dict):
         await asyncio.create_task(trader.run())
 
 
-@app.task(serializer="json", acks_late=True)
+@app.task()
 def run_stg(stg: dict):
     try:
         asyncio.run(run_stg_async(stg))
@@ -61,7 +61,8 @@ def run_stg(stg: dict):
             "message": str(e),
             "time": str(datetime.now().time()),
         }
-        pusher_client.trigger(stg.get("sha"), event.update, message)
+        logger.info(message)
+        # pusher_client.trigger(stg.get("sha"), event.update, message)
 
 
 def get_status(task_id: str) -> str:

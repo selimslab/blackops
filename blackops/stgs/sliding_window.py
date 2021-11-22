@@ -225,7 +225,7 @@ class SlidingWindowTrader(StrategyBase):
                         "best_seller": str(self.best_seller),
                     }
                     logger.info(message)
-                    pusher_client.trigger(self.sha, event.update, message)
+                    # pusher_client.trigger(self.sha, event.update, message)
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
@@ -240,7 +240,7 @@ class SlidingWindowTrader(StrategyBase):
                         "time": str(datetime.now().time()),
                         "best_buyer": str(self.best_buyer),
                     }
-                    pusher_client.trigger(self.sha, event.update, message)
+                    # pusher_client.trigger(self.sha, event.update, message)
 
                     logger.info(message)
 
@@ -330,7 +330,7 @@ class SlidingWindowTrader(StrategyBase):
     async def broadcast_order(self, order):
         message = {"type": "order", "time": str(datetime.now().time()), "order": order}
 
-        pusher_client.trigger(self.sha, event.update, message)
+        # pusher_client.trigger(self.sha, event.update, message)
         self.orders.append(message)
         logger.info(message)
 
@@ -343,7 +343,7 @@ class SlidingWindowTrader(StrategyBase):
             "pnl": str(pnl),
             "time": str(datetime.now().time()),
         }
-        pusher_client.trigger(self.sha, event.update, message)
+        # pusher_client.trigger(self.sha, event.update, message)
 
         # "orders": self.orders}
         # TODO add orders to API
@@ -356,7 +356,7 @@ class SlidingWindowTrader(StrategyBase):
             "message": message,
             "time": str(datetime.now().time()),
         }
-        pusher_client.trigger(self.sha, event.update, message)
+        # pusher_client.trigger(self.sha, event.update, message)
 
     def broadcast_message(self, message):
         message = {
@@ -364,7 +364,7 @@ class SlidingWindowTrader(StrategyBase):
             "message": message,
             "time": str(datetime.now().time()),
         }
-        pusher_client.trigger(self.sha, event.update, message)
+        # pusher_client.trigger(self.sha, event.update, message)
 
     def broadcast_theo(self):
         message = {
@@ -373,7 +373,7 @@ class SlidingWindowTrader(StrategyBase):
             "theo_sell": str(self.theo_sell),
             "time": str(datetime.now().time()),
         }
-        pusher_client.trigger(self.sha, event.update, message)
+        # pusher_client.trigger(self.sha, event.update, message)
 
     async def broadcast_theo_periodical(self):
         while True:

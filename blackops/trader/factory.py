@@ -7,7 +7,7 @@ from blackops.domain.models.asset import Asset, AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.exchanges.binance.base import BinanceBase
 from blackops.exchanges.btcturk.base import BtcturkBase
-from blackops.exchanges.btcturk.real import btcturk_api_client_real
+from blackops.exchanges.btcturk.real import create_btcturk_api_client_real
 from blackops.exchanges.btcturk.testnet import BtcturkTestnetApiClient
 from blackops.stgs.sliding_window import SlidingWindowTrader
 from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
@@ -38,7 +38,7 @@ EXCHANGES = {
 API_CLIENTS = {
     BTCTURK: {
         TESTNET: lambda: BtcturkTestnetApiClient(),
-        REAL: lambda: btcturk_api_client_real,
+        REAL: lambda: create_btcturk_api_client_real(),
     }
 }
 

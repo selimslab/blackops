@@ -1,6 +1,4 @@
 from .base import BtcturkBase
-from .real import btcturk_api_client_real
-from .testnet import BtcturkTestnetApiClient
 
 
 def create_real_client(api_client):

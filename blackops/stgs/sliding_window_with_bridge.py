@@ -4,10 +4,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Optional
 
-import blackops.util.push_events as event
+import blackops.pubsub.push_events as event
 from blackops.domain.models.asset import Asset
+from blackops.pubsub.push import pusher_client
 from blackops.util.logger import logger
-from blackops.util.push import channel, pusher_client
 
 from .sliding_window import SlidingWindowTrader
 
@@ -70,5 +70,5 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                         "time": str(datetime.now().time()),
                         "bridge": str(self.bridge_quote),
                     }
-                    pusher_client.trigger(self.sha, event.update, message)
+                    # pusher_client.trigger(self.sha, event.update, message)
                     logger.info(message)

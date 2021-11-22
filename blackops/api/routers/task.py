@@ -11,7 +11,7 @@ from blackops.api.models.stg import Strategy
 router = APIRouter(dependencies=[Depends(auth)])
 
 
-@router.put("/task/{sha}", tags=["run"])
+@router.put("/{sha}")
 async def run_task(sha: str):
     """
     When you give a sha, this will run the given strategy
@@ -26,13 +26,23 @@ async def run_task(sha: str):
     )
 
 
-@router.delete("/task/", tags=["stop"])
+@router.get("/")
+async def get_all_tasks():
+    return JSONResponse(content={"message": "all tasks"})
+
+
+@router.get("/{sha}")
+async def get_task(sha: str):
+    return JSONResponse(content={"message": f"task {sha}"})
+
+
+@router.delete("/")
 async def stop_all_tasks():
     await handlers.stop_all()
     return JSONResponse(content={"message": "stopped all"})
 
 
-@router.delete("/task/{sha}", tags=["stop"])
+@router.delete("/{sha}")
 async def stop_task(sha: str):
     await handlers.stop_stg(sha)
     return JSONResponse(content={"message": f"stopped {sha}"})

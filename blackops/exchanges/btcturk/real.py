@@ -9,4 +9,7 @@ apiKey = os.getenv("BTCTURK_PUBLIC_KEY")
 apiSecret = os.getenv("BTCTURK_PRIVATE_KEY")
 
 # singleton
-btcturk_api_client_real = RealApiClient(api_key=apiKey, api_secret=apiSecret)
+
+
+def create_btcturk_api_client_real():
+    return RealApiClient(api_key=apiKey, api_secret=apiSecret)
