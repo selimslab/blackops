@@ -1,0 +1,112 @@
+Date : 2021-11-22 03:48:53
+Directory : /Users/selim/Desktop/ops
+Total : 62 files,  4193 codes, 158 comments, 1000 blanks, all 5351 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| toml             |          1 |      2,524 |          0 |        217 |      2,741 |
+| Python           |         48 |      1,236 |        137 |        597 |      1,970 |
+| HTML             |          3 |        246 |          0 |        119 |        365 |
+| pip requirements |          1 |         80 |          0 |          1 |         81 |
+| YAML             |          3 |         67 |         11 |         20 |         98 |
+| Markdown         |          1 |         13 |          0 |         14 |         27 |
+| Docker           |          1 |         13 |          3 |         11 |         27 |
+| Shell Script     |          3 |         11 |          7 |         20 |         38 |
+| Ini              |          1 |          3 |          0 |          1 |          4 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                 | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                    |         62 |      4,193 |        158 |      1,000 |      5,351 |
+| blackops                                                             |         46 |      1,261 |        137 |        598 |      1,996 |
+| blackops/api                                                         |         10 |        285 |         68 |        166 |        519 |
+| blackops/api/models                                                  |          3 |         84 |          1 |         44 |        129 |
+| blackops/api/static                                                  |          1 |         62 |          0 |         25 |         87 |
+| blackops/domain                                                      |          6 |        102 |          2 |         36 |        140 |
+| blackops/domain/models                                               |          4 |         56 |          2 |         29 |         87 |
+| blackops/exchanges                                                   |          9 |        208 |          5 |         82 |        295 |
+| blackops/exchanges/binance                                           |          3 |         35 |          0 |         14 |         49 |
+| blackops/exchanges/btcturk                                           |          6 |        173 |          5 |         68 |        246 |
+| blackops/stgs                                                        |          4 |        300 |         31 |        124 |        455 |
+| blackops/streams                                                     |          3 |         43 |          4 |         28 |         75 |
+| blackops/taskq                                                       |          4 |        100 |         14 |         56 |        170 |
+| blackops/trader                                                      |          2 |        144 |          2 |         52 |        198 |
+| blackops/util                                                        |          6 |         78 |         11 |         52 |        141 |
+| exp                                                                  |          1 |          8 |          0 |          8 |         16 |
+| scripts                                                              |          1 |          3 |          3 |          5 |         11 |
+| static                                                               |          2 |        184 |          0 |         94 |        278 |
+| tests                                                                |          2 |         29 |          0 |         16 |         45 |
++----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                             | language         | code       | comment    | blank      | total      |
++----------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| /Users/selim/Desktop/ops/.flake8                                     | Ini              |          3 |          0 |          1 |          4 |
+| /Users/selim/Desktop/ops/.pre-commit-config.yaml                     | YAML             |         25 |          0 |          6 |         31 |
+| /Users/selim/Desktop/ops/Dockerfile                                  | Docker           |         13 |          3 |         11 |         27 |
+| /Users/selim/Desktop/ops/README.md                                   | Markdown         |         13 |          0 |         14 |         27 |
+| /Users/selim/Desktop/ops/blackops/__init__.py                        | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/api/__init__.py                    | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/api/auth.py                        | Python           |         14 |          0 |          5 |         19 |
+| /Users/selim/Desktop/ops/blackops/api/basics.py                      | Python           |          0 |         35 |         14 |         49 |
+| /Users/selim/Desktop/ops/blackops/api/handlers.py                    | Python           |         59 |          8 |         41 |        108 |
+| /Users/selim/Desktop/ops/blackops/api/main.py                        | Python           |         17 |          0 |         10 |         27 |
+| /Users/selim/Desktop/ops/blackops/api/models/__init__.py             | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/api/models/stg.py                  | Python           |         83 |          1 |         42 |        126 |
+| /Users/selim/Desktop/ops/blackops/api/models/validate.py             | Python           |          0 |          0 |          1 |          1 |
+| /Users/selim/Desktop/ops/blackops/api/routers.py                     | Python           |         48 |         24 |         26 |         98 |
+| /Users/selim/Desktop/ops/blackops/api/static/index.html              | HTML             |         62 |          0 |         25 |         87 |
+| /Users/selim/Desktop/ops/blackops/domain/__init__.py                 | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/domain/models/__init__.py          | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/domain/models/asset.py             | Python           |         15 |          0 |          8 |         23 |
+| /Users/selim/Desktop/ops/blackops/domain/models/exchange.py          | Python           |         30 |          0 |         12 |         42 |
+| /Users/selim/Desktop/ops/blackops/domain/models/stg.py               | Python           |         10 |          2 |          8 |         20 |
+| /Users/selim/Desktop/ops/blackops/domain/symbols.py                  | Python           |         45 |          0 |          6 |         51 |
+| /Users/selim/Desktop/ops/blackops/exchanges/binance/__init__.py      | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/exchanges/binance/base.py          | Python           |         29 |          0 |          8 |         37 |
+| /Users/selim/Desktop/ops/blackops/exchanges/binance/factory.py       | Python           |          5 |          0 |          5 |         10 |
+| /Users/selim/Desktop/ops/blackops/exchanges/btcturk/__init__.py      | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/exchanges/btcturk/base.py          | Python           |         55 |          4 |         19 |         78 |
+| /Users/selim/Desktop/ops/blackops/exchanges/btcturk/factory.py       | Python           |          7 |          0 |          5 |         12 |
+| /Users/selim/Desktop/ops/blackops/exchanges/btcturk/manual.py        | Python           |         65 |          0 |         26 |         91 |
+| /Users/selim/Desktop/ops/blackops/exchanges/btcturk/real.py          | Python           |          7 |          1 |          5 |         13 |
+| /Users/selim/Desktop/ops/blackops/exchanges/btcturk/testnet.py       | Python           |         38 |          0 |         12 |         50 |
+| /Users/selim/Desktop/ops/blackops/main.py                            | Python           |          0 |          0 |          1 |          1 |
+| /Users/selim/Desktop/ops/blackops/stgs/__init__.py                   | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/stgs/base.py                       | Python           |          0 |          0 |          1 |          1 |
+| /Users/selim/Desktop/ops/blackops/stgs/sliding_window.py             | Python           |        241 |         31 |        104 |        376 |
+| /Users/selim/Desktop/ops/blackops/stgs/sliding_window_with_bridge.py | Python           |         58 |          0 |         18 |         76 |
+| /Users/selim/Desktop/ops/blackops/streams/__init__.py                | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/streams/binance.py                 | Python           |         17 |          3 |         11 |         31 |
+| /Users/selim/Desktop/ops/blackops/streams/btcturk.py                 | Python           |         25 |          1 |         16 |         42 |
+| /Users/selim/Desktop/ops/blackops/taskq/__init__.py                  | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/taskq/redis.py                     | Python           |          6 |          1 |          6 |         13 |
+| /Users/selim/Desktop/ops/blackops/taskq/task_ctx.py                  | Python           |         32 |          1 |         10 |         43 |
+| /Users/selim/Desktop/ops/blackops/taskq/tasks.py                     | Python           |         61 |         12 |         39 |        112 |
+| /Users/selim/Desktop/ops/blackops/trader/__init__.py                 | Python           |          1 |          0 |          1 |          2 |
+| /Users/selim/Desktop/ops/blackops/trader/factory.py                  | Python           |        143 |          2 |         51 |        196 |
+| /Users/selim/Desktop/ops/blackops/util/is_unique.py                  | Python           |         13 |          0 |         13 |         26 |
+| /Users/selim/Desktop/ops/blackops/util/logger.py                     | Python           |         29 |          5 |         22 |         56 |
+| /Users/selim/Desktop/ops/blackops/util/numbers.py                    | Python           |          2 |          0 |          2 |          4 |
+| /Users/selim/Desktop/ops/blackops/util/push.py                       | Python           |          9 |          0 |          3 |         12 |
+| /Users/selim/Desktop/ops/blackops/util/push_events.py                | Python           |          3 |          0 |          3 |          6 |
+| /Users/selim/Desktop/ops/blackops/util/ws.py                         | Python           |         22 |          6 |          9 |         37 |
+| /Users/selim/Desktop/ops/docker-compose.yml                          | YAML             |          7 |         11 |          5 |         23 |
+| /Users/selim/Desktop/ops/docker-entrypoint.sh                        | Shell Script     |          3 |          4 |          8 |         15 |
+| /Users/selim/Desktop/ops/exp/aiotask.py                              | Python           |          8 |          0 |          8 |         16 |
+| /Users/selim/Desktop/ops/poetry.lock                                 | toml             |      2,524 |          0 |        217 |      2,741 |
+| /Users/selim/Desktop/ops/requirements.txt                            | pip requirements |         80 |          0 |          1 |         81 |
+| /Users/selim/Desktop/ops/scripts/clean.sh                            | Shell Script     |          3 |          3 |          5 |         11 |
+| /Users/selim/Desktop/ops/setup-dev.sh                                | Shell Script     |          5 |          0 |          7 |         12 |
+| /Users/selim/Desktop/ops/static/index.html                           | HTML             |         29 |          0 |         14 |         43 |
+| /Users/selim/Desktop/ops/static/logs.html                            | HTML             |        155 |          0 |         80 |        235 |
+| /Users/selim/Desktop/ops/tests/__init__.py                           | Python           |          0 |          0 |          1 |          1 |
+| /Users/selim/Desktop/ops/tests/realtime.py                           | Python           |         29 |          0 |         15 |         44 |
+| /Users/selim/Desktop/ops/wtf.yml                                     | YAML             |         35 |          0 |          9 |         44 |
+| Total                                                                |                  |      4,193 |        158 |      1,000 |      5,351 |
++----------------------------------------------------------------------+------------------+------------+------------+------------+------------+

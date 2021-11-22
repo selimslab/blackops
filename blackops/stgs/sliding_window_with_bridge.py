@@ -25,13 +25,13 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     name: str = "Sliding Window With Bridge"
 
     async def run(self):
-        message = {"start": str(self)}
-        pusher_client.trigger(channel, event.update, message)
-        pusher_client.trigger(channel, event.order, {"ping": "pong"})
-        pusher_client.trigger(channel, event.update, {"ping": "pong"})
+        message = f"Starting {self.name}"
+        self.broadcast_message(f"Starting {self.name}")
+        self.broadcast_message(f"Parameters {str(self)}")
 
         logger.info(message)
         logger.info(self)
+
         await self.set_step_info()
         await self.run_streams()
 
@@ -46,13 +46,19 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
             self.update_bridge_quote(),
             self.update_best_buyers_and_sellers(),
             self.watch_books_and_decide(),
+            self.broadcast_theo_periodical(),
         ]
         await asyncio.gather(*aws)
 
     async def update_bridge_quote(self):
-        logger.info(f"Watching the leader bridge quotes..")
+        msg = f"Watching the leader bridge quotes.."
+        self.broadcast_message(msg)
+        logger.info(msg)
+
         if not self.leader_bridge_quote_stream:
-            raise Exception("No bridge quote stream")
+            msg = f"Leader bridge quote stream is not set"
+            self.broadcast_error(msg)
+            raise Exception(msg)
 
         async for book in self.leader_bridge_quote_stream:
             if book:
@@ -60,8 +66,9 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
                     message = {
+                        "type": "bridge",
                         "time": str(datetime.now().time()),
                         "bridge": str(self.bridge_quote),
                     }
+                    pusher_client.trigger(self.sha, event.update, message)
                     logger.info(message)
-                    pusher_client.trigger(channel, event.update, message)

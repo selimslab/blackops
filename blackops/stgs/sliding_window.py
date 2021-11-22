@@ -10,7 +10,7 @@ from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
-from blackops.util.push import channel, pusher_client
+from blackops.util.push import pusher_client
 
 
 @dataclass
@@ -32,6 +32,8 @@ class SlidingWindowTrader(StrategyBase):
     """
 
     #  Params
+
+    sha: str
 
     pair: AssetPair
 
@@ -76,6 +78,7 @@ class SlidingWindowTrader(StrategyBase):
 
     async def run(self):
         logger.info(f"Starting {self.name}")
+        self.broadcast_message(f"Starting {self.name}")
         logger.info(self)
 
         await self.set_step_info()
@@ -88,14 +91,18 @@ class SlidingWindowTrader(StrategyBase):
         quote_balance = await self.follower_exchange.get_balance(self.pair.quote.symbol)
 
         if quote_balance is None:
-            raise Exception("Could not get quote balance")
+            msg = f"Could not get balance for {self.pair.quote.symbol}"
+            self.broadcast_error(msg)
+            raise Exception(msg)
 
         self.start_quote_balance = quote_balance
 
         if self.max_usable_quote_amount_y < quote_balance:
-            raise Exception(
-                f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {quote_balance}"
-            )
+            msg = f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {quote_balance}"
+
+            self.broadcast_error(msg)
+
+            raise Exception(msg)
 
         self.remaining_usable_quote_balance = self.max_usable_quote_amount_y
         self.quote_step_qty = (
@@ -104,21 +111,27 @@ class SlidingWindowTrader(StrategyBase):
 
     async def run_streams(self):
         logger.info(f"Start streams for {self.name}")
+        self.broadcast_message(f"Starting streams for  {self.name}")
+
         consumers: Any = [
             self.watch_books_and_decide(),
             self.update_best_buyers_and_sellers(),
+            self.broadcast_theo_periodical(),
         ]  # is this ordering important ?
 
         await asyncio.gather(*consumers)
 
     async def watch_books_and_decide(self):
         logger.info(f"Watching the leader book..")
+        self.broadcast_message(f"Watching books of {self.leader_exchange.name}")
+
         async for book in self.leader_book_ticker_stream:
             self.calculate_window(book)
             await self.should_transact()
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
+        self.broadcast_message(f"Watching books of {self.follower_exchange.name}")
         async for book in self.follower_book_stream:
             parsed_book = self.follower_exchange.parse_book(book)
             self.update_best_prices(parsed_book)
@@ -202,31 +215,34 @@ class SlidingWindowTrader(StrategyBase):
             sales_orders = self.follower_exchange.get_sales_orders(book)
             if sales_orders:
                 best_seller = self.get_best_seller(sales_orders)
-                if best_seller:
-
+                if self.best_seller is None or (
+                    best_seller and best_seller < self.best_seller
+                ):
+                    self.best_seller = best_seller
                     message = {
+                        "type": "best_seller",
                         "time": str(datetime.now().time()),
-                        "best seller": str(self.best_seller),
-                        "theo buy": str(self.theo_buy),
+                        "best_seller": str(self.best_seller),
                     }
-                    pusher_client.trigger(channel, event.update, message)
-                    if self.best_seller is None or best_seller < self.best_seller:
-                        self.best_seller = best_seller
-                        logger.info(message)
+                    logger.info(message)
+                    pusher_client.trigger(self.sha, event.update, message)
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
                 best_buyer = self.get_best_buyer(purchase_orders)
-                if best_buyer:
+                if self.best_buyer is None or (
+                    best_buyer and best_buyer > self.best_buyer
+                ):
+                    self.best_buyer = best_buyer
+
                     message = {
+                        "type": "best_buyer",
                         "time": str(datetime.now().time()),
-                        "best buyer": str(self.best_buyer),
-                        "theo sell": str(self.theo_sell),
+                        "best_buyer": str(self.best_buyer),
                     }
-                    pusher_client.trigger(channel, event.update, message)
-                    if self.best_buyer is None or best_buyer > self.best_buyer:
-                        self.best_buyer = best_buyer
-                        logger.info(message)
+                    pusher_client.trigger(self.sha, event.update, message)
+
+                    logger.info(message)
 
         except Exception as e:
             logger.info(e)
@@ -265,8 +281,7 @@ class SlidingWindowTrader(StrategyBase):
 
         await self.follower_exchange.long(price, qty, symbol)
 
-        message = {
-            "time": str(datetime.now().time()),
+        order = {
             "type": "long",
             "price": str(price),
             "qty": str(qty),
@@ -274,26 +289,17 @@ class SlidingWindowTrader(StrategyBase):
             "symbol": symbol,
         }
 
-        self.broadcast_order(message)
-
-        await self.report()
-
-    def broadcast_order(self, message):
-        # pusher_client.trigger(channel, event.update, message)
-        pusher_client.trigger(channel, event.order, message)
-        self.orders.append(message)
-        logger.info(message)
+        await self.broadcast_order(order)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
-            raise ValueError("best_buyer or base_step_qty is None")
+            return
 
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
         symbol = self.pair.bt_order_symbol
 
-        message = {
-            "time": str(datetime.now().time()),
+        order = {
             "type": "short",
             "price": str(price),
             "qty": str(qty),
@@ -301,11 +307,9 @@ class SlidingWindowTrader(StrategyBase):
             "symbol": symbol,
         }
 
-        self.broadcast_order(message)
+        await self.broadcast_order(order)
 
         await self.follower_exchange.short(price, qty, symbol)
-
-        await self.report()
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
@@ -323,12 +327,55 @@ class SlidingWindowTrader(StrategyBase):
             logger.info(e)
             return None
 
-    async def report(self):
+    async def broadcast_order(self, order):
+        message = {"type": "order", "time": str(datetime.now().time()), "order": order}
+
+        pusher_client.trigger(self.sha, event.update, message)
+        self.orders.append(message)
+        logger.info(message)
+
+        await self.broadcast_pnl()
+
+    async def broadcast_pnl(self):
         pnl = await self.calculate_pnl()
-        stats = {"pnl": str(pnl)}
-        pusher_client.trigger(channel, event.update, stats)
+        message = {
+            "type": "pnl",
+            "pnl": str(pnl),
+            "time": str(datetime.now().time()),
+        }
+        pusher_client.trigger(self.sha, event.update, message)
 
         # "orders": self.orders}
         # TODO add orders to API
 
-        logger.info(stats)
+        logger.info(message)
+
+    def broadcast_error(self, message):
+        message = {
+            "type": "error",
+            "message": message,
+            "time": str(datetime.now().time()),
+        }
+        pusher_client.trigger(self.sha, event.update, message)
+
+    def broadcast_message(self, message):
+        message = {
+            "type": "message",
+            "message": message,
+            "time": str(datetime.now().time()),
+        }
+        pusher_client.trigger(self.sha, event.update, message)
+
+    def broadcast_theo(self):
+        message = {
+            "type": "theo",
+            "theo_buy": str(self.theo_buy),
+            "theo_sell": str(self.theo_sell),
+            "time": str(datetime.now().time()),
+        }
+        pusher_client.trigger(self.sha, event.update, message)
+
+    async def broadcast_theo_periodical(self):
+        while True:
+            self.broadcast_theo()
+            await asyncio.sleep(1)

@@ -1,5 +1,3 @@
-from typing import List, Union
-
 import simplejson as json
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Union
+from typing import Optional, Union
 
 import simplejson as json
 from pydantic import BaseModel, Field
@@ -58,6 +58,8 @@ class SlidingWindow(StrategyBase):
     follower_exchange = "btcturk"
 
     description: str = "slide down as you buy, slide up as you sell"
+
+    sha: Optional[str] = None
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:

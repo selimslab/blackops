@@ -73,6 +73,9 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
     if not isinstance(stg, SlidingWindowWithBridge):
         raise ValueError(f"wrong strategy type: {stg.type}")
 
+    if not stg.sha:
+        raise ValueError(f"sha is not set: {stg}")
+
     bridge: str = stg.bridge
     if not bridge:
         raise ValueError(f"bridge is not set for strategy: {stg}")
@@ -101,6 +104,7 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
     base_bridge_symbol = stg.base + bridge
 
     trader = SlidingWindowWithBridgeTrader(
+        sha=stg.sha,
         bridge=Asset(bridge),
         leader_exchange=leader_exchange,
         follower_exchange=follower_exchange,
@@ -118,6 +122,9 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
 
 
 async def sliding_window_factory(stg: Strategy):
+
+    if not stg.sha:
+        raise ValueError(f"sha is not set: {stg}")
 
     network = TESTNET if stg.testnet else REAL
 
@@ -141,6 +148,7 @@ async def sliding_window_factory(stg: Strategy):
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
     trader = SlidingWindowTrader(
+        sha=stg.sha,
         leader_exchange=leader_exchange,
         follower_exchange=follower_exchange,
         pair=pair,

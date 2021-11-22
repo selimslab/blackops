@@ -91,11 +91,9 @@ async def run_stg(sha: str) -> str:
 
 async def stop_stg(sha: str):
     task_id = await redis_client.hget(RUNNING_TASKS, sha)
-
     if not task_id:
         raise ValueError("no tasks found")
-
-    taskq.revoke(task_id)
+    taskq.revoke(str(task_id, "utf-8"))
     await remove_log_channel(sha)
 
 

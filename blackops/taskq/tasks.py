@@ -1,15 +1,18 @@
 import asyncio
 import itertools
 import time
+from datetime import datetime
 from typing import Any, Callable, List, Union
 
 from celery import Celery
 from celery.states import PENDING, SUCCESS, state
 
+import blackops.util.push_events as event
 from blackops.api.models.stg import Strategy
 from blackops.taskq.redis import redis_url
 from blackops.trader.factory import create_trader_from_strategy
 from blackops.util.logger import logger
+from blackops.util.push import pusher_client
 
 app = Celery(
     "celery-leader",
@@ -44,19 +47,21 @@ async def testrun():
 
 async def run_stg_async(stg: dict):
     trader = await create_trader_from_strategy(stg)
-    print(trader)
     if trader:
-        # asyncio.run(trader.run())
         await asyncio.create_task(trader.run())
-
-        return "trader running.."
-
-    raise ValueError("Trader not created")
 
 
 @app.task(serializer="json", acks_late=True)
 def run_stg(stg: dict):
-    asyncio.run(run_stg_async(stg))
+    try:
+        asyncio.run(run_stg_async(stg))
+    except Exception as e:
+        message = {
+            "type": "error",
+            "message": str(e),
+            "time": str(datetime.now().time()),
+        }
+        pusher_client.trigger(stg.get("sha"), event.update, message)
 
 
 def get_status(task_id: str) -> str:
@@ -97,6 +102,8 @@ def revoke_all():
 
     task_lists = [i.scheduled().values(), i.reserved().values(), i.active().values()]
     task_lists = flatten(task_lists)
+
+    print(task_lists, task_lists)
 
     ids = [task.get("id") for tl in task_lists for task in tl]
     ids = [i for i in ids if i]
