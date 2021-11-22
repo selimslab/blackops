@@ -93,7 +93,7 @@ class SlidingWindow(StrategyBase):
 
     def is_valid_params(self):
 
-        if self.max_usable_quote_amount_y >= MAX_SPEND_ALLOWED:
+        if self.max_usable_quote_amount_y > MAX_SPEND_ALLOWED:
             raise Exception(
                 f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
             )
