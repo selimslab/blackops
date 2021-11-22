@@ -7,118 +7,138 @@
   />
 </head>
 
-<body class="has-background-dark has-text-success" style="min-height: 100rem;">
-
-
-
-<div class="container">
-
-  <nav class="navbar has-background-dark" role="navigation" aria-label="main navigation">
-    <div class="navbar-brand">
-      <a class="navbar-item is-family-monospace is-size-4 is-bold has-text-success" href="/">
-        BlackOps
+<body class="has-background-dark has-text-success" style="min-height: 100rem">
+  <div class="container">
+    <nav
+      class="navbar has-background-dark"
+      role="navigation"
+      aria-label="main navigation"
+    >
+      <div class="navbar-brand">
+        <a
+          class="
+            navbar-item
+            is-family-monospace is-size-4 is-bold
+            has-text-success
+          "
+          href="/"
+        >
+          BlackOps
         </a>
+      </div>
+    </nav>
+
+    <br />
+
+    <div id="app">
+      <p class="has-text-primary-light">
+        Click to create and
+        <a href="/docs" target="_blank" class="has-text-success"
+          >run a strategy</a
+        >
+      </p>
+
+      <br />
+
+      <p class="has-text-primary-light">Copy/paste the task sha to view logs</p>
+
+      <br />
+
+      <input
+        class="input is-rounded"
+        v-model="sha"
+        v-on:input="connect"
+        placeholder="edit me"
+      />
+
+      <br />
+      <br />
+
+      <div class="columns">
+
+        <div class="column">
+          <h1>Summary</h1>
+
+
+            <p>pnl: {{pnl}}</p>
+            <p>last_update: {{pnl_last_updated}}</p>
+
+            ---
+    
+            <p>bridge: {{bridge}}</p>
+            <p>last_update: {{bridge_last_updated}}</p>
+     
+            ---
+
+
+            <p>best_buyer: {{best_buyer}}</p>
+            <p>last_update: {{best_buyer_last_updated}}</p>
+
+
+          ---
+
+
+            <p>best_seller: {{best_seller}}</p>
+            <p>last_update: {{best_seller_last_updated}}</p>
+
+
+          ---
+
+            <p>theo_buy: {{theo_buy}}</p>
+            <p>last_update:  {{theo_buy_last_updated}}</p>
+
+
+
+          ---
+
+            <p>theo_sell: {{theo_sell}}</p>
+            <p>last_update: {{theo_sell_last_updated}}</p>
+
+        </div>
+
+        <div class="column">
+          <h1>Messages</h1>
+          <br />
+          <br />
+
+          <ul>
+            <li class="" v-for="message in messages">{{message}}</li>
+          </ul>
+        </div>
+
+        <div class="column">
+          <h2>Errors</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="error in errors">{{error}}</li>
+          </ul>
+        </div>
+
+        <div class="column">
+          <h2>Orders</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="order in orders">{{order}}</li>
+          </ul>
+        </div>
+      </div>
     </div>
-</nav>
-
-
-<br>
-
-  <div id="app">
-
-    <p class="has-text-primary-light">Click to create and <a href="/docs" target="_blank" class="has-text-success">run a strategy</a></p>
-
-    <br>
-
-    <p class="has-text-primary-light">Copy/paste the task sha to view logs </p>
-
-    <br>
-
-    <input class="input is-rounded" v-model="sha"  v-on:input="connect" placeholder="edit me">
-
-    <br>
-    <br>
-
-
-    <div class="columns">
-
-
-      <div class="column">
-        <h1>Summary</h1>
-        <br>
-    
-
-        <p>{{pnl_last_updated}} pnl: {{pnl}}</p>
-
-        <p>{{bridge_last_updated}} brdige: {{bridge}}</p>
-
-        <p>{{best_buyer_last_updated}} best_buyer: {{best_buyer}}</p>
-        <p>{{best_seller_last_updated}} best_seller: {{best_seller}}</p>
-
-        <p>{{theo_buy_last_updated}} theo_buy: {{theo_buy}}</p>
-        <p>{{theo_sell_last_updated}} theo_sell: {{theo_sell}}</p>
-
-      </div>
-
-
-
-      <div class="column">
-        <h1 >Messages</h1>
-        <br>
-        <br>
-    
-        <ul>
-          <li v-for="message in messages">{{message}}</li>
-        </ul>
-          
-      </div>
-
-
-      <div class="column">
-
-        <h2>Errors</h2>
-        <br>
-        <br>
-    
-        <ul>
-          <li v-for="error in errors">{{error}}</li>
-        </ul>
-      </div>
-
-
-      <div class="column">
-
-        <h2>Orders</h2>
-        <br>
-        <br>
-    
-        <ul>
-          <li v-for="order in orders">{{order}}</li>
-        </ul>
-      </div>
-
-      
-
-
-
-    </div>
-
-
-  </div>
-
   </div>
 
   <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
   <script>
-
     function getParameterByName(name, url = window.location.href) {
-        name = name.replace(/[\[\]]/g, '\\$&');
-        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-            results = regex.exec(url);
-        if (!results) return null;
-        if (!results[2]) return '';
-        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+      name = name.replace(/[\[\]]/g, "\\$&");
+      var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return "";
+      return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
     // Enable pusher logging - don't include this in production
@@ -129,106 +149,92 @@
       el: "#app",
       data: {
         messages: [],
-        sha: '27d660d0fabd7e2bbaac47792075f36e04168160',
+        sha: "27d660d0fabd7e2bbaac47792075f36e04168160",
         pnl: 0,
-        pnl_last_updated: '',
+        pnl_last_updated: "",
         theo_buy: 0,
-        theo_buy_last_updated: '',
+        theo_buy_last_updated: "",
         theo_sell: 0,
-        theo_sell_last_updated: '',
+        theo_sell_last_updated: "",
         best_buyer: 0,
-        best_buyer_last_updated: '',
+        best_buyer_last_updated: "",
         best_seller: 0,
-        best_seller_last_updated:'',
-        bridge: '',
-        bridge_last_updated: '',
+        best_seller_last_updated: "",
+        bridge: "",
+        bridge_last_updated: "",
         orders: [],
         trades: [],
         trades_count: 0,
         orders_count: 0,
-        binance_books_seen:0,
-        btc_books_seen:0,
-        errors:[]
+        binance_books_seen: 0,
+        btc_books_seen: 0,
+        errors: [],
       },
       methods: {
         connect: function (e) {
-          var channel = pusher.subscribe( app.sha );
+          var channel = pusher.subscribe(app.sha);
 
           channel.bind("update", function (data) {
-
-
-            type = data.type
-            if(type == 'message'){
-              app.messages.push(data.message)
+            type = data.type;
+            if (type == "message") {
+              app.messages.push(data.message);
             }
 
-            if (type == 'pnl'){
-              app.pnl = data.pnl
-              app.pnl_last_updated = data.time
+            if (type == "pnl") {
+              app.pnl = data.pnl;
+              app.pnl_last_updated = data.time;
             }
-            if (type == 'bridge'){
-              app.bridge = data.bridge
-              bridge_last_updated = data.time
-            }
-
-            if (type == 'best_buyer'){
-              app.best_buyer = data.best_buyer
-              app.best_buyer_last_updated = data.time
+            if (type == "bridge") {
+              app.bridge = data.bridge;
+              app.bridge_last_updated = data.time;
             }
 
-            if (type == 'best_seller'){
-              app.best_seller = data.best_seller
-              app.best_seller_last_updated = data.time
+            if (type == "best_buyer") {
+              app.best_buyer = data.best_buyer;
+              app.best_buyer_last_updated = data.time;
             }
 
-            if (type == 'order'){
-              app.orders.push(data.order)
-
-              app.theo_buy = data.theo_buy
-              app.theo_sell = data.theo_sell
-
-              app.theo_buy_last_updated = app.theo_sell_last_updated = data.time
+            if (type == "best_seller") {
+              app.best_seller = data.best_seller;
+              app.best_seller_last_updated = data.time;
             }
 
-            if (type == 'theo'){
+            if (type == "order") {
+              app.orders.push(data.order);
 
-              app.theo_buy = data.theo_buy
-              app.theo_sell = data.theo_sell
+              app.theo_buy = data.theo_buy;
+              app.theo_sell = data.theo_sell;
 
-              app.theo_buy_last_updated = app.theo_sell_last_updated = data.time
+              app.theo_buy_last_updated = app.theo_sell_last_updated =
+                data.time;
             }
-     
-              if (type == 'error'){
 
-              app.errors.push(data.message)
+            if (type == "theo") {
+              app.theo_buy = data.theo_buy;
+              app.theo_sell = data.theo_sell;
 
-              }
+              app.theo_buy_last_updated = app.theo_sell_last_updated =
+                data.time;
+            }
 
+            if (type == "error") {
+              app.errors.push(data.message);
+            }
           });
 
           channel.bind("order", function (data) {
             app.orders.push(JSON.stringify(data));
           });
-
-
-        }
-    }
+        },
+      },
     });
 
-
     var pusher = new Pusher("7b2411e6822e2f36b872", {
-        cluster: "eu",
-      });
+      cluster: "eu",
+    });
 
-      // var sha = getParameterByName('sha');
+    // var sha = getParameterByName('sha');
 
-      app.connect()
-
-
-
+    app.connect();
   </script>
-
-
-
-
 </body>
