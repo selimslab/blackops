@@ -1,3 +1,4 @@
+# import asyncio
 import asyncio
 import itertools
 import time
@@ -23,11 +24,18 @@ app = Celery(
 
 
 def revoke(task_id: Union[str, List[str]]) -> Any:
+    # SIGUSR1 to raise SoftTimeLimitExceeded()
     return app.control.revoke(task_id, terminate=True, signal="SIGUSR1")
 
 
 def get_result(task_id: str) -> Any:
     return app.AsyncResult(task_id).result
+
+
+def get_result_all() -> Any:
+    ids = get_all_task_ids()
+
+    return [app.AsyncResult(task_id).result for task_id in ids]
 
 
 @app.task
@@ -95,7 +103,7 @@ def flatten(ll):
     return list(itertools.chain.from_iterable(ll))
 
 
-def revoke_all():
+def get_all_task_ids():
     # Inspect all nodes.
     i = app.control.inspect()
 
@@ -104,11 +112,15 @@ def revoke_all():
     task_lists = [i.scheduled().values(), i.reserved().values(), i.active().values()]
     task_lists = flatten(task_lists)
 
-    print(task_lists, task_lists)
+    print("task_lists", task_lists)
 
     ids = [task.get("id") for tl in task_lists for task in tl]
     ids = [i for i in ids if i]
+    return ids
 
+
+def revoke_all():
+    ids = get_all_task_ids()
     for i in ids:
         revoke(i)
 

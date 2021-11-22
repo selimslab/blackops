@@ -26,14 +26,15 @@ async def run_task(sha: str):
     )
 
 
-@router.get("/")
-async def get_all_tasks():
-    return JSONResponse(content={"message": "all tasks"})
+# @router.get("/")
+# async def get_all_tasks():
+#     return taskq.get_result_all()
 
 
-@router.get("/{sha}")
-async def get_task(sha: str):
-    return JSONResponse(content={"message": f"task {sha}"})
+# @router.get("/{sha}")
+# async def get_task(sha: str):
+#     task_id = await handlers.get_task_id(sha)
+#     return taskq.get_result(task_id)
 
 
 @router.delete("/")

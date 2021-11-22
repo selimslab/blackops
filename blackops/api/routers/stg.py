@@ -19,7 +19,7 @@ async def read_all():
 
 
 @router.get("/{sha}")
-async def read_stg(sha: str):
+async def read(sha: str):
     """View the stg with this id"""
     return await handlers.get_stg(sha)
 
@@ -31,7 +31,7 @@ async def delete_all():
 
 
 @router.delete("/{sha}", response_model=dict)
-async def delete_stg(
+async def delete(
     sha: str,
 ):
     """Delete a strategy"""
@@ -42,7 +42,7 @@ async def delete_stg(
     "/",
     response_model=dict,
 )
-async def create_stg(stg: Strategy):
+async def create(stg: Strategy):
     """
     This will run the strategy with your parameters
 

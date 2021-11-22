@@ -356,6 +356,7 @@ class SlidingWindowTrader(StrategyBase):
             "message": message,
             "time": str(datetime.now().time()),
         }
+        logger.info(message)
         # pusher_client.trigger(self.sha, event.update, message)
 
     def broadcast_message(self, message):
@@ -364,6 +365,7 @@ class SlidingWindowTrader(StrategyBase):
             "message": message,
             "time": str(datetime.now().time()),
         }
+        logger.info(message)
         # pusher_client.trigger(self.sha, event.update, message)
 
     def broadcast_theo(self):
@@ -373,6 +375,7 @@ class SlidingWindowTrader(StrategyBase):
             "theo_sell": str(self.theo_sell),
             "time": str(datetime.now().time()),
         }
+        logger.info(message)
         # pusher_client.trigger(self.sha, event.update, message)
 
     async def broadcast_theo_periodical(self):

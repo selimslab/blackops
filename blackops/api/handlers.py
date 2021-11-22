@@ -76,6 +76,10 @@ async def remove_log_channel(sha: str):
     await redis_client.srem(LOG_CHANNELS, sha)
 
 
+async def get_task_id(sha):
+    return await redis_client.hget(RUNNING_TASKS, sha)
+
+
 async def run_stg(sha: str) -> str:
     stg: dict = await get_stg(sha)
 
@@ -89,7 +93,7 @@ async def run_stg(sha: str) -> str:
 
 
 async def stop_stg(sha: str):
-    task_id = await redis_client.hget(RUNNING_TASKS, sha)
+    task_id = await get_task_id(sha)
     if not task_id:
         raise ValueError("no tasks found")
     taskq.revoke(str(task_id, "utf-8"))
