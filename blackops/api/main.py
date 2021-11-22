@@ -24,11 +24,6 @@ async def validation_exception_handler(request, exc: Exception):
     )
 
 
-@app.get("/")
-async def root():
-    return FileResponse("static/index.html")
-
-
 templates = Jinja2Templates(directory="templates")
 
 
@@ -36,3 +31,8 @@ templates = Jinja2Templates(directory="templates")
 async def logs():
     # return templates.TemplateResponse("logs.html", {"request": {}, "sha": sha})
     return FileResponse("static/logs.html")
+
+
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
