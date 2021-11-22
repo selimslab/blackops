@@ -7,12 +7,12 @@ from typing import Any, Callable, List, Union
 from celery import Celery
 from celery.states import PENDING, SUCCESS, state
 
-import blackops.util.push_events as event
+import blackops.pubsub.push_events as event
 from blackops.api.models.stg import Strategy
+from blackops.pubsub.push import pusher_client
 from blackops.taskq.redis import redis_url
 from blackops.trader.factory import create_trader_from_strategy
 from blackops.util.logger import logger
-from blackops.util.push import pusher_client
 
 app = Celery(
     "celery-leader",
@@ -23,7 +23,7 @@ app = Celery(
 
 
 def revoke(task_id: Union[str, List[str]]) -> Any:
-    return app.control.revoke(task_id, terminate=True)
+    return app.control.revoke(task_id, terminate=True, signal="SIGUSR1")
 
 
 def get_result(task_id: str) -> Any:

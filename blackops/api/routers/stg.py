@@ -5,9 +5,8 @@ from fastapi.templating import Jinja2Templates
 
 import blackops.api.handlers as handlers
 import blackops.taskq.tasks as taskq
+from blackops.api.auth import auth
 from blackops.api.models.stg import Strategy
-
-from .auth import auth
 
 router = APIRouter(dependencies=[Depends(auth)])
 
@@ -22,7 +21,7 @@ async def logs():
 
 
 @router.get("/stg/", response_model=list, tags=["read"])
-async def list_strategies():
+async def read_stg_all():
     """View all strategies"""
     stgs = await handlers.list_stgs()
     if stgs:
@@ -66,30 +65,3 @@ async def create_stg(stg: Strategy):
     """
 
     return await handlers.create_stg(stg)
-
-
-@router.post("/stg/run/{sha}", tags=["run"])
-async def run_stg(sha: str):
-    """
-    When you give a sha, this will run the given strategy
-
-    1. If ok, you will see a task id in the response.
-
-    5. View logs on the home page
-    """
-    task_id = await handlers.run_stg(sha)
-    return JSONResponse(
-        content={"message": f"started strategy {sha} with task id {task_id}"}
-    )
-
-
-@router.post("/stg/stop/", tags=["stop"])
-async def stop_all_stgs():
-    await handlers.stop_all()
-    return JSONResponse(content={"message": "stopped all"})
-
-
-@router.post("/stg/stop/{sha}", tags=["stop"])
-async def stop_stg(sha: str):
-    await handlers.stop_stg(sha)
-    return JSONResponse(content={"message": f"stopped {sha}"})

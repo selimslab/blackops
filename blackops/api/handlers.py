@@ -14,12 +14,11 @@ STG_MAP = "STG_MAP"
 
 RUNNING_TASKS = "RUNNING_TASKS"
 
-
 LOG_CHANNELS = "LOG_CHANNELS"
 
 
 def dict_to_hash(d: dict) -> str:
-    return hashlib.sha1(json.dumps(d).encode()).hexdigest()
+    return hashlib.md5(json.dumps(d).encode()).hexdigest()
 
 
 def str_to_json(s: str) -> dict:

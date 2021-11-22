@@ -4,6 +4,10 @@ from typing import Callable
 import websockets
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 
+import blackops.pubsub.push_events as event
+from blackops.pubsub.push import pusher_client
+from blackops.util.logger import logger
+
 
 async def ws_stream(uri: str, message: str, sleep=0.5):
     async with websockets.connect(uri=uri) as websocket:
@@ -22,7 +26,7 @@ async def reconnecting_generator(generator_factory: Callable):
             async for data in gen:
                 if data:
                     yield data
-        except ConnectionClosedError as e:
+        except Exception as e:
             # recover from network errors,
             # for example connection lost
             # continue where you left
@@ -30,7 +34,12 @@ async def reconnecting_generator(generator_factory: Callable):
             # create a new generator
             gen = generator_factory()
 
-        except Exception as e:
-            # log and raise any other error
-            # for example a KeyError
-            raise e
+            logger.info(f"Reconnecting generator: {e}")
+
+            # pusher_client.trigger(self.sha, event.update, message)
+            # TODO sha needed here
+
+        # except Exception as e:
+        #     # log and raise any other error
+        #     # for example a KeyError
+        #     raise e
