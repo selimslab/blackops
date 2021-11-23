@@ -83,8 +83,8 @@ def is_in_progress(task_id):
 
 async def start_task(sha: str, start_task_func: Callable) -> str:
 
-    # async with redis_client.lock(sha, timeout=10):
-    #     current_running_task_id = await redis_client.get(sha)
+    # async with async_redis_client.lock(sha, timeout=10):
+    #     current_running_task_id = await async_redis_client.get(sha)
     #     if current_running_task_id:
     #         current_running_task_id = current_running_task_id.decode("utf-8")
 

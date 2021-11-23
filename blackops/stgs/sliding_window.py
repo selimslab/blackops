@@ -9,15 +9,9 @@ from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
 from blackops.pubsub.push import pusher_client
+from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
-
-
-@dataclass
-class Stats:
-    books_seen: int = 0
-    orders_given: int = 0
-    pnl: Decimal = Decimal(0)
 
 
 @dataclass
@@ -65,6 +59,18 @@ class SlidingWindowTrader(StrategyBase):
     best_buyer: Optional[Decimal] = None
 
     orders: list = field(default_factory=list)
+
+    pnl: Decimal = Decimal("0")
+    pnl_last_updated: Optional[Any] = None
+
+    theo_buy_last_updated: Optional[Any] = None
+    theo_sell_last_updated: Optional[Any] = None
+
+    best_buyer_last_updated: Optional[Any] = None
+    best_seller_last_updated: Optional[Any] = None
+
+    binance_book_ticker_stream_seen: int = 0
+    btc_books_seen: int = 0
 
     #  NOTES
 
@@ -116,7 +122,7 @@ class SlidingWindowTrader(StrategyBase):
         consumers: Any = [
             self.watch_books_and_decide(),
             self.update_best_buyers_and_sellers(),
-            self.broadcast_theo_periodical(),
+            self.broadcast_stats_periodical(),
         ]  # is this ordering important ?
 
         await asyncio.gather(*consumers)
@@ -126,15 +132,19 @@ class SlidingWindowTrader(StrategyBase):
         self.broadcast_message(f"Watching books of {self.leader_exchange.name}")
 
         async for book in self.leader_book_ticker_stream:
+            self.binance_book_ticker_stream_seen += 1
             self.calculate_window(book)
             await self.should_transact()
+            await asyncio.sleep(0.08)
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
         self.broadcast_message(f"Watching books of {self.follower_exchange.name}")
         async for book in self.follower_book_stream:
+            self.btc_books_seen += 1
             parsed_book = self.follower_exchange.parse_book(book)
             self.update_best_prices(parsed_book)
+            await asyncio.sleep(0.08)
 
     def get_current_step(self) -> Decimal:
         # for example 20
@@ -179,6 +189,9 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
+        self.theo_buy_last_updated = datetime.now().time()
+        self.theo_sell_last_updated = datetime.now().time()
+
         # logger.info(f"theo_buy {self.theo_buy}")
 
     @staticmethod
@@ -204,8 +217,8 @@ class SlidingWindowTrader(StrategyBase):
 
         sorted_sales_orders = sorted(sales_orders, key=lambda d: Decimal(d["P"]))
         best_seller = sorted_sales_orders[0].get("P")
-        logger.info(sorted_sales_orders[0])
-        logger.info("best_seller", best_seller)
+        logger.info(f"sorted_sales_orders {sorted_sales_orders[0]}")
+        logger.info(f"best_seller, {best_seller}")
         if best_seller:
             return Decimal(best_seller)
         return None
@@ -221,13 +234,7 @@ class SlidingWindowTrader(StrategyBase):
                     best_seller and best_seller < self.best_seller
                 ):
                     self.best_seller = best_seller
-                    message = {
-                        "type": "best_seller",
-                        "time": str(datetime.now().time()),
-                        "best_seller": str(self.best_seller),
-                    }
-                    logger.info(message)
-                    pusher_client.trigger(self.sha, event.update, message)
+                    self.best_seller_last_updated = datetime.now().time()
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
@@ -236,15 +243,7 @@ class SlidingWindowTrader(StrategyBase):
                     best_buyer and best_buyer > self.best_buyer
                 ):
                     self.best_buyer = best_buyer
-
-                    message = {
-                        "type": "best_buyer",
-                        "time": str(datetime.now().time()),
-                        "best_buyer": str(self.best_buyer),
-                    }
-                    pusher_client.trigger(self.sha, event.update, message)
-
-                    logger.info(message)
+                    self.best_buyer_last_updated = datetime.now().time()
 
         except Exception as e:
             logger.info(e)
@@ -344,26 +343,15 @@ class SlidingWindowTrader(StrategyBase):
         self.orders.append(message)
         logger.info(message)
 
-        await self.broadcast_pnl()
-
-    async def broadcast_pnl(self):
         pnl = await self.calculate_pnl()
-        message = {
-            "type": "pnl",
-            "pnl": str(pnl),
-            "time": str(datetime.now().time()),
-        }
-        pusher_client.trigger(self.sha, event.update, message)
-
-        # "orders": self.orders}
-        # TODO add orders to API
-
-        logger.info(message)
+        if pnl:
+            self.pnl = pnl
+            self.pnl_last_updated = datetime.now().time()
 
     def broadcast_error(self, message):
         message = {
             "type": "error",
-            "message": message,
+            "message": str(message),
             "time": str(datetime.now().time()),
         }
         logger.info(message)
@@ -378,17 +366,30 @@ class SlidingWindowTrader(StrategyBase):
         logger.info(message)
         pusher_client.trigger(self.sha, event.update, message)
 
-    def broadcast_theo(self):
-        message = {
-            "type": "theo",
-            "theo_buy": str(self.theo_buy),
-            "theo_sell": str(self.theo_sell),
+    def create_stats_message(self):
+        return {
+            "type": "stats",
             "time": str(datetime.now().time()),
+            "theo_buy": str(self.theo_buy),
+            "theo_buy_last_updated": self.theo_buy_last_updated,
+            "theo_sell": str(self.theo_sell),
+            "theo_sell_last_updated": self.theo_sell_last_updated,
+            "pnl": str(self.pnl),
+            "pnl_last_updated": self.pnl_last_updated,
+            "best_seller": str(self.best_seller),
+            "best_seller_last_updated": self.best_seller_last_updated,
+            "best_buyer": str(self.best_buyer),
+            "best_buyer_last_updated": self.best_buyer_last_updated,
+            "binance_book_tickers_seen": self.binance_book_ticker_stream_seen,
+            "btc_books_seen": self.btc_books_seen,
         }
+
+    def broadcast_stats(self):
+        message = self.create_stats_message()
         logger.info(message)
         pusher_client.trigger(self.sha, event.update, message)
 
-    async def broadcast_theo_periodical(self):
+    async def broadcast_stats_periodical(self):
         while True:
-            self.broadcast_theo()
+            self.broadcast_stats()
             await asyncio.sleep(1)

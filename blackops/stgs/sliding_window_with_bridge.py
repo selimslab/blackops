@@ -14,20 +14,18 @@ from .sliding_window import SlidingWindowTrader
 
 @dataclass
 class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
-    bridge: Asset = Asset("None")
+    bridge: Asset = Asset("")
 
     leader_bridge_quote_stream: Optional[AsyncGenerator] = None
 
-    follower_book_stream: AsyncGenerator
-
     bridge_quote: Optional[Decimal] = None
+
+    bridge_last_updated: Optional[Any] = None
 
     name: str = "Sliding Window With Bridge"
 
     async def run(self):
-        message = f"Starting {self.name}"
-        self.broadcast_message(f"Starting {self.name}")
-        self.broadcast_message(f"Parameters {str(self)}")
+        message = f"Starting {self.name} with params "
 
         logger.info(message)
         logger.info(self)
@@ -46,9 +44,14 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
             self.update_bridge_quote(),
             self.update_best_buyers_and_sellers(),
             self.watch_books_and_decide(),
-            self.broadcast_theo_periodical(),
+            self.broadcast_stats_periodical(),
         ]
         await asyncio.gather(*aws)
+
+    def create_stats_message(self):
+        message = super().create_stats_message()
+        message["bridge"] = str(self.bridge_quote)
+        message["bridge_last_updated"] = str(self.bridge_last_updated)
 
     async def update_bridge_quote(self):
         msg = f"Watching the leader bridge quotes.."
@@ -65,10 +68,4 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    message = {
-                        "type": "bridge",
-                        "time": str(datetime.now().time()),
-                        "bridge": str(self.bridge_quote),
-                    }
-                    pusher_client.trigger(self.sha, event.update, message)
-                    logger.info(message)
+                    self.bridge_last_updated = datetime.now()

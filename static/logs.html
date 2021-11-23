@@ -5,6 +5,8 @@
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css"
   />
+
+
 </head>
 
 <body class="has-background-dark has-text-success" style="min-height: 100rem">
@@ -40,64 +42,83 @@
 
       <br />
 
-      <p class="has-text-primary-light">Copy/paste the task sha to view logs</p>
 
-      <br />
+  <div class="column is-one-third">
 
-      <input
-        class="input is-rounded"
-        v-model="sha"
-        v-on:input="connect"
-        placeholder="edit me"
-      />
+
+    <p class="has-text-primary-light">Copy/paste the task sha to view logs</p>
+
+    <br />
+
+
+    <input
+    class="input is-rounded"
+    v-model="sha"
+    v-on:input="connect"
+    placeholder="edit me"
+  />
+
+
+  </div>
 
       <br />
       <br />
 
       <div class="columns">
+        <h1 class="has-text-danger mb-4">Summary</h1>
 
         <div class="column">
-          <h1>Summary</h1>
-
-
-            <p>pnl: {{pnl}}</p>
-            <p>last_update: {{pnl_last_updated}}</p>
-
-            ---
-    
-            <p>bridge: {{bridge}}</p>
-            <p>last_update: {{bridge_last_updated}}</p>
-     
-            ---
-
-
-            <p>best_buyer: {{best_buyer}}</p>
-            <p>last_update: {{best_buyer_last_updated}}</p>
-
+          <p>pnl: {{pnl}}</p>
+          <p>last_update: {{pnl_last_updated}}</p>
 
           ---
 
-
-            <p>best_seller: {{best_seller}}</p>
-            <p>last_update: {{best_seller_last_updated}}</p>
-
+          <p>bridge: {{bridge}}</p>
+          <p>last_update: {{bridge_last_updated}}</p>
 
           ---
-
-            <p>theo_buy: {{theo_buy}}</p>
-            <p>last_update:  {{theo_buy_last_updated}}</p>
-
-
-
-          ---
-
-            <p>theo_sell: {{theo_sell}}</p>
-            <p>last_update: {{theo_sell_last_updated}}</p>
-
         </div>
 
         <div class="column">
-          <h1>Messages</h1>
+          <p>best_buyer: {{best_buyer}}</p>
+          <p>last_update: {{best_buyer_last_updated}}</p>
+
+          ---
+
+          <p>best_seller: {{best_seller}}</p>
+          <p>last_update: {{best_seller_last_updated}}</p>
+
+          ---
+        </div>
+
+        <div class="column">
+          <p>theo_buy: {{theo_buy}}</p>
+          <p>last_update: {{theo_buy_last_updated}}</p>
+
+          ---
+
+          <p>theo_sell: {{theo_sell}}</p>
+          <p>last_update: {{theo_sell_last_updated}}</p>
+
+          ---
+        </div>
+
+        <div class="column">
+          <p>btc_books_seen: {{btc_books_seen}}</p>
+          ---
+
+          <p>binance_book_tickers_seen: {{binance_book_tickers_seen}}</p>
+
+          ---
+        </div>
+
+
+      </div>
+
+      <div class="columns" >
+
+        <div class="column" style="height: 32rem; overflow: scroll;">
+          <h1 class="has-text-danger">Messages</h1>
           <br />
           <br />
 
@@ -106,8 +127,8 @@
           </ul>
         </div>
 
-        <div class="column">
-          <h2>Errors</h2>
+        <div class="column" style="height: 32rem; overflow: scroll;">
+          <h2 class="has-text-danger">Errors</h2>
           <br />
           <br />
 
@@ -115,16 +136,31 @@
             <li v-for="error in errors">{{error}}</li>
           </ul>
         </div>
+</div>
 
-        <div class="column">
-          <h2>Orders</h2>
+
+        <div class="columns">
+
+        <div class="column" style="height: 32rem; overflow: scroll;">
+          <h2 class="has-text-danger">Long Orders</h2>
           <br />
           <br />
 
           <ul>
-            <li v-for="order in orders">{{order}}</li>
+            <li v-for="order in long_orders">{{order}}</li>
           </ul>
         </div>
+
+        <div class="column" style="height: 32rem; overflow: scroll;">
+          <h2 class="has-text-danger">Short Orders</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="order in short_orders">{{order}}</li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </div>
@@ -162,11 +198,9 @@
         best_seller_last_updated: "",
         bridge: "",
         bridge_last_updated: "",
-        orders: [],
-        trades: [],
-        trades_count: 0,
-        orders_count: 0,
-        binance_books_seen: 0,
+        long_orders: [],
+        short_orders:[],
+        binance_book_tickers_seen: 0,
         btc_books_seen: 0,
         errors: [],
       },
@@ -175,56 +209,55 @@
           var channel = pusher.subscribe(app.sha);
 
           channel.bind("update", function (data) {
+
+
             type = data.type;
+
             if (type == "message") {
               app.messages.push(data.message);
-            }
-
-            if (type == "pnl") {
-              app.pnl = data.pnl;
-              app.pnl_last_updated = data.time;
-            }
-            if (type == "bridge") {
-              app.bridge = data.bridge;
-              app.bridge_last_updated = data.time;
-            }
-
-            if (type == "best_buyer") {
-              app.best_buyer = data.best_buyer;
-              app.best_buyer_last_updated = data.time;
-            }
-
-            if (type == "best_seller") {
-              app.best_seller = data.best_seller;
-              app.best_seller_last_updated = data.time;
-            }
-
-            if (type == "order") {
-              app.orders.push(data.order);
-
-              app.theo_buy = data.theo_buy;
-              app.theo_sell = data.theo_sell;
-
-              app.theo_buy_last_updated = app.theo_sell_last_updated =
-                data.time;
-            }
-
-            if (type == "theo") {
-              app.theo_buy = data.theo_buy;
-              app.theo_sell = data.theo_sell;
-
-              app.theo_buy_last_updated = app.theo_sell_last_updated =
-                data.time;
             }
 
             if (type == "error") {
               app.errors.push(data.message);
             }
+
+
+            if (type == "order") {
+              if(order.type == "buy"){
+                app.long_orders.push(data.order);
+              }
+              if(order.type == "sell"){
+                app.long_orders.push(data.order);
+              }
+            }
+
+            if (type == "stats") {
+              app.pnl = data.pnl;
+              app.pnl_last_updated = data.time;
+              
+              app.bridge = data.bridge;
+              app.bridge_last_updated = data.time;
+              
+              app.best_buyer = data.best_buyer;
+              app.best_buyer_last_updated = data.time;
+
+              app.best_seller = data.best_seller;
+              app.best_seller_last_updated = data.time;
+
+              app.binance_book_tickers_seen = data.binance_book_tickers_seen;
+              app.btc_books_seen = data.btc_books_seen;
+
+              app.theo_buy = data.theo_buy;
+              app.theo_buy_last_updated = data.theo_buy_last_updated;
+
+              app.theo_sell = data.theo_sell;
+              app.theo_sell_last_updated = data.theo_sell_last_updated;
+            }
+
+
           });
 
-          channel.bind("order", function (data) {
-            app.orders.push(JSON.stringify(data));
-          });
+
         },
       },
     });

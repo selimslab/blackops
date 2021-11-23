@@ -13,10 +13,12 @@ from blackops.stgs.sliding_window import SlidingWindowTrader
 from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
 from blackops.streams.binance import create_book_stream_binance
 from blackops.streams.btcturk import create_book_stream_btcturk
+from blackops.taskq.redis import STREAM_MAP, async_redis_client
 from blackops.util.logger import logger
 
 # from decimal import getcontext
 # getcontext().prec = 10
+
 
 TESTNET = "testnet"
 REAL = "real"
@@ -103,6 +105,10 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
     bridge_quote_symbol = bridge + stg.quote
     base_bridge_symbol = stg.base + bridge
 
+    leader_book_ticker_stream = create_book_stream_binance(base_bridge_symbol)
+    leader_bridge_quote_stream = create_book_stream_binance(bridge_quote_symbol)
+    follower_book_stream = create_book_stream_btcturk(pair.symbol)
+
     trader = SlidingWindowWithBridgeTrader(
         sha=stg.sha,
         bridge=Asset(bridge),
@@ -113,9 +119,9 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
         step_count=stg.step_count,
         credit=stg.credit,
         step_constant_k=stg.step_constant_k,
-        leader_book_ticker_stream=create_book_stream_binance(base_bridge_symbol),
-        leader_bridge_quote_stream=create_book_stream_binance(bridge_quote_symbol),
-        follower_book_stream=create_book_stream_btcturk(pair.symbol),
+        leader_book_ticker_stream=leader_book_ticker_stream,
+        leader_bridge_quote_stream=leader_bridge_quote_stream,
+        follower_book_stream=follower_book_stream,
     )
 
     return trader
@@ -147,6 +153,23 @@ async def sliding_window_factory(stg: Strategy):
 
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
+    # binance_stream_channel = f"{BINANCE}_{pair.symbol}"
+    # btcturk_stream_channel = f"{BTCTURK}_{pair.symbol}"
+
+    # binance_streams = await async_redis_client.hmget(STREAM_MAP, BINANCE)
+    # if pair.symbol not in binance_streams:
+    #     leader_book_ticker_stream = create_book_stream_binance(pair.symbol)
+    #     await async_redis_client.hset(STREAM_MAP, BINANCE,binance_stream_channel )
+
+    # bt_streams = await async_redis_client.hmget(STREAM_MAP, BTCTURK)
+    # if pair.symbol not in bt_streams:
+    #     follower_book_stream = create_book_stream_btcturk(pair.symbol)
+    #     await async_redis_client.hget(STREAM_MAP, BTCTURK), btcturk_stream_channel
+
+    leader_book_ticker_stream = create_book_stream_binance(pair.symbol)
+
+    follower_book_stream = create_book_stream_btcturk(pair.symbol)
+
     trader = SlidingWindowTrader(
         sha=stg.sha,
         leader_exchange=leader_exchange,
@@ -156,8 +179,8 @@ async def sliding_window_factory(stg: Strategy):
         step_count=stg.step_count,
         credit=stg.credit,
         step_constant_k=stg.step_constant_k,
-        leader_book_ticker_stream=create_book_stream_binance(pair.symbol),
-        follower_book_stream=create_book_stream_btcturk(pair.symbol),
+        leader_book_ticker_stream=leader_book_ticker_stream,
+        follower_book_stream=follower_book_stream,
     )
 
     return trader
@@ -197,3 +220,7 @@ async def create_trader_from_strategy(stg_dict: dict) -> Trader:
 
     trader = await factory_func(stg)
     return trader
+
+
+async def create_streams_from_strategy(stg_dict: dict) -> None:
+    ...
