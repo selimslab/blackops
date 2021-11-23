@@ -11,13 +11,21 @@ from blackops.exchanges.btcturk.real import create_btcturk_api_client_real
 from blackops.exchanges.btcturk.testnet import BtcturkTestnetApiClient
 from blackops.stgs.sliding_window import SlidingWindowTrader
 from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
-from blackops.streams.binance import create_book_stream_binance
+from blackops.streams.bn import create_book_stream_binance
 from blackops.streams.btcturk import create_book_stream_btcturk
 from blackops.taskq.redis import STREAM_MAP, async_redis_client
 from blackops.util.logger import logger
 
 # from decimal import getcontext
 # getcontext().prec = 10
+
+
+# async def create_log_channel(sha: str):
+#     await async_redis_client.sadd(LOG_CHANNELS, sha)
+
+
+# async def remove_log_channel(sha: str):
+#     await async_redis_client.srem(LOG_CHANNELS, sha)
 
 
 TESTNET = "testnet"

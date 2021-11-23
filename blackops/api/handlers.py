@@ -1,11 +1,14 @@
+import asyncio
 import hashlib
 from typing import List, OrderedDict
 
 import simplejson as json
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
+from fastapi import HTTPException
 
+import blackops.pubsub.push_events as event
 import blackops.taskq.tasks as taskq
 from blackops.api.models.stg import Strategy
+from blackops.pubsub.push import pusher_client
 from blackops.taskq.redis import (
     LOG_CHANNELS,
     RUNNING_TASKS,
@@ -13,7 +16,6 @@ from blackops.taskq.redis import (
     async_redis_client,
 )
 from blackops.taskq.task_ctx import task_context
-from blackops.trader.factory import create_trader_from_strategy
 
 
 def dict_to_hash(d: dict) -> str:
@@ -67,43 +69,43 @@ async def create_stg(stg: Strategy) -> dict:
     return d
 
 
-async def create_log_channel(sha: str):
-    await async_redis_client.sadd(LOG_CHANNELS, sha)
-
-
-async def remove_log_channel(sha: str):
-    await async_redis_client.srem(LOG_CHANNELS, sha)
-
-
 async def get_task_id(sha):
     return await async_redis_client.hget(RUNNING_TASKS, sha)
 
 
-async def run_stg(sha: str) -> str:
+async def run_task(sha: str):
+    # asyncio.run(start_task(sha))
+    # await create_log_channel(sha)
     stg: dict = await get_stg(sha)
 
-    def task_func():
-        return taskq.run_stg.delay(stg)
-
-    await create_log_channel(sha)
-    task_id = await taskq.start_task(sha, task_func)
-    await async_redis_client.hset(RUNNING_TASKS, sha, task_id)
-    return task_id
+    await task_context.start_task(stg)
+    # task_id = await taskq.start_task(sha, task_func)
+    # await async_redis_client.hset(RUNNING_TASKS, sha, task_id)
+    # await async_redis_client.sadd("RUNNING_TASKS", sha)
+    return sha
 
 
-async def stop_stg(sha: str):
-    task_id = await get_task_id(sha)
-    if not task_id:
-        raise ValueError("no tasks found")
-    taskq.revoke(str(task_id, "utf-8"))
-    await remove_log_channel(sha)
+async def stop_task(sha: str):
+    await task_context.cancel_task(sha)
+    pusher_client.publish(sha, event.update, {"message": f"{sha} stopped"})
 
 
-async def stop_all():
+async def stop_all_tasks():
     # stgs = await list_stgs()
     # if stgs:
     #     hashes = [s.get("sha", "") for s in stgs]
     #     task_ids = await async_redis_client.mget(hashes)
     #     taskq.revoke(task_ids)
 
-    taskq.revoke_all()
+    # taskq.revoke_all()
+
+    n = await task_context.cancel_all()
+    return n
+
+
+def get_orders(sha: str):
+    return task_context.get_orders(sha)
+
+
+def get_tasks():
+    return task_context.get_tasks()

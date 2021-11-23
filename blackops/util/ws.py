@@ -26,7 +26,12 @@ async def reconnecting_generator(generator_factory: Callable):
             async for data in gen:
                 if data:
                     yield data
-        except Exception as e:
+        except (
+            ConnectionClosedError,
+            ConnectionAbortedError,
+            ConnectionResetError,
+            WebSocketException,
+        ) as e:
             # recover from network errors,
             # for example connection lost
             # continue where you left
@@ -39,7 +44,7 @@ async def reconnecting_generator(generator_factory: Callable):
             # pusher_client.trigger(self.sha, event.update, message)
             # TODO sha needed here
 
-        # except Exception as e:
-        #     # log and raise any other error
-        #     # for example a KeyError
-        #     raise e
+        except Exception as e:
+            # log and raise any other error
+            # for example a KeyError
+            raise e

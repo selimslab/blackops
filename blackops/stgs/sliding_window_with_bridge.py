@@ -52,6 +52,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         message = super().create_stats_message()
         message["bridge"] = str(self.bridge_quote)
         message["bridge_last_updated"] = str(self.bridge_last_updated)
+        return message
 
     async def update_bridge_quote(self):
         msg = f"Watching the leader bridge quotes.."
@@ -68,4 +69,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    self.bridge_last_updated = datetime.now()
+                    self.bridge_last_updated = (
+                        datetime.now().time().replace(microsecond=0)
+                    )
+            await asyncio.sleep(0.08)

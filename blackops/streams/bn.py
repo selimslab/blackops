@@ -15,6 +15,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
         while True:
             res = await tscm.recv()
             yield res
+            await asyncio.sleep(0.05)
 
 
 def create_book_stream_binance(symbol: str):
@@ -22,7 +23,8 @@ def create_book_stream_binance(symbol: str):
 
 
 async def test_orderbook_stream(symbol):
-    async for book in create_book_stream_binance(symbol):
+    gen = create_book_stream_binance(symbol)
+    async for book in gen:
         print(book)
 
 

@@ -55,7 +55,7 @@
     class="input is-rounded"
     v-model="sha"
     v-on:input="connect"
-    placeholder="edit me"
+    placeholder="please enter the sha of the stg you run"
   />
 
 
@@ -185,7 +185,7 @@
       el: "#app",
       data: {
         messages: [],
-        sha: "please enter the sha of the stg you run",
+        sha: null,
         pnl: 0,
         pnl_last_updated: "",
         theo_buy: 0,

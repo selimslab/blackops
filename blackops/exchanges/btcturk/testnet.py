@@ -44,6 +44,7 @@ class BtcturkTestnetApiClient:
                 raise ValueError("Insufficient funds")
             await self.add_balance(base, Decimal(quantity))
             await self.subtract_balance(quote, cost)
+
         elif order_type == "sell":
             base_balance = await self.get_balance(base)
             if base_balance < quantity:
