@@ -194,8 +194,8 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
-        self.theo_buy_last_updated = datetime.now().time().replace(microsecond=0)
-        self.theo_sell_last_updated = datetime.now().time().replace(microsecond=0)
+        self.theo_buy_last_updated = datetime.now().time()
+        self.theo_sell_last_updated = datetime.now().time()
 
         # logger.info(f"theo_buy {self.theo_buy}")
 
@@ -238,9 +238,7 @@ class SlidingWindowTrader(StrategyBase):
                     best_seller and best_seller < self.best_seller
                 ):
                     self.best_seller = best_seller
-                    self.best_seller_last_updated = (
-                        datetime.now().time().replace(microsecond=0)
-                    )
+                    self.best_seller_last_updated = datetime.now().time()
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
@@ -249,9 +247,7 @@ class SlidingWindowTrader(StrategyBase):
                     best_buyer and best_buyer > self.best_buyer
                 ):
                     self.best_buyer = best_buyer
-                    self.best_buyer_last_updated = (
-                        datetime.now().time().replace(microsecond=0)
-                    )
+                    self.best_buyer_last_updated = datetime.now().time()
 
         except Exception as e:
             logger.info(e)
@@ -347,7 +343,7 @@ class SlidingWindowTrader(StrategyBase):
     async def broadcast_order(self, order):
         message = {
             "type": "order",
-            "time": str(datetime.now().time().replace(microsecond=0)),
+            "time": str(datetime.now().time()),
             "order": order,
         }
 
@@ -358,13 +354,13 @@ class SlidingWindowTrader(StrategyBase):
         pnl = await self.calculate_pnl()
         if pnl:
             self.pnl = pnl
-            self.pnl_last_updated = datetime.now().time().replace(microsecond=0)
+            self.pnl_last_updated = datetime.now().time()
 
     def broadcast_error(self, message):
         message = {
             "type": "error",
             "message": str(message),
-            "time": str(datetime.now().time().replace(microsecond=0)),
+            "time": str(datetime.now().time()),
         }
         logger.info(message)
         pusher_client.trigger(self.sha, event.update, message)
@@ -373,7 +369,7 @@ class SlidingWindowTrader(StrategyBase):
         message = {
             "type": "message",
             "message": message,
-            "time": str(datetime.now().time().replace(microsecond=0)),
+            "time": str(datetime.now().time()),
         }
         logger.info(message)
         pusher_client.trigger(self.sha, event.update, message)
@@ -381,7 +377,7 @@ class SlidingWindowTrader(StrategyBase):
     def create_stats_message(self):
         return {
             "type": "stats",
-            "time": str(datetime.now().time().replace(microsecond=0)),
+            "time": str(datetime.now().time()),
             "task_start_time": str(self.task_start_time),
             "theo_buy": str(self.theo_buy),
             "theo_buy_last_updated": str(self.theo_buy_last_updated),

@@ -69,7 +69,5 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                 new_quote = super().get_mid(book)
                 if new_quote != self.bridge_quote:
                     self.bridge_quote = new_quote
-                    self.bridge_last_updated = (
-                        datetime.now().time().replace(microsecond=0)
-                    )
+                    self.bridge_last_updated = datetime.now().time()
             await asyncio.sleep(0.08)
