@@ -27,7 +27,7 @@ async def validation_exception_handler(request, exc: Exception):
 templates = Jinja2Templates(directory="templates")
 
 
-@app.get("/logs/")
+@app.get("/monitor/")
 async def logs():
     # return templates.TemplateResponse("logs.html", {"request": {}, "sha": sha})
     return FileResponse("static/logs.html")
