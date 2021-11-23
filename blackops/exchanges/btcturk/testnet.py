@@ -20,7 +20,7 @@ class BtcturkTestnetApiClient:
     async def set_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] = val
 
-    async def get_balance(self, symbol: str) -> Optional[Decimal]:
+    async def get_balance(self, symbol: str) -> Decimal:
         return self.balances.get(symbol, Decimal(0))
 
     async def get_account_balance(self, assets: List[str]) -> List[dict]:
@@ -38,11 +38,16 @@ class BtcturkTestnetApiClient:
         (base, quote) = pair_symbol.split("_")
 
         if order_type == "buy":
+            cost = Decimal(quantity) * Decimal(price) * self.buy_with_fee
+            quote_balance = await self.get_balance(base)
+            if quote_balance < cost:
+                raise ValueError("Insufficient funds")
             await self.add_balance(base, Decimal(quantity))
-            await self.subtract_balance(
-                quote, Decimal(quantity) * Decimal(price) * self.buy_with_fee
-            )
+            await self.subtract_balance(quote, cost)
         elif order_type == "sell":
+            base_balance = await self.get_balance(base)
+            if base_balance < quantity:
+                raise ValueError("Insufficient funds")
             await self.subtract_balance(base, Decimal(quantity))
             await self.add_balance(
                 quote, Decimal(quantity) * Decimal(price) * self.sell_with_fee

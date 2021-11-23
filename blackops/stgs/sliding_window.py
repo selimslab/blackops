@@ -225,7 +225,7 @@ class SlidingWindowTrader(StrategyBase):
                         "best_seller": str(self.best_seller),
                     }
                     logger.info(message)
-                    # pusher_client.trigger(self.sha, event.update, message)
+                    pusher_client.trigger(self.sha, event.update, message)
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
@@ -240,7 +240,7 @@ class SlidingWindowTrader(StrategyBase):
                         "time": str(datetime.now().time()),
                         "best_buyer": str(self.best_buyer),
                     }
-                    # pusher_client.trigger(self.sha, event.update, message)
+                    pusher_client.trigger(self.sha, event.update, message)
 
                     logger.info(message)
 
@@ -265,6 +265,7 @@ class SlidingWindowTrader(StrategyBase):
         # so we buy or sell a quantum
 
         # TODO: should we consider exchange fees?
+
         if not self.best_seller:
             return
 
@@ -279,7 +280,10 @@ class SlidingWindowTrader(StrategyBase):
         qty = float(base_qty)  #  we buy base
         symbol = self.pair.bt_order_symbol
 
-        await self.follower_exchange.long(price, qty, symbol)
+        try:
+            await self.follower_exchange.long(price, qty, symbol)
+        except Exception as e:
+            logger.info(e)
 
         order = {
             "type": "long",
@@ -299,6 +303,11 @@ class SlidingWindowTrader(StrategyBase):
         qty = float(self.base_step_qty)  # we sell base
         symbol = self.pair.bt_order_symbol
 
+        try:
+            await self.follower_exchange.short(price, qty, symbol)
+        except Exception as e:
+            logger.info(e)
+
         order = {
             "type": "short",
             "price": str(price),
@@ -308,8 +317,6 @@ class SlidingWindowTrader(StrategyBase):
         }
 
         await self.broadcast_order(order)
-
-        await self.follower_exchange.short(price, qty, symbol)
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
@@ -330,7 +337,7 @@ class SlidingWindowTrader(StrategyBase):
     async def broadcast_order(self, order):
         message = {"type": "order", "time": str(datetime.now().time()), "order": order}
 
-        # pusher_client.trigger(self.sha, event.update, message)
+        pusher_client.trigger(self.sha, event.update, message)
         self.orders.append(message)
         logger.info(message)
 
@@ -343,7 +350,7 @@ class SlidingWindowTrader(StrategyBase):
             "pnl": str(pnl),
             "time": str(datetime.now().time()),
         }
-        # pusher_client.trigger(self.sha, event.update, message)
+        pusher_client.trigger(self.sha, event.update, message)
 
         # "orders": self.orders}
         # TODO add orders to API
@@ -357,7 +364,7 @@ class SlidingWindowTrader(StrategyBase):
             "time": str(datetime.now().time()),
         }
         logger.info(message)
-        # pusher_client.trigger(self.sha, event.update, message)
+        pusher_client.trigger(self.sha, event.update, message)
 
     def broadcast_message(self, message):
         message = {
@@ -366,7 +373,7 @@ class SlidingWindowTrader(StrategyBase):
             "time": str(datetime.now().time()),
         }
         logger.info(message)
-        # pusher_client.trigger(self.sha, event.update, message)
+        pusher_client.trigger(self.sha, event.update, message)
 
     def broadcast_theo(self):
         message = {
@@ -376,7 +383,7 @@ class SlidingWindowTrader(StrategyBase):
             "time": str(datetime.now().time()),
         }
         logger.info(message)
-        # pusher_client.trigger(self.sha, event.update, message)
+        pusher_client.trigger(self.sha, event.update, message)
 
     async def broadcast_theo_periodical(self):
         while True:

@@ -70,5 +70,5 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
                         "time": str(datetime.now().time()),
                         "bridge": str(self.bridge_quote),
                     }
-                    # pusher_client.trigger(self.sha, event.update, message)
+                    pusher_client.trigger(self.sha, event.update, message)
                     logger.info(message)
