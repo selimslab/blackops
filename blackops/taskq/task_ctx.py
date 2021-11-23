@@ -34,9 +34,11 @@ class TaskContext:
             raise Exception("Task not found")
 
     async def cancel_all(self):
-        n = len(self.tasks)
-        for sha in self.tasks:
-            await self.cancel_task(sha)
+        n = 0
+        for sha, state in self.task_state:
+            if state == "RUNNING":
+                await self.cancel_task(sha)
+                n += 1
 
         return n
         # self.tasks.clear()

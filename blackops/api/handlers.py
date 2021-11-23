@@ -99,7 +99,7 @@ async def stop_all_tasks():
 
     # taskq.revoke_all()
 
-    n = await task_context.cancel_all()
+    n = task_context.cancel_all()
     return n
 
 

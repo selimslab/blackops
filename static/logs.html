@@ -123,6 +123,7 @@
           <br />
 
           <ul>
+            <li>Started at {{task_start_time}}</li>
             <li class="" v-for="message in messages">{{message}}</li>
           </ul>
         </div>
@@ -202,6 +203,7 @@
         short_orders:[],
         binance_book_tickers_seen: 0,
         btc_books_seen: 0,
+        task_start_time: "",
         errors: [],
       },
       methods: {
@@ -232,6 +234,8 @@
             }
 
             if (type == "stats") {
+              app.task_start_time = data.task_start_time;
+
               app.pnl = data.pnl;
               app.pnl_last_updated = data.time;
               
