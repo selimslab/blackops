@@ -204,6 +204,8 @@ class SlidingWindowTrader(StrategyBase):
 
         sorted_sales_orders = sorted(sales_orders, key=lambda d: Decimal(d["P"]))
         best_seller = sorted_sales_orders[0].get("P")
+        logger.info(sorted_sales_orders[0])
+        logger.info("best_seller", best_seller)
         if best_seller:
             return Decimal(best_seller)
         return None
@@ -282,18 +284,19 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.long(price, qty, symbol)
+
+            order = {
+                "type": "long",
+                "price": str(price),
+                "qty": str(qty),
+                "theo_buy": str(self.theo_buy),
+                "symbol": symbol,
+            }
+
+            await self.broadcast_order(order)
+
         except Exception as e:
             logger.info(e)
-
-        order = {
-            "type": "long",
-            "price": str(price),
-            "qty": str(qty),
-            "theo_buy": str(self.theo_buy),
-            "symbol": symbol,
-        }
-
-        await self.broadcast_order(order)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -305,18 +308,18 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.short(price, qty, symbol)
+            order = {
+                "type": "short",
+                "price": str(price),
+                "qty": str(qty),
+                "theo_buy": str(self.theo_sell),
+                "symbol": symbol,
+            }
+
+            await self.broadcast_order(order)
+
         except Exception as e:
             logger.info(e)
-
-        order = {
-            "type": "short",
-            "price": str(price),
-            "qty": str(qty),
-            "theo_buy": str(self.theo_sell),
-            "symbol": symbol,
-        }
-
-        await self.broadcast_order(order)
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
