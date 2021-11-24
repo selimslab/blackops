@@ -24,7 +24,7 @@ async def binance_stream_generator(
                 await asyncio.sleep(0.1)
     except Exception as e:
         logger.error(e)
-        pub.publish_error(channel, str(e))
+        pub.publish_error(channel, f"binance stream: {e}")
 
 
 def create_book_stream_binance(symbol: str, channel: str = "default"):

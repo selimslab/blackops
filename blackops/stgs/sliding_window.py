@@ -88,17 +88,20 @@ class SlidingWindowTrader(StrategyBase):
     # fee_percent * Decimal(1.5)
     # Decimal(0.001)
 
-    async def run(self):
+    async def init(self):
         self.task_start_time = datetime.now().time()
         self.channnel = self.sha
         logger.info(self)
 
         await self.set_step_info()
-        await self.run_streams()
 
         message = self.create_params_message()
         pub.publish_params(self.channnel, message)
         logger.info(message)
+
+    async def run(self):
+        await self.init()
+        await self.run_streams()
 
     def get_orders(self):
         return self.orders
@@ -408,6 +411,7 @@ class SlidingWindowTrader(StrategyBase):
             "btc_books_seen": self.btc_books_seen,
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
+            "params": self.create_params_message(),
         }
 
     def broadcast_stats(self):

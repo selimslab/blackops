@@ -24,17 +24,7 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
     name: str = "Sliding Window With Bridge"
 
     async def run(self):
-        message = f"Starting {self.name} with params "
-
-        self.channnel = self.sha
-
-        message = self.create_params_message()
-        pub.publish_params(self.channnel, message)
-
-        logger.info(message)
-        logger.info(self)
-
-        await self.set_step_info()
+        await super().init()
         await self.run_streams()
 
     def get_mid(self, book: dict) -> Optional[Decimal]:

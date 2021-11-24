@@ -38,13 +38,13 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
             # create a new generator
             gen = generator_factory()
 
-            logger.error(f"Reconnecting generator: {e}")
+            logger.error(f"Reconnecting btc stream: {e}")
             pub.publish_error(channel, str(e))
 
         except Exception as e:
             # log and raise any other error
             # for example a KeyError
-            logger.error(f"Reconnecting generator: {e}")
+            logger.error(f"BT stream lost: {e}")
 
             pub.publish_error(channel, str(e))
             raise e
