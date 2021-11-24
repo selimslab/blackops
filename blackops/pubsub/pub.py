@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from blackops.pubsub.client import pusher_client
+from blackops.util.logger import logger
 
 stats = "stats"
 
@@ -29,7 +30,10 @@ def publish_order(chaannel: str, message):
 
 
 def publish_error(chaannel: str, message):
-    pusher_client.trigger(chaannel, error, add_time(message))
+    try:
+        pusher_client.trigger(chaannel, error, add_time(message))
+    except Exception as e:
+        logger.info(f"{message} {e}")
 
 
 def publish_message(chaannel: str, message):

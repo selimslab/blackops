@@ -20,7 +20,7 @@ def create_orderbook_gen(symbol: str):
     message = get_orderbook_message(symbol)
     message = json.dumps(message)
 
-    gen = ws_stream(uri, message, sleep=0.2)
+    gen = ws_stream(uri, message, sleep=0.21)
 
     return gen
 

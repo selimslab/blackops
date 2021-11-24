@@ -97,21 +97,6 @@
           ---
         </div>
         
-
-
-
-        <div class="column">
-          <p>best_buyer: {{best_buyer}}</p>
-          <p>last_update: {{best_buyer_last_updated}}</p>
-
-          ---
-
-          <p>best_seller: {{best_seller}}</p>
-          <p>last_update: {{best_seller_last_updated}}</p>
-
-          ---
-        </div>
-
         <div class="column">
           <p>theo_buy: {{theo_buy}}</p>
           <p>last_update: {{theo_buy_last_updated}}</p>
@@ -123,6 +108,23 @@
 
           ---
         </div>
+
+
+        <div class="column">
+
+          <p>best_seller: {{best_seller}}</p>
+          <p>last_update: {{best_seller_last_updated}}</p>
+
+          ---
+
+
+          <p>best_buyer: {{best_buyer}}</p>
+          <p>last_update: {{best_buyer_last_updated}}</p>
+
+          ---
+        </div>
+
+
 
         <div class="column">
           <p>btc_books_seen: {{btc_books_seen}}</p>
@@ -282,16 +284,16 @@
               data = data.message;
 
               app.pnl = data.pnl;
-              app.pnl_last_updated = data.time;
+              app.pnl_last_updated = data.pnl_last_updated;
               
               app.bridge = data.bridge;
-              app.bridge_last_updated = data.time;
+              app.bridge_last_updated = data.bridge_last_updated;
               
               app.best_buyer = data.best_buyer;
-              app.best_buyer_last_updated = data.time;
+              app.best_buyer_last_updated = data.best_buyer_last_updated;
 
               app.best_seller = data.best_seller;
-              app.best_seller_last_updated = data.time;
+              app.best_seller_last_updated = data.best_seller_last_updated;
 
               app.binance_book_tickers_seen = data.binance_book_tickers_seen;
               app.btc_books_seen = data.btc_books_seen;

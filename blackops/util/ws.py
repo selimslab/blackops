@@ -17,8 +17,16 @@ async def ws_stream(uri: str, message: str, sleep=0.5):
             yield data
 
 
+def log_and_publish_error(channel, msg):
+    logger.error(msg)
+    pub.publish_error(channel, msg)
+
+
 async def reconnecting_generator(generator_factory: Callable, channel: str = "default"):
     gen = generator_factory()
+
+    retries = 0
+    max_retry = 10
 
     while True:
         try:
@@ -34,17 +42,19 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
             # recover from network errors,
             # for example connection lost
             # continue where you left
-
+            if retries > max_retry:
+                msg = f"Binance stream lost: {e}"
+                log_and_publish_error(channel, msg)
+                raise e
             # create a new generator
+            retries += 1
             gen = generator_factory()
-
-            logger.error(f"Reconnecting btc stream: {e}")
-            pub.publish_error(channel, str(e))
-
+            msg = f"Reconnecting btc stream:  (retry step {retries}) {e}"
+            log_and_publish_error(channel, msg)
         except Exception as e:
             # log and raise any other error
             # for example a KeyError
-            logger.error(f"BT stream lost: {e}")
 
-            pub.publish_error(channel, str(e))
+            msg = f"BT stream lost: {e}"
+            log_and_publish_error(channel, msg)
             raise e

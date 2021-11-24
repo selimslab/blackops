@@ -137,7 +137,6 @@ class SlidingWindowTrader(StrategyBase):
 
     async def run_streams(self):
         logger.info(f"Start streams for {self.name}")
-        self.broadcast_message(f"Starting streams for  {self.name}")
 
         consumers: Any = [
             self.watch_books_and_decide(),
@@ -158,7 +157,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
-            await asyncio.sleep(0.08)
+            await asyncio.sleep(0.1)
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
@@ -170,7 +169,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
-            await asyncio.sleep(0.08)
+            await asyncio.sleep(0.1)
 
     def get_current_step(self) -> Decimal:
         # for example 20
