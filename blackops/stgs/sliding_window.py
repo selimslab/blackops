@@ -228,11 +228,8 @@ class SlidingWindowTrader(StrategyBase):
         sorted_purchase_orders = sorted(
             purchase_orders, key=lambda d: Decimal(d["P"]), reverse=True
         )
-        bids = [Decimal(d["P"]) for d in sorted_purchase_orders]
-        logger.info(f"bids {bids[:3]}")
 
         best_buyer = sorted_purchase_orders[0].get("P")
-        # best_buyer_amount = sorted_purchase_orders[0].get("A")
 
         if best_buyer:
             return Decimal(best_buyer)
@@ -246,11 +243,7 @@ class SlidingWindowTrader(StrategyBase):
 
         sorted_sales_orders = sorted(sales_orders, key=lambda d: Decimal(d["P"]))
 
-        asks = [Decimal(d["P"]) for d in sorted_sales_orders]
-        logger.info(f"asks {asks[:3]}")
-
         best_seller = sorted_sales_orders[0].get("P")
-        # best_seller_amount = sorted_sales_orders[0].get("A")
 
         if best_seller:
             return Decimal(best_seller)
