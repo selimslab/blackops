@@ -113,9 +113,15 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
     bridge_quote_symbol = bridge + stg.quote
     base_bridge_symbol = stg.base + bridge
 
-    leader_book_ticker_stream = create_book_stream_binance(base_bridge_symbol)
-    leader_bridge_quote_stream = create_book_stream_binance(bridge_quote_symbol)
-    follower_book_stream = create_book_stream_btcturk(pair.symbol)
+    pub_channel = stg.sha
+
+    leader_book_ticker_stream = create_book_stream_binance(
+        base_bridge_symbol, pub_channel
+    )
+    leader_bridge_quote_stream = create_book_stream_binance(
+        bridge_quote_symbol, pub_channel
+    )
+    follower_book_stream = create_book_stream_btcturk(pair.symbol, pub_channel)
 
     trader = SlidingWindowWithBridgeTrader(
         sha=stg.sha,

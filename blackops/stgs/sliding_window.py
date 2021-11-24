@@ -73,6 +73,11 @@ class SlidingWindowTrader(StrategyBase):
     binance_book_ticker_stream_seen: int = 0
     btc_books_seen: int = 0
 
+    start_quote_balance: Optional[Decimal] = None
+    start_base_balance: Optional[Decimal] = None
+
+    current_step: Decimal = Decimal("0")
+
     #  NOTES
 
     # if we don't have a manual step_size_constant, step_size_constant = mid *
@@ -141,7 +146,9 @@ class SlidingWindowTrader(StrategyBase):
 
     async def watch_books_and_decide(self):
         logger.info(f"Watching the leader book..")
-        self.broadcast_message(f"Watching books of {self.leader_exchange.name}")
+        pub.publish_message(
+            self.channnel, f"Watching books of {self.leader_exchange.name}"
+        )
 
         async for book in self.leader_book_ticker_stream:
             if book:
@@ -152,7 +159,9 @@ class SlidingWindowTrader(StrategyBase):
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
-        self.broadcast_message(f"Watching books of {self.follower_exchange.name}")
+        pub.publish_message(
+            self.channnel, f"Watching books of {self.follower_exchange.name}"
+        )
         async for book in self.follower_book_stream:
             if book:
                 self.btc_books_seen += 1
@@ -345,6 +354,9 @@ class SlidingWindowTrader(StrategyBase):
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
+            if not self.start_quote_balance:
+                return None
+
             (
                 base_balance,
                 quote_balance,
@@ -354,6 +366,7 @@ class SlidingWindowTrader(StrategyBase):
             approximate_sales_gain: Decimal = (
                 base_balance * self.best_buyer * self.follower_exchange.api_client.sell_with_fee  # type: ignore
             )
+
             return quote_balance + approximate_sales_gain - self.start_quote_balance
         except Exception as e:
             logger.info(e)
@@ -368,14 +381,14 @@ class SlidingWindowTrader(StrategyBase):
     def create_params_message(self):
         return {
             "name": self.name,
-            "pair": self.pair,
-            "max_usable_quote_amount_y": self.max_usable_quote_amount_y,
-            "step_constant_k": self.step_constant_k,
-            "credit": self.credit,
-            "step_count": self.step_count,
+            "pair": self.pair.symbol,
+            "max_usable_quote_amount_y": str(self.max_usable_quote_amount_y),
+            "step_constant_k": str(self.step_constant_k),
+            "credit": str(self.credit),
+            "step_count": str(self.step_count),
             "task_start_time": str(self.task_start_time),
-            "start_base_balance": self.start_base_balance,
-            "start_quote_balance": self.start_quote_balance,
+            "start_base_balance": str(self.start_base_balance),
+            "start_quote_balance": str(self.start_quote_balance),
         }
 
     def create_stats_message(self):
@@ -393,17 +406,14 @@ class SlidingWindowTrader(StrategyBase):
             "best_buyer_last_updated": str(self.best_buyer_last_updated),
             "binance_book_tickers_seen": self.binance_book_ticker_stream_seen,
             "btc_books_seen": self.btc_books_seen,
-            "remaining_usable_quote_balance": self.remaining_usable_quote_balance,
-            "current_step": self.current_step,
+            "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
+            "current_step": str(self.current_step),
         }
 
     def broadcast_stats(self):
-        try:
-            message = self.create_stats_message()
-            logger.info(message)
-            pub.publish_stats(self.channnel, message)
-        except Exception as e:
-            logger.info(e)
+        message = self.create_stats_message()
+        logger.info(message)
+        pub.publish_stats(self.channnel, message)
 
     async def broadcast_stats_periodical(self):
         while True:

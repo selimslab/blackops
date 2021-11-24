@@ -25,11 +25,11 @@ def create_orderbook_gen(symbol: str):
     return gen
 
 
-def create_book_stream_btcturk(symbol: str):
+def create_book_stream_btcturk(symbol: str, channel: str = "default"):
     def gen_factory():
         return create_orderbook_gen(symbol)
 
-    return reconnecting_generator(gen_factory)
+    return reconnecting_generator(gen_factory, channel)
 
 
 async def test_orderbook_stream():

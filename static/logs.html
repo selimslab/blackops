@@ -265,7 +265,7 @@
           });
 
           channel.bind("params", function (data) {
-            app.params = data.message ; 
+            app.params = data.message;
 
           });
 
@@ -274,7 +274,6 @@
           });
 
     
-
           channel.bind("order", function (data) {
             order = data.message 
               if(order.type == "buy"){
@@ -287,7 +286,8 @@
 
           channel.bind("stats", function (data) {
 
-            
+              data = data.message;
+
               app.pnl = data.pnl;
               app.pnl_last_updated = data.time;
               
@@ -312,7 +312,7 @@
               app.remaining_usable_quote_balance = data.remaining_usable_quote_balance;
               app.current_step = data.current_step;
             
-
+              console.log(data.message);
           });
 
 

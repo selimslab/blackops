@@ -15,6 +15,7 @@ from blackops.taskq.redis import (
     async_redis_client,
 )
 from blackops.taskq.task_ctx import task_context
+from blackops.util.logger import logger
 
 
 def dict_to_hash(d: dict) -> str:
