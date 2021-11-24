@@ -54,24 +54,29 @@ class BtcturkBase(ExchangeBase):
 
     async def long(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed"""
+        try:
+            await self.api_client.submit_limit_order(
+                quantity=float(qty),
+                price=float(price),
+                order_type="buy",
+                pair_symbol=symbol,
+            )
 
-        await self.api_client.submit_limit_order(
-            quantity=float(qty),
-            price=float(price),
-            order_type="buy",
-            pair_symbol=symbol,
-        )
+            logger.info(f"buy {qty} {symbol} at {price}")
 
-        logger.info(f"buy {qty} {symbol} at {price}")
+        except Exception as e:
+            logger.error(e)
 
     async def short(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed after we deliver"""
+        try:
+            await self.api_client.submit_limit_order(
+                quantity=float(qty),
+                price=float(price),
+                order_type="sell",
+                pair_symbol=symbol,
+            )
 
-        await self.api_client.submit_limit_order(
-            quantity=float(qty),
-            price=float(price),
-            order_type="sell",
-            pair_symbol=symbol,
-        )
-
-        logger.info(f"sell {qty} {symbol} at {price}")
+            logger.info(f"sell {qty} {symbol} at {price}")
+        except Exception as e:
+            logger.error(e)

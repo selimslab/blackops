@@ -19,8 +19,8 @@ class BinanceOverflowException(Exception):
 async def binance_stream_generator(
     symbol: str, stream_type: str, channel: str = "default", sleep=0.1
 ):
+    client = await AsyncClient.create()
     try:
-        client = await AsyncClient.create()
         bm = BinanceSocketManager(client, user_timeout=1)
         # ts = bm.kline_socket(symbol, interval)
         # ts = bm.symbol_ticker_socket(symbol)
@@ -48,6 +48,7 @@ async def binance_stream_generator(
                 await asyncio.sleep(sleep)
 
     except Exception as e:
+        await client.close_connection()
         msg = f"binance stream disconnected: {e}"
         logger.error(msg)
         raise e
