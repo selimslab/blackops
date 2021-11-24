@@ -26,7 +26,7 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
     gen = generator_factory()
 
     retries = 0
-    max_retry = 500
+    max_retry = 400
 
     while True:
         try:
@@ -43,14 +43,17 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
             # for example connection lost
             # continue where you left
             if retries > max_retry:
-                msg = f"Binance stream lost: {e}"
+                msg = (
+                    f"Stopping, btcturk stream is too unstable (retries {retries}): {e}"
+                )
                 log_and_publish_error(channel, msg)
                 raise e
             # create a new generator
             retries += 1
             gen = generator_factory()
-            msg = f"Reconnecting btc stream:  (retry step {retries}) {e}"
-            log_and_publish_error(channel, msg)
+            msg = f"Reconnecting btc stream:  (retries {retries}) {e}"
+            logger.error(msg)
+            pub.publish_message(channel, msg)
         except Exception as e:
             # log and raise any other error
             # for example a KeyError
