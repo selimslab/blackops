@@ -26,7 +26,7 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
     gen = generator_factory()
 
     retries = 0
-    max_retry = 10
+    max_retry = 500
 
     while True:
         try:
