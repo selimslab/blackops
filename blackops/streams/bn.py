@@ -69,8 +69,8 @@ async def reconnecting_binance_generator(
 ):
 
     retries = 0
-    max_retry = 1000
-    sleep = 0.18
+    max_retry = 500
+    sleep = 0.1
 
     gen = generator_factory(sleep)
 
@@ -93,13 +93,14 @@ async def reconnecting_binance_generator(
             # recover from network errors,
             # for example connection lost
             # continue where you left
+            retries += 1
 
             if isinstance(e, BinanceOverflowException):
                 sleep += 0.02  # add 10ms to sleep
-                if sleep > 0.3:  # it stays behind btc
+                if sleep > 0.2:  # it stays behind btc
                     msg = f"sleep increased to {sleep} too much, staying behind follower exchanges"
                     logger.error(msg)
-                    sleep = 0.2
+                    sleep = 0.11
 
             if retries > max_retry:
                 msg = (
@@ -111,10 +112,9 @@ async def reconnecting_binance_generator(
             # create a new generator
             gen = generator_factory(sleep)
 
-            retries += 1
             msg = f"Reconnecting binance stream (retries {retries}) (sleep {sleep} seconds): {e}"
             log_and_publish_message(channel, msg)
-            await asyncio.sleep(0.1)  # wait for 100ms before sending again
+            await asyncio.sleep(0.05)  # wait for 50ms before sending again
             continue
 
         except Exception as e:
