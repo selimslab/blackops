@@ -232,7 +232,7 @@ class SlidingWindowTrader(StrategyBase):
         logger.info(f"bids {bids[:3]}")
 
         best_buyer = sorted_purchase_orders[0].get("P")
-        best_buyer_amount = sorted_purchase_orders[0].get("A")
+        # best_buyer_amount = sorted_purchase_orders[0].get("A")
 
         if best_buyer:
             return Decimal(best_buyer)
@@ -250,7 +250,7 @@ class SlidingWindowTrader(StrategyBase):
         logger.info(f"asks {asks[:3]}")
 
         best_seller = sorted_sales_orders[0].get("P")
-        best_seller_amount = sorted_sales_orders[0].get("A")
+        # best_seller_amount = sorted_sales_orders[0].get("A")
 
         if best_seller:
             return Decimal(best_seller)
@@ -263,20 +263,14 @@ class SlidingWindowTrader(StrategyBase):
             sales_orders = self.follower_exchange.get_sales_orders(book)
             if sales_orders:
                 best_seller = self.get_best_seller(sales_orders)
-                if self.best_seller is None or (
-                    best_seller and best_seller < self.best_seller
-                ):
-                    self.best_seller = best_seller
-                    self.best_seller_last_updated = datetime.now().time()
+                self.best_seller = best_seller
+                self.best_seller_last_updated = datetime.now().time()
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
                 best_buyer = self.get_best_buyer(purchase_orders)
-                if self.best_buyer is None or (
-                    best_buyer and best_buyer > self.best_buyer
-                ):
-                    self.best_buyer = best_buyer
-                    self.best_buyer_last_updated = datetime.now().time()
+                self.best_buyer = best_buyer
+                self.best_buyer_last_updated = datetime.now().time()
 
         except Exception as e:
             logger.info(e)
