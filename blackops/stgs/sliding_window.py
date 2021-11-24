@@ -4,11 +4,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, AsyncGenerator, List, Optional
 
-import blackops.pubsub.push_events as event
+import blackops.pubsub.pub as pub
 from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
-from blackops.pubsub.push import pusher_client
 from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
@@ -86,30 +85,40 @@ class SlidingWindowTrader(StrategyBase):
 
     async def run(self):
         self.task_start_time = datetime.now().time()
-        logger.info(f"Starting {self.name}")
-        self.broadcast_message(f"Starting {self.name}")
+        self.channnel = self.sha
         logger.info(self)
 
         await self.set_step_info()
         await self.run_streams()
 
+        message = self.create_params_message()
+        pub.publish_params(self.channnel, message)
+        logger.info(message)
+
     def get_orders(self):
         return self.orders
 
     async def set_step_info(self):
-        quote_balance = await self.follower_exchange.get_balance(self.pair.quote.symbol)
-
-        if quote_balance is None:
-            msg = f"Could not get balance for {self.pair.quote.symbol}"
-            self.broadcast_error(msg)
+        # TODO : 90 rate limit
+        try:
+            (
+                base_balance,
+                quote_balance,
+            ) = await self.follower_exchange.get_balance_multiple(
+                [self.pair.base.symbol, self.pair.quote.symbol]
+            )
+        except Exception as e:
+            msg = "could not read balances"
+            pub.publish_error(self.channnel, msg)
             raise Exception(msg)
 
         self.start_quote_balance = quote_balance
+        self.start_base_balance = base_balance
 
         if self.max_usable_quote_amount_y < quote_balance:
             msg = f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {quote_balance}"
 
-            self.broadcast_error(msg)
+            pub.publish_error(self.channnel, msg)
 
             raise Exception(msg)
 
@@ -186,8 +195,8 @@ class SlidingWindowTrader(StrategyBase):
             return
 
         #  0,1,2,3, n-1
-        current_step = self.get_current_step()
-        step_size = self.step_constant_k * current_step
+        self.current_step = self.get_current_step()
+        step_size = self.step_constant_k * self.current_step
 
         mid -= step_size  # go down as you buy, we wish to buy lower as we buy
 
@@ -294,9 +303,14 @@ class SlidingWindowTrader(StrategyBase):
                 "qty": str(qty),
                 "theo_buy": str(self.theo_buy),
                 "symbol": symbol,
+                "time": str(datetime.now().time()),
             }
 
-            await self.broadcast_order(order)
+            pub.publish_order(self.channnel, order)
+            self.orders.append(order)
+            logger.info(order)
+
+            await self.update_pnl()
 
         except Exception as e:
             logger.info(e)
@@ -317,9 +331,14 @@ class SlidingWindowTrader(StrategyBase):
                 "qty": str(qty),
                 "theo_buy": str(self.theo_sell),
                 "symbol": symbol,
+                "time": str(datetime.now().time()),
             }
 
-            await self.broadcast_order(order)
+            pub.publish_order(self.channnel, order)
+            self.orders.append(order)
+            logger.info(order)
+
+            await self.update_pnl()
 
         except Exception as e:
             logger.info(e)
@@ -340,45 +359,28 @@ class SlidingWindowTrader(StrategyBase):
             logger.info(e)
             return None
 
-    async def broadcast_order(self, order):
-        message = {
-            "type": "order",
-            "time": str(datetime.now().time()),
-            "order": order,
-        }
-
-        pusher_client.trigger(self.sha, event.update, message)
-        self.orders.append(message)
-        logger.info(message)
-
+    async def update_pnl(self):
         pnl = await self.calculate_pnl()
         if pnl:
             self.pnl = pnl
             self.pnl_last_updated = datetime.now().time()
 
-    def broadcast_error(self, message):
-        message = {
-            "type": "error",
-            "message": str(message),
-            "time": str(datetime.now().time()),
+    def create_params_message(self):
+        return {
+            "name": self.name,
+            "pair": self.pair,
+            "max_usable_quote_amount_y": self.max_usable_quote_amount_y,
+            "step_constant_k": self.step_constant_k,
+            "credit": self.credit,
+            "step_count": self.step_count,
+            "task_start_time": str(self.task_start_time),
+            "start_base_balance": self.start_base_balance,
+            "start_quote_balance": self.start_quote_balance,
         }
-        logger.info(message)
-        pusher_client.trigger(self.sha, event.update, message)
-
-    def broadcast_message(self, message):
-        message = {
-            "type": "message",
-            "message": message,
-            "time": str(datetime.now().time()),
-        }
-        logger.info(message)
-        pusher_client.trigger(self.sha, event.update, message)
 
     def create_stats_message(self):
         return {
-            "type": "stats",
             "time": str(datetime.now().time()),
-            "task_start_time": str(self.task_start_time),
             "theo_buy": str(self.theo_buy),
             "theo_buy_last_updated": str(self.theo_buy_last_updated),
             "theo_sell": str(self.theo_sell),
@@ -391,13 +393,15 @@ class SlidingWindowTrader(StrategyBase):
             "best_buyer_last_updated": str(self.best_buyer_last_updated),
             "binance_book_tickers_seen": self.binance_book_ticker_stream_seen,
             "btc_books_seen": self.btc_books_seen,
+            "remaining_usable_quote_balance": self.remaining_usable_quote_balance,
+            "current_step": self.current_step,
         }
 
     def broadcast_stats(self):
         try:
             message = self.create_stats_message()
             logger.info(message)
-            pusher_client.trigger(self.sha, event.update, message)
+            pub.publish_stats(self.channnel, message)
         except Exception as e:
             logger.info(e)
 

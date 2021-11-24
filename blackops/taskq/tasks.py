@@ -8,9 +8,7 @@ from typing import Any, Callable, List, Union
 from celery import Celery
 from celery.states import PENDING, SUCCESS, state
 
-import blackops.pubsub.push_events as event
-from blackops.api.models.stg import Strategy
-from blackops.pubsub.push import pusher_client
+import blackops.pubsub.pub as pub
 from blackops.taskq.redis import redis_url
 from blackops.trader.factory import create_trader_from_strategy
 from blackops.util.logger import logger
@@ -70,7 +68,8 @@ def run_stg(stg: dict):
             "time": str(datetime.now().time()),
         }
         logger.info(message)
-        # pusher_client.trigger(stg.get("sha"), event.update, message)
+        pub.publish_error(stg.get("sha", ""), message)
+        raise e
 
 
 def get_status(task_id: str) -> str:

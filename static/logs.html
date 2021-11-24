@@ -65,9 +65,22 @@
       <br />
 
       <div class="columns">
-        <h1 class="has-text-danger mb-4">Summary</h1>
+        <div class="column">
+          <h1 class="has-text-danger mb-4">Start Params</h1>
+
+          {{params}}
+        </div>
+
+      </div>
+
+
+      <div class="columns">
+
 
         <div class="column">
+
+          <h1 class="has-text-danger mb-4">Summary</h1>
+
           <p>pnl: {{pnl}}</p>
           <p>last_update: {{pnl_last_updated}}</p>
 
@@ -78,6 +91,21 @@
 
           ---
         </div>
+        
+
+        <div class="column">
+
+
+          <p>remaining_usable_quote_balance: {{remaining_usable_quote_balance}}</p>
+
+          ---
+
+          <p>current_step: {{current_step}}</p>
+
+          ---
+        </div>
+
+
 
         <div class="column">
           <p>best_buyer: {{best_buyer}}</p>
@@ -123,7 +151,6 @@
           <br />
 
           <ul>
-            <li>Started at {{task_start_time}}</li>
             <li class="" v-for="message in messages">{{message}}</li>
           </ul>
         </div>
@@ -181,6 +208,23 @@
     // Enable pusher logging - don't include this in production
     Pusher.logToConsole = true;
 
+    let params = {
+      type: null, 
+      name: null,
+      pair: null,
+      max_usable_quote_amount_y: null,
+      step_constant_k: null,
+      credit: null,
+      step_count : null,
+      task_start_time : null,
+      start_base_balance: null,
+      start_quote_balance: null, 
+    }
+
+    let stats = {
+
+    }
+
     // Vue application
     const app = new Vue({
       el: "#app",
@@ -205,37 +249,45 @@
         btc_books_seen: 0,
         task_start_time: "",
         errors: [],
+        remaining_usable_quote_balance: 0,
+        current_step: 0 ,
+        params: params,
+      
       },
+
       methods: {
         connect: function (e) {
           var channel = pusher.subscribe(app.sha);
 
-          channel.bind("update", function (data) {
 
+          channel.bind("error", function (data) {
+            app.errors.push(data);
+          });
 
-            type = data.type;
+          channel.bind("params", function (data) {
+            app.params = data.message ; 
 
-            if (type == "message") {
-              app.messages.push(data.message);
-            }
+          });
 
-            if (type == "error") {
-              app.errors.push(data.message);
-            }
+          channel.bind("message", function (data) {
+            app.messages.push(data);
+          });
 
+    
 
-            if (type == "order") {
+          channel.bind("order", function (data) {
+            order = data.message 
               if(order.type == "buy"){
                 app.long_orders.push(data.order);
               }
               if(order.type == "sell"){
                 app.long_orders.push(data.order);
               }
-            }
+          });
 
-            if (type == "stats") {
-              app.task_start_time = data.task_start_time;
+          channel.bind("stats", function (data) {
 
+            
               app.pnl = data.pnl;
               app.pnl_last_updated = data.time;
               
@@ -256,8 +308,10 @@
 
               app.theo_sell = data.theo_sell;
               app.theo_sell_last_updated = data.theo_sell_last_updated;
-            }
 
+              app.remaining_usable_quote_balance = data.remaining_usable_quote_balance;
+              app.current_step = data.current_step;
+            
 
           });
 

@@ -4,8 +4,6 @@ from typing import Callable
 import websockets
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 
-import blackops.pubsub.push_events as event
-from blackops.pubsub.push import pusher_client
 from blackops.util.logger import logger
 
 

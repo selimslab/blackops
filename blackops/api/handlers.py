@@ -5,10 +5,9 @@ from typing import List, OrderedDict
 import simplejson as json
 from fastapi import HTTPException
 
-import blackops.pubsub.push_events as event
+import blackops.pubsub.pub as pub
 import blackops.taskq.tasks as taskq
 from blackops.api.models.stg import Strategy
-from blackops.pubsub.push import pusher_client
 from blackops.taskq.redis import (
     LOG_CHANNELS,
     RUNNING_TASKS,
@@ -87,10 +86,11 @@ async def run_task(sha: str):
 
 async def stop_task(sha: str):
     await task_context.cancel_task(sha)
-    pusher_client.publish(sha, event.update, {"message": f"{sha} stopped"})
+    pub.publish_message(sha, f"{sha} stopped")
 
 
 async def stop_all_tasks():
+
     # stgs = await list_stgs()
     # if stgs:
     #     hashes = [s.get("sha", "") for s in stgs]

@@ -4,9 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Optional
 
-import blackops.pubsub.push_events as event
+import blackops.pubsub.pub as pub
 from blackops.domain.models.asset import Asset
-from blackops.pubsub.push import pusher_client
 from blackops.util.logger import logger
 
 from .sliding_window import SlidingWindowTrader
@@ -26,6 +25,11 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
     async def run(self):
         message = f"Starting {self.name} with params "
+
+        self.channnel = self.sha
+
+        message = self.create_params_message()
+        pub.publish_params(self.channnel, message)
 
         logger.info(message)
         logger.info(self)
@@ -56,12 +60,12 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
     async def update_bridge_quote(self):
         msg = f"Watching the leader bridge quotes.."
-        self.broadcast_message(msg)
+        pub.publish_message(self.channnel, msg)
         logger.info(msg)
 
         if not self.leader_bridge_quote_stream:
             msg = f"Leader bridge quote stream is not set"
-            self.broadcast_error(msg)
+            pub.publish_error(self.channnel, msg)
             raise Exception(msg)
 
         async for book in self.leader_bridge_quote_stream:
