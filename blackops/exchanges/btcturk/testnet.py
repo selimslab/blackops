@@ -22,9 +22,11 @@ class BtcturkTestnetApiClient:
         self.balances[symbol] = val
 
     async def get_balance(self, symbol: str) -> Decimal:
+        await asyncio.sleep(0.7)  # 90 limit
         return self.balances.get(symbol, Decimal(0))
 
     async def get_account_balance(self, assets: List[str]) -> List[dict]:
+        await asyncio.sleep(0.7)
         return [{"balance": self.balances[symbol]} for symbol in assets]
 
     async def add_balance(self, symbol: str, val: Decimal):
@@ -36,7 +38,7 @@ class BtcturkTestnetApiClient:
     async def submit_limit_order(
         self, pair_symbol: str, order_type: str, price: float, quantity: float
     ):
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.2)  # 300 limit
         (base, quote) = pair_symbol.split("_")
 
         if order_type == "buy":

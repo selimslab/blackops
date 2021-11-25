@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -8,6 +9,7 @@ import blackops.pubsub.pub as pub
 from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
+from blackops.environment import is_prod
 from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
@@ -157,7 +159,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.005)
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
@@ -169,7 +171,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.005)
 
     def get_current_step(self) -> Decimal:
         # for example 20
@@ -177,6 +179,7 @@ class SlidingWindowTrader(StrategyBase):
         # 20-19 = 1
 
         # max_qu
+
         remaining_steps = self.remaining_usable_quote_balance / self.quote_step_qty
         return self.step_count - remaining_steps
 
@@ -249,9 +252,11 @@ class SlidingWindowTrader(StrategyBase):
             await self.short()
 
     def should_long(self):
+        # TODO consider info last updated
         return self.best_seller and self.theo_buy and self.best_seller <= self.theo_buy
 
     def should_short(self):
+        # TODO consider info last updated
         return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
 
     async def long(self):
@@ -274,9 +279,11 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.long(price, qty, symbol)
-            self.remaining_usable_quote_balance = self.follower_exchange.get_balance(
+            quote_balance = await self.follower_exchange.get_balance(
                 self.pair.quote.symbol
             )
+            if quote_balance:
+                self.remaining_usable_quote_balance = quote_balance
 
             order = {
                 "type": "long",
@@ -304,9 +311,11 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.short(price, qty, symbol)
-            self.remaining_usable_quote_balance = self.follower_exchange.get_balance(
+            quote_balance = await self.follower_exchange.get_balance(
                 self.pair.quote.symbol
             )
+            if quote_balance:
+                self.remaining_usable_quote_balance = quote_balance
 
             order = {
                 "type": "short",
@@ -360,7 +369,7 @@ class SlidingWindowTrader(StrategyBase):
         }
 
     def create_stats_message(self):
-        return {
+        stats = {
             "time": str(datetime.now().time()),
             "theo_buy": str(self.theo_buy),
             "theo_buy_last_updated": str(self.theo_buy_last_updated),
@@ -376,13 +385,17 @@ class SlidingWindowTrader(StrategyBase):
             "btc_books_seen": self.btc_books_seen,
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
-            # "params": self.params_message,
         }
+        if is_prod:
+            stats["params"] = self.params_message
+
+        return stats
 
     def broadcast_stats(self):
         message = self.create_stats_message()
         logger.info(message)
-        pub.publish_stats(self.channnel, message)
+        if is_prod:
+            pub.publish_stats(self.channnel, message)
 
     async def broadcast_stats_periodical(self):
         while True:

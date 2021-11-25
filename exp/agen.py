@@ -4,7 +4,7 @@ from aiostream import stream
 import aiostream 
 from aiostream import stream, async_
 
-async def gen():
+async def gen1():
     for i in itertools.count(0):
         yield i 
         await asyncio.sleep(1)
@@ -14,23 +14,34 @@ async def gen2():
         yield i 
         await asyncio.sleep(1)
 
+async def anext(ait):
+    return await ait.__anext__()
 
 async def st():
-    xs = stream.zip(gen(), gen2())
-    # ys = stream.map(xs, async_(lambda ms: asyncio.sleep(ms / 1000)))
-    ys = stream.switchmap(xs, async_(lambda s1, s2: asyncio.sleep(1) ))
-    zs = stream.spaceout(ys, 1)
 
-    async with zs.stream() as streamer:
+    gens = [gen1(), gen2()]
+    for gen in itertools.cycle(gens):
+        yield await anext(gen)
+    
 
-        # Asynchronous iteration
-        async for z in streamer:
-            print(z)
+
+
+# def dd():
+
+#     xs = stream.zip(gen(), gen2())
+#     # ys = stream.map(xs, async_(lambda ms: asyncio.sleep(ms / 1000)))
+#     ys = stream.switchmap(xs, async_(lambda s1, s2: asyncio.sleep(1) ))
+#     zs = stream.spaceout(ys, 1)
+
+#     async with zs.stream() as streamer:
+
+#         # Asynchronous iteration
+#         async for z in streamer:
+#             print(z)
 
 async def consumer():
-    async for i in gen():
+    async for i in st():
         print(i)
-        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":

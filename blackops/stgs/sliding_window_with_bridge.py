@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -23,24 +24,11 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
     name: str = "Sliding Window With Bridge"
 
-    async def run(self):
-        await super().init()
-        await self.run_streams()
-
     def get_mid(self, book: dict) -> Optional[Decimal]:
         mid = super().get_mid(book)
         if mid and self.bridge_quote:
             return mid * self.bridge_quote
         return None
-
-    async def run_streams(self):
-        aws: Any = [
-            self.update_bridge_quote(),
-            self.update_best_buyers_and_sellers(),
-            self.watch_books_and_decide(),
-            self.broadcast_stats_periodical(),
-        ]
-        await asyncio.gather(*aws)
 
     def create_stats_message(self):
         message = super().create_stats_message()
@@ -48,20 +36,27 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         message["bridge_last_updated"] = str(self.bridge_last_updated)
         return message
 
-    async def update_bridge_quote(self):
-        msg = f"Watching the leader bridge quotes.."
-        pub.publish_message(self.channnel, msg)
+    async def watch_books_and_decide(self):
+        msg = f"Watching books of {self.leader_exchange.name}"
         logger.info(msg)
-
-        if not self.leader_bridge_quote_stream:
-            msg = f"Leader bridge quote stream is not set"
-            pub.publish_error(self.channnel, msg)
-            raise Exception(msg)
-
-        async for book in self.leader_bridge_quote_stream:
+        pub.publish_message(self.channnel, msg)
+        gens = [
+            (self.leader_book_ticker_stream, self.update_theo),
+            (self.leader_bridge_quote_stream, self.update_bridge_quote),
+        ]
+        for gen, func in itertools.cycle(gens):
+            book = await gen.__anext__()
             if book:
-                new_quote = super().get_mid(book)
-                if new_quote != self.bridge_quote:
-                    self.bridge_quote = new_quote
-                    self.bridge_last_updated = datetime.now().time()
-            await asyncio.sleep(0.1)
+                await func(book)
+            await asyncio.sleep(0.005)
+
+    async def update_theo(self, book):
+        self.binance_book_ticker_stream_seen += 1
+        self.calculate_window(book)
+        await self.should_transact()
+
+    async def update_bridge_quote(self, book):
+        new_quote = super().get_mid(book)
+        if new_quote:
+            self.bridge_quote = new_quote
+            self.bridge_last_updated = datetime.now().time()
