@@ -49,7 +49,7 @@ class TaskContext:
             return trader.get_orders()
 
     def get_tasks(self):
-        return self.tasks
+        return list(self.tasks.keys())
 
 
 task_context = TaskContext()
