@@ -111,8 +111,8 @@ class SlidingWindowTrader(StrategyBase):
         # TODO : 90 rate limit
         try:
             (
-                base_balance,
-                quote_balance,
+                self.pair.base.balance,
+                self.pair.quote.balance,
             ) = await self.follower_exchange.get_balance_multiple(
                 [self.pair.base.symbol, self.pair.quote.symbol]
             )
@@ -121,11 +121,11 @@ class SlidingWindowTrader(StrategyBase):
             pub.publish_error(self.channnel, msg)
             raise Exception(msg)
 
-        self.start_quote_balance = quote_balance
-        self.start_base_balance = base_balance
+        self.start_base_balance = self.pair.base.balance
+        self.start_quote_balance = self.pair.quote.balance
 
-        if self.max_usable_quote_amount_y < quote_balance:
-            msg = f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {quote_balance}"
+        if self.max_usable_quote_amount_y < self.pair.quote.balance:
+            msg = f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {self.pair.quote.balance}"
 
             pub.publish_error(self.channnel, msg)
 
@@ -257,11 +257,21 @@ class SlidingWindowTrader(StrategyBase):
 
     def should_long(self):
         #  act only when you are ahead
-        return self.best_seller and self.theo_buy and self.best_seller <= self.theo_buy
+        return (
+            self.best_seller
+            and self.theo_buy
+            and self.time_diff > -0.1
+            and self.best_seller <= self.theo_buy
+        )
 
     def should_short(self):
         #  act only when you are ahead
-        return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
+        return (
+            self.best_buyer
+            and self.theo_sell
+            and self.time_diff > -0.1
+            and self.best_buyer >= self.theo_sell
+        )
 
     async def long(self):
         # we buy and sell at the quantized steps
@@ -358,7 +368,6 @@ class SlidingWindowTrader(StrategyBase):
         pnl = await self.calculate_pnl()
         if pnl:
             self.pnl = pnl
-            self.pnl_last_updated = datetime.now().time()
 
     def create_params_message(self):
         return {
@@ -376,19 +385,21 @@ class SlidingWindowTrader(StrategyBase):
     def create_stats_message(self):
         stats = {
             "time": str(datetime.now().time()),
+            "runtime": str((datetime.now() - self.task_start_time).total_seconds()),
             "theo_buy": str(self.theo_buy),
             "theo_sell": str(self.theo_sell),
             "theo_last_updated": str(self.theo_last_updated.time()),
             "pnl": str(self.pnl),
-            "pnl_last_updated": str(self.pnl_last_updated),
-            "best_seller": str(self.best_seller),
-            "best_buyer": str(self.best_buyer),
-            "bid_ask_last_updated": str(self.bid_ask_last_updated.time()),
-            "binance_book_tickers_seen": self.binance_book_ticker_stream_seen,
-            "btc_books_seen": self.btc_books_seen,
+            "base_balance": str(self.pair.base.balance),
+            "quote_balance": str(self.pair.quote.balance),
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
             "orders": len(self.orders),
+            "best_ask": str(self.best_seller),
+            "best_bid": str(self.best_buyer),
+            "bid_ask_last_updated": str(self.bid_ask_last_updated.time()),
+            "binance_seen": self.binance_book_ticker_stream_seen,
+            "btc_seen": self.btc_books_seen,
             "time_diff": self.time_diff,
         }
         if is_prod:
@@ -402,10 +413,11 @@ class SlidingWindowTrader(StrategyBase):
             pub.publish_stats(self.channnel, message)
         else:
             keys = {
-                "orders",
+                "runtime",
                 "pnl",
-                "binance_book_tickers_seen",
-                "btc_books_seen",
+                "orders",
+                "binance_seen",
+                "btc_seen",
                 "time_diff",
             }
             logger.info({k: v for k, v in message.items() if k in keys})
@@ -413,4 +425,4 @@ class SlidingWindowTrader(StrategyBase):
     async def broadcast_stats_periodical(self):
         while True:
             self.broadcast_stats()
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)
