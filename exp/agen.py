@@ -30,7 +30,7 @@ async def st():
 async def consumer():
     async for i in gen():
         print(i)
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":

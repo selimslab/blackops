@@ -157,7 +157,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.02)
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
@@ -169,7 +169,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.02)
 
     def get_current_step(self) -> Decimal:
         # for example 20
@@ -214,8 +214,7 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
-        self.theo_buy_last_updated = datetime.now().time()
-        self.theo_sell_last_updated = datetime.now().time()
+        self.theo_buy_last_updated = self.theo_sell_last_updated = datetime.now().time()
 
     def update_best_prices(self, book: dict):
         if not book:
@@ -269,14 +268,13 @@ class SlidingWindowTrader(StrategyBase):
         if self.base_step_qty is None or base_qty < self.base_step_qty:
             self.base_step_qty = base_qty
 
-        self.remaining_usable_quote_balance -= self.quote_step_qty
-
         price = float(self.best_seller)
         qty = float(base_qty)  #  we buy base
         symbol = self.pair.bt_order_symbol
 
         try:
             await self.follower_exchange.long(price, qty, symbol)
+            self.remaining_usable_quote_balance -= self.quote_step_qty
 
             order = {
                 "type": "long",
@@ -286,15 +284,16 @@ class SlidingWindowTrader(StrategyBase):
                 "symbol": symbol,
                 "time": str(datetime.now().time()),
             }
-
-            pub.publish_order(self.channnel, order)
-            self.orders.append(order)
-            logger.info(order)
-
+            self.log_order(order)
             await self.update_pnl()
 
         except Exception as e:
             logger.info(e)
+
+    def log_order(self, order: dict):
+        pub.publish_order(self.channnel, order)
+        self.orders.append(order)
+        logger.info(order)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -315,10 +314,7 @@ class SlidingWindowTrader(StrategyBase):
                 "time": str(datetime.now().time()),
             }
 
-            pub.publish_order(self.channnel, order)
-            self.orders.append(order)
-            logger.info(order)
-
+            self.log_order(order)
             await self.update_pnl()
 
         except Exception as e:
