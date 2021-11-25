@@ -11,7 +11,7 @@ class TaskContext:
 
     async def start_task(self, stg: dict):
         sha = stg.get("sha")
-        if self.tasks.get("sha", "") == "RUNNING":
+        if self.task_state.get(sha, "") == "RUNNING":
             raise Exception(f"{sha} already running")
 
         trader = await create_trader_from_strategy(stg)
