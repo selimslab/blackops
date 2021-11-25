@@ -96,24 +96,25 @@ async def reconnecting_binance_generator(
             retries += 1
 
             if isinstance(e, BinanceOverflowException):
-                sleep += 0.02  # add 10ms to sleep
+                sleep += 0.05  # add 10ms to sleep
                 if sleep > 0.2:  # it stays behind btc
                     msg = f"sleep increased to {sleep} too much, staying behind follower exchanges"
                     logger.error(msg)
-                    sleep = 0.11
+                    sleep = 0.2
 
-            if retries > max_retry:
-                msg = (
-                    f"Stopping, binance stream is too unstable (retries {retries}): {e}"
-                )
-                log_and_publish_error(channel, msg)
-                raise e
+            # if retries > max_retry:
+            #     msg = (
+            #         f"Stopping, binance stream is too unstable (retries {retries}): {e}"
+            #     )
+            #     log_and_publish_error(channel, msg)
+            #     raise e
 
             # create a new generator
             gen = generator_factory(sleep)
 
-            msg = f"Reconnecting binance stream (retries {retries}) (sleep {sleep} seconds): {e}"
-            log_and_publish_message(channel, msg)
+            msg = f"Reconnecting binance ({retries}), (sleep {sleep} seconds): {e}"
+            logger.info(msg)
+            # log_and_publish_message(channel, msg)
             await asyncio.sleep(0.05)  # wait for 50ms before sending again
             continue
 

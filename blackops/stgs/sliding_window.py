@@ -95,9 +95,9 @@ class SlidingWindowTrader(StrategyBase):
 
         await self.set_step_info()
 
-        message = self.create_params_message()
-        pub.publish_params(self.channnel, message)
-        logger.info(message)
+        self.params_message = self.create_params_message()
+        pub.publish_params(self.channnel, self.params_message)
+        logger.info(self.params_message)
 
     async def run(self):
         await self.init()
@@ -157,7 +157,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
@@ -169,7 +169,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
 
     def get_current_step(self) -> Decimal:
         # for example 20
@@ -217,53 +217,27 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy_last_updated = datetime.now().time()
         self.theo_sell_last_updated = datetime.now().time()
 
-        # logger.info(f"theo_buy {self.theo_buy}")
-
-    @staticmethod
-    def get_best_buyer(purchase_orders: List[dict]) -> Optional[Decimal]:
-        #  best_buyer is the best price we can sell at
-        if not purchase_orders:
-            return None
-
-        sorted_purchase_orders = sorted(
-            purchase_orders, key=lambda d: Decimal(d["P"]), reverse=True
-        )
-
-        best_buyer = sorted_purchase_orders[0].get("P")
-
-        if best_buyer:
-            return Decimal(best_buyer)
-        return None
-
-    @staticmethod
-    def get_best_seller(sales_orders: List[dict]) -> Optional[Decimal]:
-        # best_seller has the lowest price we can buy at
-        if not sales_orders:
-            return None
-
-        sorted_sales_orders = sorted(sales_orders, key=lambda d: Decimal(d["P"]))
-
-        best_seller = sorted_sales_orders[0].get("P")
-
-        if best_seller:
-            return Decimal(best_seller)
-        return None
-
     def update_best_prices(self, book: dict):
         if not book:
             return
         try:
             sales_orders = self.follower_exchange.get_sales_orders(book)
             if sales_orders:
-                best_seller = self.get_best_seller(sales_orders)
-                self.best_seller = best_seller
-                self.best_seller_last_updated = datetime.now().time()
+                prices = [order.get("P") for order in sales_orders]
+                prices = [Decimal(price) for price in prices if price]
+                best_ask = min(prices)
+                if best_ask:
+                    self.best_seller = best_ask
+                    self.best_seller_last_updated = datetime.now().time()
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
-                best_buyer = self.get_best_buyer(purchase_orders)
-                self.best_buyer = best_buyer
-                self.best_buyer_last_updated = datetime.now().time()
+                prices = [order.get("P") for order in purchase_orders]
+                prices = [Decimal(price) for price in prices if price]
+                best_bid = max(prices)
+                if best_bid:
+                    self.best_buyer = best_bid
+                    self.best_buyer_last_updated = datetime.now().time()
 
         except Exception as e:
             logger.info(e)
@@ -406,7 +380,7 @@ class SlidingWindowTrader(StrategyBase):
             "btc_books_seen": self.btc_books_seen,
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
-            "params": self.create_params_message(),
+            "params": self.params_message,
         }
 
     def broadcast_stats(self):
@@ -417,4 +391,4 @@ class SlidingWindowTrader(StrategyBase):
     async def broadcast_stats_periodical(self):
         while True:
             self.broadcast_stats()
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)

@@ -8,18 +8,13 @@ import blackops.pubsub.pub as pub
 from blackops.util.logger import logger
 
 
-async def ws_stream(uri: str, message: str, sleep=0.5):
+async def ws_stream(uri: str, message: str, sleep=0.2):
     async with websockets.connect(uri=uri) as websocket:
         while True:
             await websocket.send(message)
             await asyncio.sleep(sleep)
             data = await websocket.recv()
             yield data
-
-
-def log_and_publish_error(channel, msg):
-    logger.error(msg)
-    pub.publish_error(channel, msg)
 
 
 async def reconnecting_generator(generator_factory: Callable, channel: str = "default"):
@@ -42,22 +37,24 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
             # recover from network errors,
             # for example connection lost
             # continue where you left
-            if retries > max_retry:
-                msg = (
-                    f"Stopping, btcturk stream is too unstable (retries {retries}): {e}"
-                )
-                log_and_publish_error(channel, msg)
-                raise e
+            # if retries > max_retry:
+            #     msg = (
+            #         f"Stopping, btcturk stream is too unstable (retries {retries}): {e}"
+            #     )
+            #     log_and_publish_error(channel, msg)
+            #     raise e
             # create a new generator
+
             retries += 1
             gen = generator_factory()
-            msg = f"Reconnecting btc stream:  (retries {retries}) {e}"
+            msg = f"Reconnecting btc ({retries}): {e}"
             logger.error(msg)
-            pub.publish_message(channel, msg)
+            # pub.publish_message(channel, msg)
         except Exception as e:
             # log and raise any other error
             # for example a KeyError
 
             msg = f"BT stream lost: {e}"
-            log_and_publish_error(channel, msg)
+            logger.error(msg)
+            pub.publish_error(channel, msg)
             raise e
