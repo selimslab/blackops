@@ -36,19 +36,25 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         message["bridge_last_updated"] = str(self.bridge_last_updated)
         return message
 
+    @staticmethod
+    async def alternating_stream(gens):
+        for (gen, func) in itertools.cycle(gens):
+            book = await gen.__anext__()
+            if book:
+                yield func, book
+
     async def watch_books_and_decide(self):
-        msg = f"Watching books of {self.leader_exchange.name}"
+        msg = f"Watching books from {self.leader_exchange.name}"
         logger.info(msg)
         pub.publish_message(self.channnel, msg)
         gens = [
             (self.leader_book_ticker_stream, self.update_theo),
             (self.leader_bridge_quote_stream, self.update_bridge_quote),
         ]
-        for gen, func in itertools.cycle(gens):
-            book = await gen.__anext__()
-            if book:
-                await func(book)
-            await asyncio.sleep(0.005)
+
+        async for func, book in self.alternating_stream(gens):
+            await func(book)
+            await asyncio.sleep(0.001)
 
     async def update_theo(self, book):
         self.binance_book_ticker_stream_seen += 1

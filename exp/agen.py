@@ -21,7 +21,7 @@ async def st():
 
     gens = [gen1(), gen2()]
     for gen in itertools.cycle(gens):
-        yield await anext(gen)
+        yield await gen.__anext__()
     
 
 
