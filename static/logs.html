@@ -276,10 +276,10 @@
           channel.bind("order", function (data) {
             order = data.message 
               if(order.type == "long"){
-                app.long_orders.push(data.order);
+                app.long_orders.push(order);
               }
               if(order.type == "short"){
-                app.short_orders.push(data.order);
+                app.short_orders.push(order);
               }
           });
 
