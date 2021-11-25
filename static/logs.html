@@ -270,11 +270,11 @@
     
           channel.bind("order", function (data) {
             order = data.message 
-              if(order.type == "buy"){
+              if(order.type == "long"){
                 app.long_orders.push(data.order);
               }
-              if(order.type == "sell"){
-                app.long_orders.push(data.order);
+              if(order.type == "short"){
+                app.short_orders.push(data.order);
               }
           });
 
