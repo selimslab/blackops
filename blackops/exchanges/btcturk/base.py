@@ -61,9 +61,6 @@ class BtcturkBase(ExchangeBase):
                 order_type="buy",
                 pair_symbol=symbol,
             )
-
-            logger.info(f"buy {qty} {symbol} at {price}")
-
         except Exception as e:
             logger.error(e)
 
@@ -76,7 +73,5 @@ class BtcturkBase(ExchangeBase):
                 order_type="sell",
                 pair_symbol=symbol,
             )
-
-            logger.info(f"sell {qty} {symbol} at {price}")
         except Exception as e:
             logger.error(e)

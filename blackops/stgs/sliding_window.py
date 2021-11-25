@@ -93,7 +93,6 @@ class SlidingWindowTrader(StrategyBase):
     async def init(self):
         self.task_start_time = datetime.now().time()
         self.channnel = self.sha
-        logger.info(self)
 
         await self.set_step_info()
 
@@ -149,7 +148,6 @@ class SlidingWindowTrader(StrategyBase):
         await asyncio.gather(*consumers)
 
     async def watch_books_and_decide(self):
-        logger.info(f"Watching the leader book..")
         pub.publish_message(
             self.channnel, f"Watching books of {self.leader_exchange.name}"
         )
@@ -297,7 +295,8 @@ class SlidingWindowTrader(StrategyBase):
             logger.info(e)
 
     def log_order(self, order: dict):
-        pub.publish_order(self.channnel, order)
+        if is_prod:
+            pub.publish_order(self.channnel, order)
         self.orders.append(order)
         logger.info(order)
 
@@ -393,9 +392,11 @@ class SlidingWindowTrader(StrategyBase):
 
     def broadcast_stats(self):
         message = self.create_stats_message()
-        logger.info(message)
+
         if is_prod:
             pub.publish_stats(self.channnel, message)
+        else:
+            logger.info(message)
 
     async def broadcast_stats_periodical(self):
         while True:
