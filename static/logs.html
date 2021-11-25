@@ -80,8 +80,11 @@
         <div class="column">
 
           <p>running for {{runtime}} seconds</p>
+          
+          ---
 
           <p>pnl: {{pnl}}</p>
+          <p>max pnl: {{max_pnl}}</p>
 
           ---
 
@@ -122,7 +125,6 @@
           <p>binance updates seen: {{binance_book_tickers_seen}}</p>
 
           <p>binance lead time: {{time_diff*1000}} ms </p>
-
 
           ---
 
@@ -230,6 +232,7 @@
         sha: null,
         
         pnl: 0,
+        max_pnl: 0,
 
         theo_buy: 0,
         theo_last_updated: "",
@@ -256,7 +259,7 @@
         base_balance: 0,
         quote_balance: 0,
 
-        runtime :""
+        runtime : 0,
       
       },
 
@@ -294,6 +297,7 @@
               data = data.message;
 
               app.pnl = data.pnl;
+              app.max_pnl = data.max_pnl;
 
               app.runtime = data.runtime;
               

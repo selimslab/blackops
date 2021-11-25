@@ -41,7 +41,8 @@ async def get_stg(sha: str) -> dict:
 async def delete_stg(sha: str):
     if await async_redis_client.hexists(STG_MAP, sha):
         await async_redis_client.hdel(STG_MAP, sha)
-    raise ValueError("stg not found")
+    else:
+        raise ValueError("stg not found")
 
 
 async def delete_all():

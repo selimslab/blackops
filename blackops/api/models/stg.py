@@ -38,8 +38,8 @@ class SlidingWindow(StrategyBase):
         example="5000",
     )
 
-    step_count: Decimal = Field(
-        description="eg. spend your max_usable_quote_amount in 20 steps", example="20"
+    base_step_qty: Decimal = Field(
+        description="eg. buy 100 MANA per step", example="100"
     )
 
     step_constant_k: Decimal = Field(

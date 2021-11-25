@@ -38,6 +38,7 @@ BTCTURK_TRY_BASES = set(
         "XLM",
         "XRP",
         "XTZ",
+        "GALA",
     ]
 )
 

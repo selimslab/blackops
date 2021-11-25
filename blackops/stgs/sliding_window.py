@@ -2,7 +2,7 @@ import asyncio
 import itertools
 from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, getcontext
 from typing import Any, AsyncGenerator, List, Optional
 
 import blackops.pubsub.pub as pub
@@ -13,6 +13,8 @@ from blackops.environment import is_prod
 from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
+
+getcontext().prec = 6
 
 
 @dataclass
@@ -34,7 +36,7 @@ class SlidingWindowTrader(StrategyBase):
 
     max_usable_quote_amount_y: Decimal
 
-    step_count: Decimal  # divide your money into 20
+    base_step_qty: Decimal  # buy 200 base per step
 
     credit: Decimal
 
@@ -63,13 +65,10 @@ class SlidingWindowTrader(StrategyBase):
     bid_ask_last_updated: datetime = datetime.now()
     time_diff: float = 0
 
-    base_step_qty: Decimal = Decimal("1")
-    quote_step_qty: Decimal = Decimal("1")
-
     orders: list = field(default_factory=list)
 
     pnl: Decimal = Decimal("0")
-    pnl_last_updated: datetime = datetime.now()
+    max_pnl: Decimal = Decimal("0")
 
     binance_book_ticker_stream_seen: int = 0
     btc_books_seen: int = 0
@@ -132,9 +131,9 @@ class SlidingWindowTrader(StrategyBase):
             raise Exception(msg)
 
         self.remaining_usable_quote_balance = self.max_usable_quote_amount_y
-        self.quote_step_qty = (
-            self.remaining_usable_quote_balance / self.step_count
-        )  # spend 100 TRY in 10 steps, max 1000
+        # self.quote_step_qty = (
+        #     self.remaining_usable_quote_balance / self.step_count
+        # )  # spend 100 TRY in 10 steps, max 1000
 
     async def run_streams(self):
         logger.info(f"Start streams for {self.name}")
@@ -148,10 +147,6 @@ class SlidingWindowTrader(StrategyBase):
         await asyncio.gather(*consumers)
 
     async def watch_books_and_decide(self):
-        pub.publish_message(
-            self.channnel, f"Watching books of {self.leader_exchange.name}"
-        )
-
         async for book in self.leader_book_ticker_stream:
             if book:
                 self.binance_book_ticker_stream_seen += 1
@@ -160,26 +155,12 @@ class SlidingWindowTrader(StrategyBase):
             await asyncio.sleep(0)
 
     async def update_best_buyers_and_sellers(self):
-        logger.info(f"Watching the follower book..")
-        pub.publish_message(
-            self.channnel, f"Watching books of {self.follower_exchange.name}"
-        )
         async for book in self.follower_book_stream:
             if book:
                 self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
             await asyncio.sleep(0)
-
-    def get_current_step(self) -> Decimal:
-        # for example 20
-        # 20-20 = 0
-        # 20-19 = 1
-
-        # max_qu
-
-        remaining_steps = self.remaining_usable_quote_balance / self.quote_step_qty
-        return self.step_count - remaining_steps
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
         best_bid = self.leader_exchange.get_best_bid(book)
@@ -207,7 +188,7 @@ class SlidingWindowTrader(StrategyBase):
             return
 
         #  0,1,2,3, n-1
-        self.current_step = self.get_current_step()
+        # self.current_step = self.get_current_step()
         step_size = self.step_constant_k * self.current_step
 
         mid -= step_size  # go down as you buy, we wish to buy lower as we buy
@@ -279,20 +260,17 @@ class SlidingWindowTrader(StrategyBase):
 
         # TODO: should we consider exchange fees?
 
-        if not self.best_seller or not self.quote_step_qty:
+        if not self.best_seller:
             return
 
-        base_qty = self.quote_step_qty / self.best_seller
-
-        if base_qty:
-            self.base_step_qty = base_qty
-
         price = float(self.best_seller)
-        qty = float(base_qty)  #  we buy base
+        qty = float(self.base_step_qty)  #  we buy base
         symbol = self.pair.bt_order_symbol
 
         try:
             await self.follower_exchange.long(price, qty, symbol)
+            self.current_step += 1
+
             quote_balance = await self.follower_exchange.get_balance(
                 self.pair.quote.symbol
             )
@@ -326,6 +304,8 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.short(price, qty, symbol)
+            self.current_step -= 1
+
             quote_balance = await self.follower_exchange.get_balance(
                 self.pair.quote.symbol
             )
@@ -368,6 +348,7 @@ class SlidingWindowTrader(StrategyBase):
         pnl = await self.calculate_pnl()
         if pnl:
             self.pnl = pnl
+            self.max_pnl = max(self.max_pnl, pnl)
 
     def create_params_message(self):
         return {
@@ -376,7 +357,7 @@ class SlidingWindowTrader(StrategyBase):
             "max_usable_quote_amount_y": str(self.max_usable_quote_amount_y),
             "step_constant_k": str(self.step_constant_k),
             "credit": str(self.credit),
-            "step_count": str(self.step_count),
+            "base_step_qty": str(self.base_step_qty),
             "task_start_time": str(self.task_start_time),
             "start_base_balance": str(self.start_base_balance),
             "start_quote_balance": str(self.start_quote_balance),
@@ -390,6 +371,7 @@ class SlidingWindowTrader(StrategyBase):
             "theo_sell": str(self.theo_sell),
             "theo_last_updated": str(self.theo_last_updated.time()),
             "pnl": str(self.pnl),
+            "max_pnl": str(self.max_pnl),
             "base_balance": str(self.pair.base.balance),
             "quote_balance": str(self.pair.quote.balance),
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
@@ -412,15 +394,18 @@ class SlidingWindowTrader(StrategyBase):
         if is_prod:
             pub.publish_stats(self.channnel, message)
         else:
-            keys = {
+            keys = (
                 "runtime",
-                "pnl",
+                "base_balance",
+                "quote_balance",
                 "orders",
+                "pnl",
+                "max_pnl",
                 "binance_seen",
                 "btc_seen",
                 "time_diff",
-            }
-            logger.info({k: v for k, v in message.items() if k in keys})
+            )
+            logger.info({k: message[k] for k in keys})
 
     async def broadcast_stats_periodical(self):
         while True:
