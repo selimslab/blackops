@@ -66,17 +66,18 @@
           <h1 class="has-text-danger mb-4">Start Params</h1>
 
           {{params}}
+
         </div>
+
 
       </div>
 
 
+      <h1 class="has-text-danger mb-10">Summary</h1>
+
       <div class="columns">
 
-
         <div class="column">
-
-          <h1 class="has-text-danger mb-4">Summary</h1>
 
           <p>pnl: {{pnl}}</p>
           <p>last_update: {{pnl_last_updated}}</p>
@@ -86,43 +87,27 @@
           <p>bridge: {{bridge}}</p>
           <p>last_update: {{bridge_last_updated}}</p>
 
-          ---
 
-          <p>remaining_usable_quote_balance: {{remaining_usable_quote_balance}}</p>
 
-          ---
-
-          <p>current_step: {{current_step}}</p>
-
-          ---
         </div>
         
         <div class="column">
           <p>theo_buy: {{theo_buy}}</p>
-          <p>last_update: {{theo_buy_last_updated}}</p>
-
-          ---
-
           <p>theo_sell: {{theo_sell}}</p>
-          <p>last_update: {{theo_sell_last_updated}}</p>
+
+          <p>last_update: {{theo_last_updated}}</p>
 
           ---
-        </div>
-
-
-        <div class="column">
 
           <p>best ask: {{best_seller}}</p>
-          <p>last_update: {{best_seller_last_updated}}</p>
-
-          ---
-
           <p>best bid: {{best_buyer}}</p>
-          <p>last_update: {{best_buyer_last_updated}}</p>
 
-          ---
+          <p>last_update: {{bid_ask_last_updated}}</p>
 
+   
+        
         </div>
+
 
 
         <div class="column">
@@ -132,6 +117,13 @@
           <p>binance_book_tickers_seen: {{binance_book_tickers_seen}}</p>
 
           ---
+
+          <p>remaining_usable_quote_balance: {{remaining_usable_quote_balance}}</p>
+
+          ---
+
+          <p>current_step: {{current_step}}</p>
+
         </div>
 
 
@@ -233,13 +225,11 @@
         pnl: 0,
         pnl_last_updated: "",
         theo_buy: 0,
-        theo_buy_last_updated: "",
+        theo_last_updated: "",
         theo_sell: 0,
-        theo_sell_last_updated: "",
         best_buyer: 0,
-        best_buyer_last_updated: "",
+        bid_ask_last_updated: "",
         best_seller: 0,
-        best_seller_last_updated: "",
         bridge: "",
         bridge_last_updated: "",
         long_orders: [],
@@ -251,6 +241,7 @@
         remaining_usable_quote_balance: 0,
         current_step: 0 ,
         params: params,
+        time_diff: 0,
       
       },
 
@@ -292,28 +283,25 @@
               
               app.bridge = data.bridge;
               app.bridge_last_updated = data.bridge_last_updated;
-              
-              app.best_buyer = data.best_buyer;
-              app.best_buyer_last_updated = data.best_buyer_last_updated;
+         
+              app.theo_buy = data.theo_buy;
+              app.theo_sell = data.theo_sell;
+              app.theo_last_updated = data.theo_last_updated;
 
+              app.best_buyer = data.best_buyer;
               app.best_seller = data.best_seller;
-              app.best_seller_last_updated = data.best_seller_last_updated;
+              app.bid_ask_last_updated = data.bid_ask_last_updated;
 
               app.binance_book_tickers_seen = data.binance_book_tickers_seen;
               app.btc_books_seen = data.btc_books_seen;
-
-              app.theo_buy = data.theo_buy;
-              app.theo_buy_last_updated = data.theo_buy_last_updated;
-
-              app.theo_sell = data.theo_sell;
-              app.theo_sell_last_updated = data.theo_sell_last_updated;
 
               app.remaining_usable_quote_balance = data.remaining_usable_quote_balance;
               app.current_step = data.current_step;
 
               app.params = data.params;
 
-            
+              // app.time_diff = Date.parse(app.theo_last_updated) - Date.parse(app.bid_ask_last_updated);
+
           });
 
 
