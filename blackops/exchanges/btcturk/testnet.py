@@ -1,3 +1,4 @@
+import asyncio
 import collections
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -35,6 +36,7 @@ class BtcturkTestnetApiClient:
     async def submit_limit_order(
         self, pair_symbol: str, order_type: str, price: float, quantity: float
     ):
+        await asyncio.sleep(0.2)
         (base, quote) = pair_symbol.split("_")
 
         if order_type == "buy":
