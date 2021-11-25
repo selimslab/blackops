@@ -16,17 +16,12 @@ class BinanceOverflowException(Exception):
     pass
 
 
-async def binance_stream_generator(
-    symbol: str, stream_type: str, channel: str = "default", sleep=0.1
-):
+async def binance_stream_generator(symbol: str, stream_type: str):
     client = await AsyncClient.create()
     try:
-        bm = BinanceSocketManager(client, user_timeout=1)
-        # ts = bm.kline_socket(symbol, interval)
-        # ts = bm.symbol_ticker_socket(symbol)
+        bm = BinanceSocketManager(client)
         ts = bm.multiplex_socket([f"{symbol.lower()}{stream_type}"])
 
-        # then start receiving messages
         async with ts as tscm:
             while True:
                 msg = await tscm.recv()
@@ -38,14 +33,11 @@ async def binance_stream_generator(
                     }
                     """
                     if msg.get("e", "") == "error":
-                        # if "overflow" in msg.get("m", "").lower():
-                        #     raise BinanceOverflowException(msg)
-                        # else:
                         raise BinanceWebSocketException(msg)
 
                     yield msg
 
-                await asyncio.sleep(sleep)
+                # await asyncio.sleep(sleep)
 
     except Exception as e:
         await client.close_connection()
@@ -69,10 +61,8 @@ async def reconnecting_binance_generator(
 ):
 
     retries = 0
-    max_retry = 500
-    sleep = 0.1
 
-    gen = generator_factory(sleep)
+    gen = generator_factory()
 
     while True:
         try:
@@ -95,17 +85,10 @@ async def reconnecting_binance_generator(
             # continue where you left
             retries += 1
 
-            # if isinstance(e, BinanceOverflowException):
-            #     sleep += 0.01  # add 10ms to sleep
-            #     if sleep > 0.15:  # it stays behind btc
-            #         msg = f"sleep increased to {sleep} too much, staying behind follower exchanges"
-            #         logger.error(msg)
-            #         sleep = 0.1
-
             # create a new generator
-            gen = generator_factory(sleep)
+            gen = generator_factory()
 
-            msg = f"Reconnecting binance ({retries}), (sleep {sleep} seconds): {e}"
+            msg = f"Reconnecting binance ({retries}), {e}"
             logger.info(msg)
             continue
 
@@ -119,8 +102,8 @@ async def reconnecting_binance_generator(
 
 
 def create_book_stream_binance(symbol: str, channel: str = "default"):
-    def create_new_socket_conn(sleep):
-        return binance_stream_generator(symbol, "@bookTicker", channel, sleep)
+    def create_new_socket_conn():
+        return binance_stream_generator(symbol, "@bookTicker")
 
     return reconnecting_binance_generator(create_new_socket_conn, channel)
 
@@ -131,5 +114,15 @@ async def test_orderbook_stream(symbol):
         print(book)
 
 
+async def main():
+    client = await AsyncClient.create()
+
+    res = await client.get_exchange_info()
+    print(client.response.headers)
+
+    await client.close_connection()
+
+
 if __name__ == "__main__":
     asyncio.run(test_orderbook_stream("MANAUSDT"))
+    # asyncio.run(main())
