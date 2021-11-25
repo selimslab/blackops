@@ -39,7 +39,7 @@ class BtcturkTestnetApiClient:
 
         if order_type == "buy":
             cost = Decimal(quantity) * Decimal(price) * self.buy_with_fee
-            quote_balance = await self.get_balance(base)
+            quote_balance = await self.get_balance(quote)
             if quote_balance < cost:
                 raise ValueError("Insufficient funds")
             await self.add_balance(base, Decimal(quantity))

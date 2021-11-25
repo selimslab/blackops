@@ -157,7 +157,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     async def update_best_buyers_and_sellers(self):
         logger.info(f"Watching the follower book..")
@@ -169,7 +169,7 @@ class SlidingWindowTrader(StrategyBase):
                 self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     def get_current_step(self) -> Decimal:
         # for example 20
@@ -265,7 +265,7 @@ class SlidingWindowTrader(StrategyBase):
 
         base_qty = self.quote_step_qty / self.best_seller
 
-        if self.base_step_qty is None or base_qty < self.base_step_qty:
+        if base_qty:
             self.base_step_qty = base_qty
 
         price = float(self.best_seller)
