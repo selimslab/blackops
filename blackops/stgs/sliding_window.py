@@ -106,8 +106,7 @@ class SlidingWindowTrader(StrategyBase):
     def get_orders(self):
         return self.orders
 
-    async def set_step_info(self):
-        # TODO : 90 rate limit
+    async def update_balances(self):
         try:
             (
                 self.pair.base.balance,
@@ -119,6 +118,10 @@ class SlidingWindowTrader(StrategyBase):
             msg = "could not read balances"
             pub.publish_error(self.channnel, msg)
             raise Exception(msg)
+
+    async def set_step_info(self):
+        # TODO : 90 rate limit
+        await self.update_balances()
 
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
@@ -329,17 +332,17 @@ class SlidingWindowTrader(StrategyBase):
             if not self.start_quote_balance:
                 return None
 
-            (
-                base_balance,
-                quote_balance,
-            ) = await self.follower_exchange.get_balance_multiple(
-                [self.pair.base.symbol, self.pair.quote.symbol]
-            )
+            await self.update_balances()
+
             approximate_sales_gain: Decimal = (
-                base_balance * self.best_buyer * self.follower_exchange.api_client.sell_with_fee  # type: ignore
+                self.pair.base.balance * self.best_buyer * self.follower_exchange.api_client.sell_with_fee  # type: ignore
             )
 
-            return quote_balance + approximate_sales_gain - self.start_quote_balance
+            return (
+                self.pair.quote.balance
+                + approximate_sales_gain
+                - self.start_quote_balance
+            )
         except Exception as e:
             logger.info(e)
             return None

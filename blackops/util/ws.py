@@ -8,7 +8,7 @@ import blackops.pubsub.pub as pub
 from blackops.util.logger import logger
 
 
-async def ws_stream(uri: str, message: str, sleep=0.1):
+async def ws_stream(uri: str, message: str, sleep=0.2):
     async with websockets.connect(uri=uri) as websocket:
         while True:
             await websocket.send(message)
