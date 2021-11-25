@@ -379,6 +379,7 @@ class SlidingWindowTrader(StrategyBase):
             "btc_books_seen": self.btc_books_seen,
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
+            "orders": len(self.orders),
         }
         if is_prod:
             stats["params"] = self.params_message
@@ -387,10 +388,19 @@ class SlidingWindowTrader(StrategyBase):
 
     def broadcast_stats(self):
         message = self.create_stats_message()
-
         if is_prod:
             pub.publish_stats(self.channnel, message)
-        logger.info(message)
+        else:
+            keys = {
+                "orders",
+                "pnl",
+                "pnl_last_updated",
+                "theo_last_updated",
+                "bid_ask_last_updated",
+                "binance_book_tickers_seen",
+                "btc_books_seen",
+            }
+            logger.info({k: v for k, v in message.items() if k in keys})
 
     async def broadcast_stats_periodical(self):
         while True:

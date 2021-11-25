@@ -7,4 +7,4 @@ load_dotenv()
 apiKey = os.getenv("BTCTURK_PUBLIC_KEY")
 apiSecret = os.getenv("BTCTURK_PRIVATE_KEY")
 
-is_prod = os.getenv("PROD", False)
+is_prod = bool(os.getenv("PROD"))
