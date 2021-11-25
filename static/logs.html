@@ -137,9 +137,34 @@
 
       </div>
 
+      <div class="columns">
+
+        <div class="column" style="height: 25rem; overflow: scroll;">
+          <h2 class="has-text-danger">Long Orders</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="order in long_orders">{{order}}</li>
+          </ul>
+        </div>
+
+        <div class="column" style="height: 25rem; overflow: scroll;">
+          <h2 class="has-text-danger">Short Orders</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="order in short_orders">{{order}}</li>
+          </ul>
+        </div>
+
+      </div>
+
+
       <div class="columns" >
 
-        <div class="column" style="height: 29rem; overflow: scroll;">
+        <div class="column" style="height: 25rem; overflow: scroll;">
           <h1 class="has-text-danger">Messages</h1>
           <br />
           <br />
@@ -149,7 +174,7 @@
           </ul>
         </div>
 
-        <div class="column" style="height: 29rem; overflow: scroll;">
+        <div class="column" style="height: 25rem; overflow: scroll;">
           <h2 class="has-text-danger">Errors</h2>
           <br />
           <br />
@@ -161,29 +186,9 @@
 </div>
 
 
-        <div class="columns">
 
-        <div class="column" style="height: 29rem; overflow: scroll;">
-          <h2 class="has-text-danger">Long Orders</h2>
-          <br />
-          <br />
 
-          <ul>
-            <li v-for="order in long_orders">{{order}}</li>
-          </ul>
-        </div>
 
-        <div class="column" style="height: 29rem; overflow: scroll;">
-          <h2 class="has-text-danger">Short Orders</h2>
-          <br />
-          <br />
-
-          <ul>
-            <li v-for="order in short_orders">{{order}}</li>
-          </ul>
-        </div>
-
-      </div>
     </div>
   </div>
 
