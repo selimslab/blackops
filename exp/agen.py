@@ -39,8 +39,13 @@ async def st():
 #         async for z in streamer:
 #             print(z)
 
+async def generr():
+    for i in range(19):
+        yield Exception(f"Error {i}")
+
+
 async def consumer():
-    async for i in st():
+    async for i in generr():
         print(i)
 
 

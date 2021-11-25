@@ -55,19 +55,21 @@ class SlidingWindowTrader(StrategyBase):
     theo_buy: Optional[Decimal] = None
     theo_sell: Optional[Decimal] = None  # sell higher than theo_sell
 
-    base_step_qty: Optional[Decimal] = None
     best_seller: Optional[Decimal] = None
     best_buyer: Optional[Decimal] = None
 
+    task_start_time: datetime = datetime.now()
+    theo_last_updated: datetime = datetime.now()
+    bid_ask_last_updated: datetime = datetime.now()
+    time_diff: float = 0
+
+    base_step_qty: Optional[Decimal] = None
+    quote_step_qty: Optional[Decimal] = None
+
     orders: list = field(default_factory=list)
 
-    task_start_time: Optional[Any] = None
-
     pnl: Decimal = Decimal("0")
-    pnl_last_updated: Optional[Any] = None
-
-    theo_last_updated: Optional[Any] = None
-    bid_ask_last_updated: Optional[Any] = None
+    pnl_last_updated: datetime = datetime.now()
 
     binance_book_ticker_stream_seen: int = 0
     btc_books_seen: int = 0
@@ -88,7 +90,6 @@ class SlidingWindowTrader(StrategyBase):
     # Decimal(0.001)
 
     async def init(self):
-        self.task_start_time = datetime.now().time()
         self.channnel = self.sha
 
         await self.set_step_info()
@@ -212,7 +213,10 @@ class SlidingWindowTrader(StrategyBase):
         self.theo_buy = mid - self.credit
         self.theo_sell = mid + self.credit
 
-        self.theo_last_updated = datetime.now().time()
+        self.theo_last_updated = datetime.now()
+        self.time_diff = (
+            self.theo_last_updated - self.bid_ask_last_updated
+        ).total_seconds()
 
     def update_best_prices(self, book: dict):
         if not book:
@@ -225,7 +229,6 @@ class SlidingWindowTrader(StrategyBase):
                 best_ask = min(prices)
                 if best_ask:
                     self.best_seller = best_ask
-                    self.bid_ask_last_updated = datetime.now().time()
 
             purchase_orders = self.follower_exchange.get_purchase_orders(book)
             if purchase_orders:
@@ -234,7 +237,11 @@ class SlidingWindowTrader(StrategyBase):
                 best_bid = max(prices)
                 if best_bid:
                     self.best_buyer = best_bid
-                    self.bid_ask_last_updated = datetime.now().time()
+
+            self.bid_ask_last_updated = datetime.now()
+            self.time_diff = (
+                self.theo_last_updated - self.bid_ask_last_updated
+            ).total_seconds()
 
         except Exception as e:
             logger.info(e)
@@ -247,11 +254,11 @@ class SlidingWindowTrader(StrategyBase):
             await self.short()
 
     def should_long(self):
-        # TODO consider info last updated
+        #  act only when you are ahead
         return self.best_seller and self.theo_buy and self.best_seller <= self.theo_buy
 
     def should_short(self):
-        # TODO consider info last updated
+        #  act only when you are ahead
         return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
 
     async def long(self):
@@ -260,7 +267,7 @@ class SlidingWindowTrader(StrategyBase):
 
         # TODO: should we consider exchange fees?
 
-        if not self.best_seller:
+        if not self.best_seller or not self.quote_step_qty:
             return
 
         base_qty = self.quote_step_qty / self.best_seller
@@ -369,17 +376,18 @@ class SlidingWindowTrader(StrategyBase):
             "time": str(datetime.now().time()),
             "theo_buy": str(self.theo_buy),
             "theo_sell": str(self.theo_sell),
-            "theo_last_updated": str(self.theo_last_updated),
+            "theo_last_updated": str(self.theo_last_updated.time()),
             "pnl": str(self.pnl),
             "pnl_last_updated": str(self.pnl_last_updated),
             "best_seller": str(self.best_seller),
             "best_buyer": str(self.best_buyer),
-            "bid_ask_last_updated": str(self.bid_ask_last_updated),
+            "bid_ask_last_updated": str(self.bid_ask_last_updated.time()),
             "binance_book_tickers_seen": self.binance_book_ticker_stream_seen,
             "btc_books_seen": self.btc_books_seen,
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
             "orders": len(self.orders),
+            "time_diff": self.time_diff,
         }
         if is_prod:
             stats["params"] = self.params_message
@@ -394,11 +402,9 @@ class SlidingWindowTrader(StrategyBase):
             keys = {
                 "orders",
                 "pnl",
-                "pnl_last_updated",
-                "theo_last_updated",
-                "bid_ask_last_updated",
                 "binance_book_tickers_seen",
                 "btc_books_seen",
+                "time_diff",
             }
             logger.info({k: v for k, v in message.items() if k in keys})
 

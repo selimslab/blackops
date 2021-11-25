@@ -38,10 +38,10 @@ async def binance_stream_generator(
                     }
                     """
                     if msg.get("e", "") == "error":
-                        if "overflow" in msg.get("m", "").lower():
-                            raise BinanceOverflowException(msg)
-                        else:
-                            raise BinanceWebSocketException(msg)
+                        # if "overflow" in msg.get("m", "").lower():
+                        #     raise BinanceOverflowException(msg)
+                        # else:
+                        raise BinanceWebSocketException(msg)
 
                     yield msg
 
@@ -95,27 +95,18 @@ async def reconnecting_binance_generator(
             # continue where you left
             retries += 1
 
-            if isinstance(e, BinanceOverflowException):
-                sleep += 0.01  # add 10ms to sleep
-                if sleep > 0.15:  # it stays behind btc
-                    msg = f"sleep increased to {sleep} too much, staying behind follower exchanges"
-                    logger.error(msg)
-                    sleep = 0.1
-
-            # if retries > max_retry:
-            #     msg = (
-            #         f"Stopping, binance stream is too unstable (retries {retries}): {e}"
-            #     )
-            #     log_and_publish_error(channel, msg)
-            #     raise e
+            # if isinstance(e, BinanceOverflowException):
+            #     sleep += 0.01  # add 10ms to sleep
+            #     if sleep > 0.15:  # it stays behind btc
+            #         msg = f"sleep increased to {sleep} too much, staying behind follower exchanges"
+            #         logger.error(msg)
+            #         sleep = 0.1
 
             # create a new generator
             gen = generator_factory(sleep)
 
             msg = f"Reconnecting binance ({retries}), (sleep {sleep} seconds): {e}"
             logger.info(msg)
-            # log_and_publish_message(channel, msg)
-            await asyncio.sleep(0.01)  # wait for 10ms before sending again
             continue
 
         except Exception as e:
@@ -141,4 +132,4 @@ async def test_orderbook_stream(symbol):
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream("ANKRUSDT"))
+    asyncio.run(test_orderbook_stream("MANAUSDT"))

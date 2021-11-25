@@ -54,7 +54,6 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
 
         async for func, book in self.alternating_stream(gens):
             await func(book)
-            await asyncio.sleep(0.001)
 
     async def update_theo(self, book):
         self.binance_book_ticker_stream_seen += 1

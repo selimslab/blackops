@@ -35,8 +35,8 @@ class TaskContext:
 
     async def cancel_all(self):
         n = 0
-        for sha, state in self.task_state:
-            if state == "RUNNING":
+        for sha in self.task_state:
+            if self.task_state.get(sha) == "RUNNING":
                 await self.cancel_task(sha)
                 n += 1
 
