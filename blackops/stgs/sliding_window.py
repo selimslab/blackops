@@ -274,7 +274,9 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.long(price, qty, symbol)
-            self.remaining_usable_quote_balance -= self.quote_step_qty
+            self.remaining_usable_quote_balance = self.follower_exchange.get_balance(
+                self.pair.quote.symbol
+            )
 
             order = {
                 "type": "long",
@@ -302,6 +304,9 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.short(price, qty, symbol)
+            self.remaining_usable_quote_balance = self.follower_exchange.get_balance(
+                self.pair.quote.symbol
+            )
 
             order = {
                 "type": "short",
@@ -371,12 +376,12 @@ class SlidingWindowTrader(StrategyBase):
             "btc_books_seen": self.btc_books_seen,
             "remaining_usable_quote_balance": str(self.remaining_usable_quote_balance),
             "current_step": str(self.current_step),
-            "params": self.params_message,
+            # "params": self.params_message,
         }
 
     def broadcast_stats(self):
         message = self.create_stats_message()
-        # logger.info(message)
+        logger.info(message)
         pub.publish_stats(self.channnel, message)
 
     async def broadcast_stats_periodical(self):
