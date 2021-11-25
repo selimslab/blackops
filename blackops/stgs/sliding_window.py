@@ -276,19 +276,16 @@ class SlidingWindowTrader(StrategyBase):
             await self.follower_exchange.long(price, qty, symbol)
             self.remaining_usable_quote_balance -= self.quote_step_qty
 
+            order = {
+                "type": "long",
+                "price": str(price),
+                "qty": str(qty),
+                "theo_buy": str(self.theo_buy),
+            }
+            self.log_order(order)
+            await self.update_pnl()
         except Exception as e:
             logger.info(e)
-
-        order = {
-            "type": "long",
-            "price": str(price),
-            "qty": str(qty),
-            "theo_buy": str(self.theo_buy),
-            "symbol": symbol,
-            "time": str(datetime.now().time()),
-        }
-        self.log_order(order)
-        await self.update_pnl()
 
     def log_order(self, order: dict):
         pub.publish_order(self.channnel, order)
@@ -305,19 +302,18 @@ class SlidingWindowTrader(StrategyBase):
 
         try:
             await self.follower_exchange.short(price, qty, symbol)
+
+            order = {
+                "type": "short",
+                "price": str(price),
+                "qty": str(qty),
+                "theo_sell": str(self.theo_sell),
+            }
+            self.log_order(order)
+            await self.update_pnl()
+
         except Exception as e:
             logger.info(e)
-
-        order = {
-            "type": "short",
-            "price": str(price),
-            "qty": str(qty),
-            "theo_buy": str(self.theo_sell),
-            "symbol": symbol,
-            "time": str(datetime.now().time()),
-        }
-        self.log_order(order)
-        await self.update_pnl()
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
