@@ -413,4 +413,4 @@ class SlidingWindowTrader(StrategyBase):
     async def broadcast_stats_periodical(self):
         while True:
             self.broadcast_stats()
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.25)

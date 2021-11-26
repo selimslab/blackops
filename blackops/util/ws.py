@@ -9,12 +9,18 @@ from blackops.util.logger import logger
 
 
 async def ws_stream(uri: str, message: str, sleep=0.2):
-    async with websockets.connect(uri=uri) as websocket:
-        while True:
-            await websocket.send(message)
-            await asyncio.sleep(sleep)
-            data = await websocket.recv()
-            yield data
+    # async with websockets.connect(uri=uri) as ws:
+    ws = await websockets.connect(uri=uri)
+    while True:
+
+        if not ws.open:
+            ws = await websockets.connect(uri=uri)
+            logger.info("Reconnecting to btcturk")
+
+        await ws.send(message)
+        await asyncio.sleep(sleep)
+        data = await ws.recv()
+        yield data
 
 
 async def reconnecting_generator(generator_factory: Callable, channel: str = "default"):
