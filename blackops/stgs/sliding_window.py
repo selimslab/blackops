@@ -244,7 +244,7 @@ class SlidingWindowTrader(StrategyBase):
         return (
             self.best_seller
             and self.theo_buy
-            and self.time_diff > -0.1
+            and abs(self.time_diff) < 0.2  # max 200 ms diff between btc and bt
             and self.best_seller <= self.theo_buy
         )
 
@@ -253,7 +253,7 @@ class SlidingWindowTrader(StrategyBase):
         return (
             self.best_buyer
             and self.theo_sell
-            and self.time_diff > -0.1
+            and abs(self.time_diff) < 0.2
             and self.best_buyer >= self.theo_sell
         )
 
@@ -282,6 +282,7 @@ class SlidingWindowTrader(StrategyBase):
 
             order = {
                 "type": "long",
+                "time": str(datetime.now().time()),
                 "price": str(price),
                 "qty": str(qty),
                 "theo_buy": str(self.theo_buy),
@@ -317,6 +318,7 @@ class SlidingWindowTrader(StrategyBase):
 
             order = {
                 "type": "short",
+                "time": str(datetime.now().time()),
                 "price": str(price),
                 "qty": str(qty),
                 "theo_sell": str(self.theo_sell),
