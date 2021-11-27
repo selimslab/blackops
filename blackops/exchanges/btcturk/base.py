@@ -63,6 +63,7 @@ class BtcturkBase(ExchangeBase):
             )
         except Exception as e:
             logger.error(e)
+            raise e
 
     async def short(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed after we deliver"""
@@ -75,3 +76,4 @@ class BtcturkBase(ExchangeBase):
             )
         except Exception as e:
             logger.error(e)
+            raise e
