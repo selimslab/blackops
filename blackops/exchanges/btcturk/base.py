@@ -1,3 +1,4 @@
+import asyncio
 import json
 from dataclasses import dataclass
 from decimal import Decimal
@@ -38,6 +39,9 @@ class BtcturkBase(ExchangeBase):
             return {}
 
     async def get_balance_multiple(self, symbols: list) -> List[Decimal]:
+        await asyncio.sleep(
+            0.35
+        )  # simulate 180 calls per second, 90 balance, 90 orders
         try:
             res_list = await self.api_client.get_account_balance(assets=symbols)
             decimal_balances = [Decimal(r.get("balance", "")) for r in res_list]

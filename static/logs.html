@@ -90,10 +90,9 @@
 
           <p>base balance: {{base_balance}}</p>
           <p>quote balance: {{quote_balance}}</p>
-
+          
           ---
 
-          <p>remaining_usable_quote_balance: {{remaining_usable_quote_balance}}</p>
           <p>current_step: {{current_step}}</p>
 
           ---
@@ -124,7 +123,7 @@
           <p>btc updates seen: {{btc_books_seen}}</p>
           <p>binance updates seen: {{binance_book_tickers_seen}}</p>
 
-          <p>binance lead time: {{time_diff*1000}} ms </p>
+          <!-- <p>binance lead time: {{time_diff*1000}} ms </p> -->
 
           ---
 
@@ -227,9 +226,18 @@
     const app = new Vue({
       el: "#app",
       data: {
-        messages: [],
-
         sha: null,
+
+        params: params,
+
+        messages: [],
+        errors: [],
+        long_orders: [],
+        short_orders:[],
+
+        base_balance: 0,
+        quote_balance: 0,
+
         
         pnl: 0,
         max_pnl: 0,
@@ -244,20 +252,14 @@
         bridge: "",
         bridge_last_updated: "",
 
-        long_orders: [],
-        short_orders:[],
-
         binance_book_tickers_seen: 0,
         btc_books_seen: 0,
         task_start_time: "",
-        errors: [],
 
-        remaining_usable_quote_balance: 0,
+        // remaining_usable_quote_balance: 0,
         current_step: 0 ,
-        params: params,
-        time_diff: 0,
-        base_balance: 0,
-        quote_balance: 0,
+        
+        // time_diff: 0,
 
         runtime : 0,
       
@@ -319,8 +321,6 @@
               app.current_step = data.current_step;
 
               app.params = data.params;
-
-              app.time_diff = data.time_diff;
 
               app.base_balance = data.base_balance;
               app.quote_balance = data.quote_balance;
