@@ -18,7 +18,9 @@ async def ws_stream(uri: str, message: str, sleep=0.2):
             logger.info("Reconnecting to btcturk")
 
         await ws.send(message)
+
         await asyncio.sleep(sleep)
+
         data = await ws.recv()
         yield data
 

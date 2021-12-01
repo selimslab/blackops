@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 
-MAX_SPEND_ALLOWED = 100000
+MAX_SPEND_ALLOWED = 200000
 
 
 class ImmutableModel(BaseModel):

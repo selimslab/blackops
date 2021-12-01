@@ -282,6 +282,7 @@ class SlidingWindowTrader(StrategyBase):
             await self.update_pnl()
         except Exception as e:
             logger.info(e)
+            pub.publish_message(self.channnel, str(e))
 
     def log_order(self, order: dict):
         if is_prod:

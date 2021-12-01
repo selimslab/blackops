@@ -37,9 +37,9 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         await asyncio.gather(*consumers)
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
-        mid = super().get_mid(book)
-        if mid and self.bridge_quote:
-            return mid * self.bridge_quote
+        base_bridge_pair_mid = super().get_mid(book)
+        if base_bridge_pair_mid and self.bridge_quote:
+            return base_bridge_pair_mid * self.bridge_quote
         return None
 
     async def update_bridge_quote(self):
