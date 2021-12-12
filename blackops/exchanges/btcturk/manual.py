@@ -15,6 +15,7 @@ load_dotenv()
 def get_headers() -> dict:
     apiKey = os.getenv("BTCTURK_PUBLIC_KEY")
     apiSecret = os.getenv("BTCTURK_PRIVATE_KEY", "")
+
     apiSecret = base64.b64decode(apiSecret)  # type: ignore
 
     stamp = str(int(time.time()) * 1000)
@@ -66,10 +67,9 @@ def get_balance():
     get_data(url)
 
 
-headers = get_headers()
-
-
 def submit_order(qty, price, order_type):
+    headers = get_headers()
+
     path = "/api/v1/order"
     url = urllib.parse.urljoin(api_base, path)
     params = {
@@ -88,3 +88,7 @@ def submit_order(qty, price, order_type):
 
 def buy(qty, price):
     submit_order(qty, price, "buy")
+
+
+if __name__ == "__main__":
+    get_balance()
