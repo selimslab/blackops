@@ -2,15 +2,31 @@ import asyncio
 from typing import Callable
 
 import websockets
-from websockets.exceptions import ConnectionClosedError, WebSocketException
+from websockets.exceptions import (
+    ConnectionClosed,
+    ConnectionClosedError,
+    WebSocketException,
+)
 
 import blackops.pubsub.pub as pub
 from blackops.util.logger import logger
 
 
-async def ws_stream(uri: str, message: str, sleep=0.2):
+async def ws_stream(uri: str, message: str, sleep=0):
     # async with websockets.connect(uri=uri) as ws:
     ws = await websockets.connect(uri=uri)
+
+    # async for ws in websockets.connect(uri=uri):
+    #     try:
+    #         while True:
+    #             pong_waiter = await ws.ping()
+    #             await pong_waiter
+    #             await ws.send(message)
+    #             data = await ws.recv()
+    #             yield data
+    #     except websockets.exceptions.ConnectionClosed:
+    #         continue
+
     while True:
 
         if not ws.open:
@@ -18,11 +34,9 @@ async def ws_stream(uri: str, message: str, sleep=0.2):
             logger.info("Reconnecting to btcturk")
 
         await ws.send(message)
-
-        await asyncio.sleep(sleep)
-
         data = await ws.recv()
         yield data
+        await asyncio.sleep(sleep)
 
 
 async def reconnecting_generator(generator_factory: Callable, channel: str = "default"):

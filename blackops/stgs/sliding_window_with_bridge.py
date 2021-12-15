@@ -58,10 +58,3 @@ class SlidingWindowWithBridgeTrader(SlidingWindowTrader):
         message["bridge"] = str(self.bridge_quote)
         message["bridge_last_updated"] = str(self.bridge_last_updated)
         return message
-
-    @staticmethod
-    async def alternating_stream(gens):
-        for (gen, func) in itertools.cycle(gens):
-            book = await gen.__anext__()
-            if book:
-                yield func, book

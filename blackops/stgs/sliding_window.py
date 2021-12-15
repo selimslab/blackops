@@ -10,6 +10,7 @@ from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
 from blackops.environment import is_prod
+from blackops.exchanges import FOLLOWERS, LEADERS
 from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
@@ -44,8 +45,8 @@ class SlidingWindowTrader(StrategyBase):
 
     # Exchanges
 
-    leader_exchange: ExchangeBase
-    follower_exchange: ExchangeBase
+    leader_exchange: LEADERS
+    follower_exchange: FOLLOWERS
 
     leader_book_ticker_stream: AsyncGenerator
     follower_book_stream: AsyncGenerator
@@ -78,7 +79,7 @@ class SlidingWindowTrader(StrategyBase):
 
     current_step: Decimal = Decimal("0")
 
-    remaining_usable_quote_balance: Decimal = Decimal("0")
+    # remaining_usable_quote_balance: Decimal = Decimal("0")
 
     #  NOTES
 
@@ -90,39 +91,23 @@ class SlidingWindowTrader(StrategyBase):
     # fee_percent * Decimal(1.5)
     # Decimal(0.001)
 
-    async def init(self):
+    async def run(self):
         self.channnel = self.sha
 
-        await self.set_step_info()
+        await self.update_balances()
 
+        self.save_start_balances()
+
+        self.broadcast_start_params()
+
+        await self.run_streams()
+
+    def broadcast_start_params(self):
         self.params_message = self.create_params_message()
         pub.publish_params(self.channnel, self.params_message)
         logger.info(self.params_message)
 
-    async def run(self):
-        await self.init()
-        await self.run_streams()
-
-    def get_orders(self):
-        return self.orders
-
-    async def update_balances(self):
-        try:
-            (
-                self.pair.base.balance,
-                self.pair.quote.balance,
-            ) = await self.follower_exchange.get_balance_multiple(
-                [self.pair.base.symbol, self.pair.quote.symbol]
-            )
-        except Exception as e:
-            msg = "could not read balances"
-            pub.publish_error(self.channnel, msg)
-            raise Exception(msg)
-
-    async def set_step_info(self):
-        # TODO : 90 rate limit
-        await self.update_balances()
-
+    def save_start_balances(self):
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
 
@@ -133,10 +118,28 @@ class SlidingWindowTrader(StrategyBase):
 
             raise Exception(msg)
 
-        self.remaining_usable_quote_balance = self.max_usable_quote_amount_y
+        # self.remaining_usable_quote_balance = self.max_usable_quote_amount_y
         # self.quote_step_qty = (
         #     self.remaining_usable_quote_balance / self.step_count
         # )  # spend 100 TRY in 10 steps, max 1000
+
+    def get_orders(self):
+        return self.orders
+
+    async def update_balances(self):
+        try:
+            balances: List[dict] = await self.follower_exchange.get_account_balance(
+                assets=[self.pair.base.symbol, self.pair.quote.symbol]
+            )
+
+            self.pair.base.balance, self.pair.quote.balance = [
+                Decimal(balance["free"]) for balance in balances
+            ]
+
+        except Exception as e:
+            msg = f"could not read balances: {e}"
+            pub.publish_error(self.channnel, msg)
+            raise Exception(msg)
 
     async def run_streams(self):
         logger.info(f"Start streams for {self.name}")
@@ -152,17 +155,18 @@ class SlidingWindowTrader(StrategyBase):
     async def watch_books_and_decide(self):
         async for book in self.leader_book_ticker_stream:
             if book:
-                self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
+                self.binance_book_ticker_stream_seen += 1
             await asyncio.sleep(0)
 
     async def update_best_buyers_and_sellers(self):
         async for book in self.follower_book_stream:
             if book:
-                self.btc_books_seen += 1
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_best_prices(parsed_book)
+                self.btc_books_seen += 1
+
             await asyncio.sleep(0)
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
@@ -208,7 +212,7 @@ class SlidingWindowTrader(StrategyBase):
         if not book:
             return
         try:
-            sales_orders = self.follower_exchange.get_sales_orders(book)
+            sales_orders = book.get("AO", [])
             if sales_orders:
                 prices = [order.get("P") for order in sales_orders]
                 prices = [Decimal(price) for price in prices if price]
@@ -216,7 +220,7 @@ class SlidingWindowTrader(StrategyBase):
                 if best_ask:
                     self.best_seller = best_ask
 
-            purchase_orders = self.follower_exchange.get_purchase_orders(book)
+            purchase_orders = book.get("BO", [])
             if purchase_orders:
                 prices = [order.get("P") for order in purchase_orders]
                 prices = [Decimal(price) for price in prices if price]
@@ -247,29 +251,29 @@ class SlidingWindowTrader(StrategyBase):
         #  act only when you are ahead
         return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
 
+    async def update_current_step(self):
+        await self.update_balances()
+        self.current_step = (
+            self.pair.base.balance - self.start_base_balance
+        ) // self.base_step_qty
+
     async def long(self):
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
-
-        # TODO: should we consider exchange fees?
 
         if not self.best_seller:
             return
 
         price = float(self.best_seller)
         qty = float(self.base_step_qty)  #  we buy base
-        symbol = self.pair.bt_order_symbol
+        symbol = self.pair.symbol
 
         try:
             await self.follower_exchange.long(price, qty, symbol)
 
             # for a real order, you just know you delivered it,
             # to increasse the step, we should check either balance or trades
-
-            await self.update_balances()
-
-            # so assume that order is successful after 550 ms, 200 ms to deliver and 350 ms to verify at best
-            self.current_step += 1
+            await self.update_current_step()
 
             order = {
                 "type": "long",
@@ -279,16 +283,11 @@ class SlidingWindowTrader(StrategyBase):
                 "theo_buy": str(self.theo_buy),
             }
             self.log_order(order)
+
             await self.update_pnl()
         except Exception as e:
             logger.info(e)
             pub.publish_message(self.channnel, str(e))
-
-    def log_order(self, order: dict):
-        if is_prod:
-            pub.publish_order(self.channnel, order)
-        self.orders.append(order)
-        logger.info(order)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -296,14 +295,12 @@ class SlidingWindowTrader(StrategyBase):
 
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
-        symbol = self.pair.bt_order_symbol
+        symbol = self.pair.symbol
 
         try:
             await self.follower_exchange.short(price, qty, symbol)
 
-            await self.update_balances()
-
-            self.current_step -= 1
+            await self.update_current_step()
 
             order = {
                 "type": "short",
@@ -313,10 +310,16 @@ class SlidingWindowTrader(StrategyBase):
                 "theo_sell": str(self.theo_sell),
             }
             self.log_order(order)
-            await self.update_pnl()
 
+            await self.update_pnl()
         except Exception as e:
             logger.info(e)
+
+    def log_order(self, order: dict):
+        if is_prod:
+            pub.publish_order(self.channnel, order)
+        self.orders.append(order)
+        logger.info(order)
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
@@ -326,7 +329,7 @@ class SlidingWindowTrader(StrategyBase):
             # await self.update_balances()
 
             approximate_sales_gain: Decimal = (
-                self.pair.base.balance * self.best_buyer * self.follower_exchange.api_client.sell_with_fee  # type: ignore
+                self.pair.base.balance * self.best_buyer * self.follower_exchange.sell_with_fee  # type: ignore
             )
 
             return (

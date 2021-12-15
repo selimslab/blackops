@@ -9,7 +9,7 @@ def get_orderbook_message(symbol: str):
     # obdiff
     message = [
         151,
-        {"type": 151, "channel": "orderbook", "event": symbol, "join": True},
+        {"type": 151, "channel": "obdiff", "event": symbol, "join": True},
     ]
     return message
 
@@ -20,7 +20,7 @@ def create_orderbook_gen(symbol: str):
     message = get_orderbook_message(symbol)
     message = json.dumps(message)
 
-    gen = ws_stream(uri, message, sleep=0.08)
+    gen = ws_stream(uri, message, sleep=0.1)
 
     return gen
 
