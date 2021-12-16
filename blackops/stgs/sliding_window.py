@@ -152,7 +152,6 @@ class SlidingWindowTrader(StrategyBase):
             self.update_best_buyers_and_sellers(),
             self.broadcast_stats_periodical(),
             self.update_current_step_from_balances(),
-            self.update_current_step_from_trades(),
         ]  # is this ordering important ?
 
         await asyncio.gather(*consumers)
@@ -186,27 +185,6 @@ class SlidingWindowTrader(StrategyBase):
                 logger.info(e)
 
             await asyncio.sleep(0.7)  # 90 rate limit
-
-    async def update_current_step_from_trades(self):
-        params = {"pairSymbol": self.pair.symbol, "limit": 10}
-
-        while True:
-            res = await self.follower_exchange.get_all_orders(params)
-            if res:
-                orders = res.get("data", [])
-                current_balance = self.pair.base.balance
-                for order in orders:
-                    done = Decimal(order["amount"]) - Decimal(order["leftAmount"])
-                    if order["type"] == "buy":
-                        current_balance += done
-                    elif order["type"] == "sell":
-                        current_balance -= done
-
-                self.current_step = (
-                    current_balance - self.start_base_balance
-                ) / self.base_step_qty
-
-            await asyncio.sleep(0.1)
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
         best_bid = self.leader_exchange.get_best_bid(book)
