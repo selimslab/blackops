@@ -1,10 +1,13 @@
+import asyncio
 import base64
 import hashlib
 import hmac
 import itertools
+import json
+import pprint
 import time
 import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 import aiohttp
@@ -29,8 +32,6 @@ class BtcturkApiClient(BtcturkBase):
 
     name: str = "btcturk_real"
 
-    orders: list = []
-
     def __post_init__(self):
         self.headers = self.get_headers()
         self.session = aiohttp.ClientSession()
@@ -54,32 +55,29 @@ class BtcturkApiClient(BtcturkBase):
 
         return headers
 
-    async def get_data(self, url: str) -> dict:
-        try:
-            with requests.get(url, stream=True, headers=self.headers) as r:
-                if r.status_code == 200:
-                    print(r.json())
-                    return r.json()
-                else:
-                    print(str(r.status_code), r.reason)
-                    return {}
-        except Exception as e:
-            logger.error(e)
-            return {}
+    async def _get(self, uri: str):
+        async with self.session.get(uri, headers=self.get_headers()) as res:
+            if res.status == 200:
+                return await res.json()
+            else:
+                msg = f"{str(res.status)} {res.reason} {uri}"
+                logger.error(msg)
+                return {}
 
-    async def get_account_balance(self, assets: List[str]):
-        res = await self.get_data(self.balance_url)
+    async def get_account_balance(self, assets: Optional[List[str]] = None):
+        res = await self._get(self.balance_url)
 
         balance_list = res.get("data", [])
         if not assets:
             return balance_list
 
-        return [bl for bl in balance_list if bl["asset"] in assets]
+        return [d for d in balance_list if d["asset"] in assets]
 
     async def submit_limit_order(
         self, pair_symbol: str, order_type: str, price: float, quantity: float
-    ):
+    ) -> Optional[dict]:
 
+        # TODO can we use decimal instead of float?
         params = {
             "quantity": quantity,
             "price": price,
@@ -93,36 +91,26 @@ class BtcturkApiClient(BtcturkBase):
         async with self.session.post(
             self.order_url, headers=self.headers, json=params
         ) as res:
-            return res
-
-            # self.orders.append(result)
-
-            # data = result.get("data", {})
-            # order_id = data.get("id")
-            # timestamp = data.get("timestamp")
-
-            # print(json.dumps(result, indent=2))
+            return await res.json()
 
     async def get_all_orders(self, params: dict) -> Optional[dict]:
         uri = update_url_query_params(self.all_orders_url, params)
-        async with self.session.get(uri, headers=self.headers) as res:
-            return await res.json()
+        return await self._get(uri)
 
     async def get_open_orders(self, symbol: str) -> Optional[dict]:
         if not symbol:
             raise Exception("symbol is required")
 
-        uri = update_url_query_params(self.open_orders_url, {"pairSymbol": symbol})
-        async with self.session.get(uri, headers=self.headers) as res:
-            return await res.json()
+        params = {"pairSymbol": symbol}
+        uri = update_url_query_params(self.open_orders_url, params)
+        return await self._get(uri)
 
     async def cancel_order(self, order_id: str) -> Optional[dict]:
         if not order_id:
             raise Exception("order id is required")
 
         uri = update_url_query_params(self.order_url, {"id": order_id})
-        async with self.session.delete(uri, headers=self.headers) as res:
-            return await res.json()
+        return await self._get(uri)
 
     async def cancel_open_orders(self, symbol: str, bids=True, asks=True):
         """
@@ -140,17 +128,20 @@ class BtcturkApiClient(BtcturkBase):
         asks = data.get("asks", [])
         bids = data.get("bids", [])
 
+        results = []
         if bids:
             for order in bids:
                 order_id = order.get("id")
-                await self.cancel_order(order_id)
+                res = await self.cancel_order(order_id)
+                results.append(res)
+
         if asks:
             for order in asks:
                 order_id = order.get("id")
-                await self.cancel_order(order_id)
+                res = await self.cancel_order(order_id)
+                results.append(res)
 
-    def get_saved_orders(self):
-        return self.orders
+        return results
 
     async def close_session(self):
         await self.session.close()

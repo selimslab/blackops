@@ -13,8 +13,14 @@ from blackops.util.logger import logger
 
 
 async def ws_stream(uri: str, message: str, sleep=0):
-    # async with websockets.connect(uri=uri) as ws:
-    ws = await websockets.connect(uri=uri)
+    async with websockets.connect(uri=uri) as ws:
+        while True:
+            await ws.send(message)
+            data = await ws.recv()
+            yield data
+            await asyncio.sleep(sleep)
+
+    # ws = await websockets.connect(uri=uri)
 
     # async for ws in websockets.connect(uri=uri):
     #     try:
@@ -27,23 +33,12 @@ async def ws_stream(uri: str, message: str, sleep=0):
     #     except websockets.exceptions.ConnectionClosed:
     #         continue
 
-    while True:
-
-        if not ws.open:
-            ws = await websockets.connect(uri=uri)
-            logger.info("Reconnecting to btcturk")
-
-        await ws.send(message)
-        data = await ws.recv()
-        yield data
-        await asyncio.sleep(sleep)
-
 
 async def reconnecting_generator(generator_factory: Callable, channel: str = "default"):
     gen = generator_factory()
 
     retries = 0
-    max_retry = 400
+    # max_retry = 400
 
     while True:
         try:
@@ -69,7 +64,7 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
 
             retries += 1
             gen = generator_factory()
-            msg = f"Reconnecting btc ({retries}): {e}"
+            msg = f"Reconnecting btc, retries: {retries}: {e}"
             logger.error(msg)
             # pub.publish_message(channel, msg)
         except Exception as e:

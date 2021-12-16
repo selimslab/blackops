@@ -2,17 +2,14 @@ from typing import Union
 
 import blackops.exchanges.binance.factory as binance_factory
 import blackops.exchanges.btcturk.factory as btcturk_factory
+import blackops.streams.bn as bn_streams
+import blackops.streams.btcturk as btc_streams
 from blackops.api.models.stg import SlidingWindow, SlidingWindowWithBridge, Strategy
 from blackops.domain.models.asset import Asset, AssetPair
 from blackops.domain.models.exchange import ExchangeBase
-from blackops.exchanges.binance.base import BinanceBase
-from blackops.exchanges.btcturk.base import BtcturkBase
-from blackops.exchanges.btcturk.real import create_btcturk_api_client_real
-from blackops.exchanges.btcturk.testnet import BtcturkTestnetApiClient
+from blackops.exchanges import EXCHANGE, FOLLOWERS, LEADERS
 from blackops.stgs.sliding_window import SlidingWindowTrader
 from blackops.stgs.sliding_window_with_bridge import SlidingWindowWithBridgeTrader
-from blackops.streams.bn import create_book_stream_binance
-from blackops.streams.btcturk import create_book_stream_btcturk
 from blackops.taskq.redis import STREAM_MAP, async_redis_client
 from blackops.util.logger import logger
 
@@ -40,16 +37,9 @@ EXCHANGES = {
         REAL: lambda: binance_factory.create_real_client(),
     },
     BTCTURK: {
-        TESTNET: lambda api_client: btcturk_factory.create_testnet_client(api_client),
-        REAL: lambda api_client: btcturk_factory.create_real_client(api_client),
+        TESTNET: lambda: btcturk_factory.create_testnet_client(),
+        REAL: lambda: btcturk_factory.create_real_client(),
     },
-}
-
-API_CLIENTS = {
-    BTCTURK: {
-        TESTNET: lambda: BtcturkTestnetApiClient(),
-        REAL: lambda: create_btcturk_api_client_real(),
-    }
 }
 
 
@@ -62,21 +52,13 @@ TRADER_CLASSES = {
 }
 
 
-def create_exchange(ex_type: str, network: str, api_client) -> ExchangeBase:
+def create_exchange(ex_type: str, network: str) -> EXCHANGE:
     factory_func = EXCHANGES.get(ex_type, {}).get(network)  # type: ignore
+
     if not factory_func:
         raise ValueError(f"unknown exchange: {ex_type}")
 
-    if api_client:
-        return factory_func(api_client)
-    else:
-        return factory_func()
-
-
-def create_api_client(ex_type: str, network: str):
-    factory_func = API_CLIENTS.get(ex_type, {}).get(network)
-    if factory_func:
-        return factory_func()
+    return factory_func()
 
 
 async def sliding_window_with_bridge_factory(stg: Strategy):
@@ -92,21 +74,18 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
 
     network = TESTNET if stg.testnet else REAL
 
-    follower_client = create_api_client(stg.follower_exchange, network)
+    follower_exchange: FOLLOWERS = create_exchange(
+        stg.follower_exchange, network
+    )  # type:ignore
 
-    if network == TESTNET and follower_client:
-        await follower_client.add_balance(  # type:ignore
+    if network == TESTNET and follower_exchange:
+        await follower_exchange.test_exchange.add_balance(  # type:ignore
             stg.quote, stg.max_usable_quote_amount_y
         )
 
-    leader_client = create_api_client(stg.leader_exchange, network)
-
-    follower_exchange: ExchangeBase = create_exchange(
-        stg.follower_exchange, network, follower_client
-    )
-    leader_exchange: ExchangeBase = create_exchange(
-        stg.leader_exchange, network, leader_client
-    )
+    leader_exchange: LEADERS = create_exchange(
+        stg.leader_exchange, network
+    )  # type:ignore
 
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
@@ -115,13 +94,13 @@ async def sliding_window_with_bridge_factory(stg: Strategy):
 
     pub_channel = stg.sha
 
-    leader_book_ticker_stream = create_book_stream_binance(
+    leader_book_ticker_stream = bn_streams.create_book_stream(
         base_bridge_symbol, pub_channel
     )
-    leader_bridge_quote_stream = create_book_stream_binance(
+    leader_bridge_quote_stream = bn_streams.create_book_stream(
         bridge_quote_symbol, pub_channel
     )
-    follower_book_stream = create_book_stream_btcturk(pair.symbol, pub_channel)
+    follower_book_stream = btc_streams.create_book_stream(pair.symbol, pub_channel)
 
     trader = SlidingWindowWithBridgeTrader(
         sha=stg.sha,
@@ -148,22 +127,18 @@ async def sliding_window_factory(stg: Strategy):
 
     network = TESTNET if stg.testnet else REAL
 
-    follower_client = create_api_client(stg.follower_exchange, network)
+    follower_exchange: FOLLOWERS = create_exchange(
+        stg.follower_exchange, network
+    )  # type:ignore
 
-    if network == TESTNET:
-
-        await follower_client.add_balance(  # type:ignore
+    if network == TESTNET and follower_exchange:
+        await follower_exchange.test_exchange.add_balance(  # type:ignore
             stg.quote, stg.max_usable_quote_amount_y
         )
 
-    leader_client = create_api_client(stg.leader_exchange, network)
-
-    follower_exchange: ExchangeBase = create_exchange(
-        stg.follower_exchange, network, follower_client
-    )
-    leader_exchange: ExchangeBase = create_exchange(
-        stg.leader_exchange, network, leader_client
-    )
+    leader_exchange: LEADERS = create_exchange(
+        stg.leader_exchange, network
+    )  # type:ignore
 
     pair = AssetPair(Asset(stg.base), Asset(stg.quote))
 
@@ -180,9 +155,9 @@ async def sliding_window_factory(stg: Strategy):
     #     follower_book_stream = create_book_stream_btcturk(pair.symbol)
     #     await async_redis_client.hget(STREAM_MAP, BTCTURK), btcturk_stream_channel
 
-    leader_book_ticker_stream = create_book_stream_binance(pair.symbol)
+    leader_book_ticker_stream = bn_streams.create_book_stream(pair.symbol)
 
-    follower_book_stream = create_book_stream_btcturk(pair.symbol)
+    follower_book_stream = btc_streams.create_book_stream(pair.symbol)
 
     trader = SlidingWindowTrader(
         sha=stg.sha,

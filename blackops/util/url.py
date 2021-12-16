@@ -22,3 +22,6 @@ def test_update_url_query_params():
         update_url_query_params(url, params)
         == "https://api.airsafe.spire.com/v2/targets/stream?compression=none&token=test_token"
     )
+
+
+test_update_url_query_params()

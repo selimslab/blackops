@@ -6,3 +6,5 @@ from .btcturk.testnet import BtcturkApiClientTestnet
 
 LEADERS = BinanceBase
 FOLLOWERS = Union[BtcturkApiClient, BtcturkApiClientTestnet]
+
+EXCHANGE = Union[LEADERS, FOLLOWERS]

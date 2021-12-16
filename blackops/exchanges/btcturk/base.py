@@ -28,7 +28,7 @@ class BtcturkBase(ExchangeBase):
 
     async def long(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed"""
-        await self.submit_limit_order(
+        return await self.submit_limit_order(
             quantity=float(qty),
             price=float(price),
             order_type="buy",
@@ -37,7 +37,7 @@ class BtcturkBase(ExchangeBase):
 
     async def short(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed after we deliver"""
-        await self.submit_limit_order(
+        return await self.submit_limit_order(
             quantity=float(qty),
             price=float(price),
             order_type="sell",

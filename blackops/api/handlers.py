@@ -19,7 +19,7 @@ from blackops.util.logger import logger
 
 
 def dict_to_hash(d: dict) -> str:
-    return hashlib.md5(json.dumps(d).encode()).hexdigest()
+    return hashlib.md5(json.dumps(d).encode()).hexdigest()[:7]
 
 
 def str_to_json(s: str) -> dict:

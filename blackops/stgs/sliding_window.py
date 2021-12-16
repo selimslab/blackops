@@ -1,16 +1,17 @@
 import asyncio
+import collections
 import itertools
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, getcontext
-from typing import Any, AsyncGenerator, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import blackops.pubsub.pub as pub
 from blackops.domain.models.asset import AssetPair
 from blackops.domain.models.exchange import ExchangeBase
 from blackops.domain.models.stg import StrategyBase
 from blackops.environment import is_prod
-from blackops.exchanges import FOLLOWERS, LEADERS
+from blackops.exchanges import EXCHANGE, FOLLOWERS, LEADERS
 from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 from blackops.util.numbers import DECIMAL_2
@@ -66,7 +67,9 @@ class SlidingWindowTrader(StrategyBase):
     bid_ask_last_updated: datetime = datetime.now()
     time_diff: float = 0
 
-    orders: list = field(default_factory=list)
+    orders: dict = field(
+        default_factory=dict
+    )  # track your orders and figure out balance
 
     pnl: Decimal = Decimal("0")
     max_pnl: Decimal = Decimal("0")
@@ -148,6 +151,8 @@ class SlidingWindowTrader(StrategyBase):
             self.watch_books_and_decide(),
             self.update_best_buyers_and_sellers(),
             self.broadcast_stats_periodical(),
+            self.update_current_step_from_balances(),
+            self.update_current_step_from_trades(),
         ]  # is this ordering important ?
 
         await asyncio.gather(*consumers)
@@ -168,6 +173,40 @@ class SlidingWindowTrader(StrategyBase):
                 self.btc_books_seen += 1
 
             await asyncio.sleep(0)
+
+    async def update_current_step_from_balances(self):
+        # raises Exception if cant't read balance
+        while True:
+            try:
+                await self.update_balances()
+                self.current_step = (
+                    self.pair.base.balance - self.start_base_balance
+                ) / self.base_step_qty  # so we may have step 1.35 or so
+            except Exception as e:
+                logger.info(e)
+
+            await asyncio.sleep(0.7)  # 90 rate limit
+
+    async def update_current_step_from_trades(self):
+        params = {"pairSymbol": self.pair.symbol, "limit": 10}
+
+        while True:
+            res = await self.follower_exchange.get_all_orders(params)
+            if res:
+                orders = res.get("data", [])
+                current_balance = self.pair.base.balance
+                for order in orders:
+                    done = Decimal(order["amount"]) - Decimal(order["leftAmount"])
+                    if order["type"] == "buy":
+                        current_balance += done
+                    elif order["type"] == "sell":
+                        current_balance -= done
+
+                self.current_step = (
+                    current_balance - self.start_base_balance
+                ) / self.base_step_qty
+
+            await asyncio.sleep(0.1)
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
         best_bid = self.leader_exchange.get_best_bid(book)
@@ -194,8 +233,6 @@ class SlidingWindowTrader(StrategyBase):
         if not mid:
             return
 
-        #  0,1,2,3, n-1
-        # self.current_step = self.get_current_step()
         step_size = self.step_constant_k * self.current_step
 
         mid -= step_size  # go down as you buy, we wish to buy lower as we buy
@@ -251,12 +288,6 @@ class SlidingWindowTrader(StrategyBase):
         #  act only when you are ahead
         return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
 
-    async def update_current_step(self):
-        await self.update_balances()
-        self.current_step = (
-            self.pair.base.balance - self.start_base_balance
-        ) // self.base_step_qty
-
     async def long(self):
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
@@ -268,26 +299,7 @@ class SlidingWindowTrader(StrategyBase):
         qty = float(self.base_step_qty)  #  we buy base
         symbol = self.pair.symbol
 
-        try:
-            await self.follower_exchange.long(price, qty, symbol)
-
-            # for a real order, you just know you delivered it,
-            # to increasse the step, we should check either balance or trades
-            await self.update_current_step()
-
-            order = {
-                "type": "long",
-                "time": str(datetime.now().time()),
-                "price": str(price),
-                "qty": str(qty),
-                "theo_buy": str(self.theo_buy),
-            }
-            self.log_order(order)
-
-            await self.update_pnl()
-        except Exception as e:
-            logger.info(e)
-            pub.publish_message(self.channnel, str(e))
+        await self.send_order("long", price, qty, symbol)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -297,29 +309,57 @@ class SlidingWindowTrader(StrategyBase):
         qty = float(self.base_step_qty)  # we sell base
         symbol = self.pair.symbol
 
+        await self.send_order("short", price, qty, symbol)
+
+    async def send_order(self, side, price, qty, symbol):
+
+        if side == "long":
+            func = self.follower_exchange.long
+            theo = self.theo_buy
+        elif side == "short":
+            func = self.follower_exchange.short
+            theo = self.theo_sell
+        else:
+            raise Exception("invalid side")
+
         try:
-            await self.follower_exchange.short(price, qty, symbol)
 
-            await self.update_current_step()
+            res = await func(price, qty, symbol)
 
-            order = {
-                "type": "short",
-                "time": str(datetime.now().time()),
-                "price": str(price),
-                "qty": str(qty),
-                "theo_sell": str(self.theo_sell),
-            }
-            self.log_order(order)
+            is_ok = res and res.get("success") and res.get("data")
+            if not is_ok:
+                msg = f"could not {side} {symbol} at {price} for {qty}: {res}"
+                raise Exception(msg)
+
+            data = res.get("data")
+
+            ts = data.get("datetime")
+            order_time = datetime.fromtimestamp(ts)
+
+            order_id = data.get("id")
+            self.orders[order_id] = data
+
+            self.log_order(side, order_time, price, qty, theo)
 
             await self.update_pnl()
+
         except Exception as e:
             logger.info(e)
+            pub.publish_message(self.channnel, str(e))
 
-    def log_order(self, order: dict):
+    def log_order(self, side, order_time, price, qty, theo):
+        order_log = {
+            "type": side,
+            "time": str(order_time),
+            "price": str(price),
+            "qty": str(qty),
+            "theo": str(theo),
+        }
+
         if is_prod:
-            pub.publish_order(self.channnel, order)
-        self.orders.append(order)
-        logger.info(order)
+            pub.publish_order(self.channnel, order_log)
+
+        logger.info(order_log)
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:

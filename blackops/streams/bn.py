@@ -19,6 +19,8 @@ class BinanceOverflowException(Exception):
 async def binance_stream_generator(symbol: str, stream_type: str):
     client = await AsyncClient.create()
     try:
+        # TODO multiple streams from the same ws
+        # f"ethusdt{stream_type}"
         bm = BinanceSocketManager(client)
         ts = bm.multiplex_socket([f"{symbol.lower()}{stream_type}"])
 
@@ -101,7 +103,7 @@ async def reconnecting_binance_generator(
             raise e
 
 
-def create_book_stream_binance(symbol: str, channel: str = "default"):
+def create_book_stream(symbol: str, channel: str = "default"):
     def create_new_socket_conn():
         return binance_stream_generator(symbol, "@bookTicker")
 
@@ -109,7 +111,7 @@ def create_book_stream_binance(symbol: str, channel: str = "default"):
 
 
 async def test_orderbook_stream(symbol):
-    gen = create_book_stream_binance(symbol)
+    gen = create_book_stream(symbol)
     async for book in gen:
         print(book)
 
