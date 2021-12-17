@@ -1,6 +1,6 @@
 import asyncio
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from dataclasses import dataclass
+from typing import List, Optional
 
 from blackops.util.logger import logger
 

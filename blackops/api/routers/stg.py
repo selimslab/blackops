@@ -2,7 +2,6 @@ import simplejson as json
 from fastapi import APIRouter, Depends, HTTPException
 
 import blackops.api.handlers as handlers
-import blackops.taskq.tasks as taskq
 from blackops.api.auth import auth
 from blackops.robots.config import StrategyConfig
 

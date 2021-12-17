@@ -1,12 +1,10 @@
-import asyncio
 import hashlib
+import json
 from typing import List, OrderedDict
 
-import simplejson as json
 from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
-import blackops.taskq.tasks as taskq
 from blackops.robots.config import STRATEGY_CLASS, StrategyConfig, StrategyType
 from blackops.taskq.redis import (
     LOG_CHANNELS,
@@ -19,7 +17,7 @@ from blackops.util.logger import logger
 
 
 def dict_to_hash(d: dict) -> str:
-    return hashlib.md5(json.dumps(d).encode()).hexdigest()[:7]
+    return hashlib.md5(json.dumps(d).encode()).hexdigest()
 
 
 def str_to_json(s: str) -> dict:
@@ -53,9 +51,9 @@ async def create_stg(stg: StrategyConfig) -> dict:
 
     stg.is_valid()
 
-    d = dict(stg)
+    d = stg.dict()
 
-    sha = dict_to_hash(d)
+    sha = dict_to_hash(d)[:7]
     d["sha"] = sha
 
     # if you ever need a uid ,its important to hash it without uid for the idempotency of stg

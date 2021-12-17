@@ -3,8 +3,7 @@ import random
 
 def test():
     """Stupid test function"""
-    L = [random.randint(0, i) for i in range(1000000)]
-    L.sort()
+    L = sorted([random.randint(0, i) for i in range(1000000)])
 
 
 if __name__ == "__main__":

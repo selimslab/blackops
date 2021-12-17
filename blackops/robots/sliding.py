@@ -1,10 +1,9 @@
 import asyncio
-import collections
 import itertools
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, getcontext
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, List, Optional
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
