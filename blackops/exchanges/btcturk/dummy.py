@@ -29,7 +29,7 @@ class BtcturkDummy:
     async def set_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] = val
 
-    async def add_balance(self, symbol: str, val: Decimal):
+    def add_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] += val
 
     async def subtract_balance(self, symbol: str, val: Decimal):

@@ -110,11 +110,6 @@ class SlidingWindowTrader(RobotBase):
 
         await self.run_streams()
 
-    def broadcast_start_params(self):
-        self.params_message = self.create_params_message()
-        pub.publish_params(self.channnel, self.params_message)
-        logger.info(self.params_message)
-
     def save_start_balances(self):
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
@@ -204,24 +199,13 @@ class SlidingWindowTrader(RobotBase):
 
             await asyncio.sleep(0.7)  # 90 rate limit
 
-    def get_mid(self, book: dict) -> Optional[Decimal]:
-        if not book:
-            return None
-
-        mid = self.leader_exchange.get_mid(book)
-
-        if mid:
-            return mid
-
-        return None
-
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
 
         if not book:
             return
 
-        mid = self.get_mid(book)
+        mid = self.leader_exchange.get_mid(book)
 
         if not mid:
             return
@@ -330,6 +314,11 @@ class SlidingWindowTrader(RobotBase):
             pub.publish_message(self.channnel, str(e))
 
     # MONITORING
+
+    def broadcast_start_params(self):
+        self.params_message = self.create_params_message()
+        pub.publish_params(self.channnel, self.params_message)
+        logger.info(self.params_message)
 
     def log_order(self, side, order_time, price, qty, theo):
         order_log = {

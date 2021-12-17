@@ -1,7 +1,7 @@
 import hashlib
-import json
 from typing import List, OrderedDict
 
+import simplejson as json
 from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
@@ -82,7 +82,7 @@ async def run_task(sha: str):
     config_class = STRATEGY_CLASS[stg_type]
     stg: StrategyConfig = config_class(**stg_dict)
 
-    await task_context.start_task(stg)
+    task_context.start_task(stg)
     # task_id = await taskq.start_task(sha, task_func)
     # await async_redis_client.hset(RUNNING_TASKS, sha, task_id)
     # await async_redis_client.sadd("RUNNING_TASKS", sha)

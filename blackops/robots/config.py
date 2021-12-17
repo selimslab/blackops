@@ -34,6 +34,7 @@ class SlidingWindowConfig(StrategyConfigBase):
     base: str = Field(..., example="UMA")
     quote: str = Field(..., example="TRY")
     bridge: Optional[str] = Field(default=None, example="USDT")
+    use_bridge = False
 
     testnet = True
 
@@ -105,6 +106,11 @@ class SlidingWindowConfig(StrategyConfigBase):
             )
 
     def is_valid_bridge(self):
+        if self.use_bridge is False and self.bridge is not None:
+            raise ValueError(
+                "do you want to use bridge? if yes, set use_bridge to true, if no, do not send a bridge symbol"
+            )
+
         if self.bridge not in SUPPORTED_BRIDDGES:
             raise ValueError(f"{self.bridge} is not a supported bridge")
 
