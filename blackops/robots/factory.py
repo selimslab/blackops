@@ -90,29 +90,3 @@ async def create_trader_from_strategy(stg: StrategyConfig) -> RobotBase:
         return robot
     except ValueError:
         raise ValueError(f"unknown strategy type: {stg.type}")
-
-
-async def create_streams_from_strategy(stg_dict: dict) -> None:
-    # binance_stream_channel = f"{BINANCE}_{pair.symbol}"
-    # btcturk_stream_channel = f"{BTCTURK}_{pair.symbol}"
-
-    # binance_streams = await async_redis_client.hmget(STREAM_MAP, BINANCE)
-    # if pair.symbol not in binance_streams:
-    #     leader_book_ticker_stream = create_book_stream_binance(pair.symbol)
-    #     await async_redis_client.hset(STREAM_MAP, BINANCE,binance_stream_channel )
-
-    # bt_streams = await async_redis_client.hmget(STREAM_MAP, BTCTURK)
-    # if pair.symbol not in bt_streams:
-    #     follower_book_stream = create_book_stream_btcturk(pair.symbol)
-    #     await async_redis_client.hget(STREAM_MAP, BTCTURK), btcturk_stream_channel
-
-    # from decimal import getcontext
-    # getcontext().prec = 10
-
-    # async def create_log_channel(sha: str):
-    #     await async_redis_client.sadd(LOG_CHANNELS, sha)
-
-    # async def remove_log_channel(sha: str):
-    #     await async_redis_client.srem(LOG_CHANNELS, sha)
-
-    pass
