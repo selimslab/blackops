@@ -1,8 +1,9 @@
 import json
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import List, Optional
 
-from blackops.domain.models.exchange import ExchangeBase
+from blackops.exchanges.base import ExchangeBase
 from blackops.util.logger import logger
 
 
@@ -21,11 +22,6 @@ class BtcturkBase(ExchangeBase):
             logger.info(e)
             return {}
 
-    async def submit_limit_order(
-        self, pair_symbol: str, order_type: str, price: float, quantity: float
-    ):
-        raise NotImplementedError
-
     async def long(self, price: float, qty: float, symbol: str):
         """the order may or may not be executed"""
         return await self.submit_limit_order(
@@ -43,3 +39,21 @@ class BtcturkBase(ExchangeBase):
             order_type="sell",
             pair_symbol=symbol,
         )
+
+    @staticmethod
+    def get_best_bid(book: dict) -> Optional[Decimal]:
+        purchase_orders = book.get("BO", [])
+        if purchase_orders:
+            prices = [order.get("P") for order in purchase_orders]
+            prices = [Decimal(price) for price in prices if price]
+            return max(prices)
+        return None
+
+    @staticmethod
+    def get_best_ask(book: dict) -> Optional[Decimal]:
+        sales_orders = book.get("AO", [])
+        if sales_orders:
+            prices = [order.get("P") for order in sales_orders]
+            prices = [Decimal(price) for price in prices if price]
+            return min(prices)
+        return None

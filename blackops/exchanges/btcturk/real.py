@@ -1,17 +1,12 @@
-import asyncio
 import base64
 import hashlib
 import hmac
-import itertools
-import json
-import pprint
 import time
 import urllib.parse
 from dataclasses import dataclass, field
 from typing import List, Optional
 
 import aiohttp
-import requests
 
 from blackops.exchanges.btcturk.base import BtcturkBase
 from blackops.util.logger import logger
@@ -33,10 +28,10 @@ class BtcturkApiClient(BtcturkBase):
     name: str = "btcturk_real"
 
     def __post_init__(self):
-        self.headers = self.get_headers()
+        self.headers = self._get_headers()
         self.session = aiohttp.ClientSession()
 
-    def get_headers(self) -> dict:
+    def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
 
         stamp = str(int(time.time()) * 1000)
@@ -56,7 +51,7 @@ class BtcturkApiClient(BtcturkBase):
         return headers
 
     async def _get(self, uri: str):
-        async with self.session.get(uri, headers=self.get_headers()) as res:
+        async with self.session.get(uri, headers=self._get_headers()) as res:
             if res.status == 200:
                 return await res.json()
             else:
@@ -143,7 +138,7 @@ class BtcturkApiClient(BtcturkBase):
 
         return results
 
-    async def close_session(self):
+    async def _close_session(self):
         await self.session.close()
 
 

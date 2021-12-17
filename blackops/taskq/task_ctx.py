@@ -1,6 +1,7 @@
 import asyncio
 
-from blackops.trader.factory import create_trader_from_strategy
+from blackops.robots.config import StrategyConfig
+from blackops.robots.factory import create_trader_from_strategy
 
 
 class TaskContext:
@@ -9,13 +10,12 @@ class TaskContext:
         self.traders = {}
         self.task_state = {}
 
-    async def start_task(self, stg: dict):
-        sha = stg.get("sha")
+    async def start_task(self, stg: StrategyConfig):
+        sha = stg.sha
         if self.task_state.get(sha, "") == "RUNNING":
             raise Exception(f"{sha} already running")
 
         trader = await create_trader_from_strategy(stg)
-
         task = asyncio.create_task(trader.run())
 
         self.tasks[sha] = task

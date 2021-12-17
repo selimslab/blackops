@@ -1,4 +1,4 @@
-from .base import BinanceBase
+from .main import BinanceBase
 
 
 def create_real_client():

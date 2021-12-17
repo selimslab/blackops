@@ -2,8 +2,8 @@ import asyncio
 from decimal import Decimal
 
 import blackops.domain.symbols as symbols
-from blackops.trader.factory import create_trader_from_strategy
-from blackops.api.models.stg import SlidingWindow, SlidingWindowWithBridge
+from blackops.robots.factory import create_trader_from_strategy
+from blackops.robots.config import SlidingWindow, SlidingWindowWithBridge
 
 import cProfile
 from pstats import Stats

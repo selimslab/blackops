@@ -12,7 +12,7 @@ from blackops.exchanges.btcturk.real import BtcturkApiClient
 async def create_api_client():
     api_client = BtcturkApiClient(api_key=apiKey, api_secret=apiSecret)
     yield api_client
-    await api_client.close_session()
+    await api_client._close_session()
 
 
 async def test_get_open_orders(api_client, symbol: str = "USDTTRY"):
@@ -98,8 +98,8 @@ async def test_bt_api():
         while True:
             # res = await api_client.get_account_balance(assets = ["USDT", "TRY"])
             # pprint.pprint(res)
-            await test_get_all_orders(api_client)
-            await asyncio.sleep(0.8)
+            await test_get_account_balance(api_client)
+            await asyncio.sleep(0.7)
 
 
 if __name__ == "__main__":

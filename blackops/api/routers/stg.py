@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import blackops.api.handlers as handlers
 import blackops.taskq.tasks as taskq
 from blackops.api.auth import auth
-from blackops.api.models.stg import Strategy
+from blackops.robots.config import StrategyConfig
 
 router = APIRouter(dependencies=[Depends(auth)])
 
@@ -42,7 +42,7 @@ async def delete(
     "/",
     response_model=dict,
 )
-async def create(stg: Strategy):
+async def create(stg: StrategyConfig):
     """
     This will run the strategy with your parameters
 

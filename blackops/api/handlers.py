@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
 import blackops.taskq.tasks as taskq
-from blackops.api.models.stg import Strategy
+from blackops.robots.config import STRATEGY_CLASS, StrategyConfig, StrategyType
 from blackops.taskq.redis import (
     LOG_CHANNELS,
     RUNNING_TASKS,
@@ -49,7 +49,7 @@ async def delete_all():
     await async_redis_client.delete(STG_MAP)
 
 
-async def create_stg(stg: Strategy) -> dict:
+async def create_stg(stg: StrategyConfig) -> dict:
 
     stg.is_valid()
 
@@ -77,7 +77,12 @@ async def get_task_id(sha):
 async def run_task(sha: str):
     # asyncio.run(start_task(sha))
     # await create_log_channel(sha)
-    stg: dict = await get_stg(sha)
+    stg_dict: dict = await get_stg(sha)
+
+    # deserialize dict to config
+    stg_type = StrategyType(stg_dict.get("type"))
+    config_class = STRATEGY_CLASS[stg_type]
+    stg: StrategyConfig = config_class(**stg_dict)
 
     await task_context.start_task(stg)
     # task_id = await taskq.start_task(sha, task_func)

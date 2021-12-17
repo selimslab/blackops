@@ -1,4 +1,5 @@
 from decimal import Decimal
+from enum import Enum
 from typing import Optional, Union
 
 import simplejson as json
@@ -9,12 +10,16 @@ from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BR
 MAX_SPEND_ALLOWED = 200000
 
 
+class StrategyType(Enum):
+    SLIDING_WINDOW = "sliding_window"
+
+
 class ImmutableModel(BaseModel):
     class Config:
         allow_mutation = False
 
 
-class StrategyBase(ImmutableModel):
+class StrategyConfigBase(ImmutableModel):
     type: str
     # uid: str = Field(default_factory=lambda: str(uuid.uuid4()), const=True, description="unique id")
 
@@ -22,12 +27,13 @@ class StrategyBase(ImmutableModel):
         raise NotImplementedError
 
 
-class SlidingWindow(StrategyBase):
+class SlidingWindowConfig(StrategyConfigBase):
 
     type = Field("sliding_window", const=True, example="sliding_window")
 
     base: str = Field(..., example="UMA")
     quote: str = Field(..., example="TRY")
+    bridge: Optional[str] = Field(default=None, example="USDT")
 
     testnet = True
 
@@ -98,6 +104,10 @@ class SlidingWindow(StrategyBase):
                 f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
             )
 
+    def is_valid_bridge(self):
+        if self.bridge not in SUPPORTED_BRIDDGES:
+            raise ValueError(f"{self.bridge} is not a supported bridge")
+
     def is_valid(self):
 
         self.is_valid_mode()
@@ -105,21 +115,10 @@ class SlidingWindow(StrategyBase):
         self.is_valid_symbols()
         self.is_valid_params()
 
-
-class SlidingWindowWithBridge(SlidingWindow):
-    type = Field(
-        "sliding_window_with_bridge", const=True, example="sliding_window_with_bridge"
-    )
-
-    bridge: str = Field(..., example="USDT")
-
-    def is_valid_bridge(self):
-        if self.bridge not in SUPPORTED_BRIDDGES:
-            raise ValueError(f"{self.bridge} is not a supported bridge")
-
-    def is_valid(self):
-        super().is_valid()
-        self.is_valid_bridge()
+        if self.bridge:
+            self.is_valid_bridge()
 
 
-Strategy = Union[SlidingWindowWithBridge, SlidingWindow]
+StrategyConfig = SlidingWindowConfig
+
+STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: SlidingWindowConfig}

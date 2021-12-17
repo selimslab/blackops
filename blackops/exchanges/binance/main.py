@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional
 
-from blackops.domain.models.exchange import ExchangeBase
+from blackops.exchanges.base import ExchangeBase
 from blackops.util.logger import logger
 
 
@@ -34,3 +34,14 @@ class BinanceBase(ExchangeBase):
         except Exception as e:
             logger.info(e)
             return None
+
+    def get_mid(self, book: dict) -> Optional[Decimal]:
+        best_bid = self.get_best_bid(book)
+        best_ask = self.get_best_ask(book)
+
+        if not best_bid or not best_ask:
+            return None
+
+        mid = (best_bid + best_ask) / Decimal("2")
+
+        return mid
