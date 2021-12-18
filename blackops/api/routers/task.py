@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 
-import blackops.api.handlers as handlers
+import blackops.api.route_handlers.task as task_handler
 from blackops.api.auth import auth
 
 router = APIRouter(dependencies=[Depends(auth)])
@@ -9,7 +9,7 @@ router = APIRouter(dependencies=[Depends(auth)])
 
 @router.get("/")
 async def get_all_tasks():
-    return handlers.get_tasks()
+    return task_handler.get_tasks()
 
 
 @router.put("/{sha}")
@@ -22,7 +22,7 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
     5. View logs on the home page
     """
 
-    background_tasks.add_task(handlers.run_task, sha)
+    background_tasks.add_task(task_handler.run_task, sha)
     return JSONResponse(content={"message": f"started strategy {sha}"})
 
 
@@ -39,11 +39,11 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
 
 @router.delete("/")
 async def stop_all_tasks():
-    n = await handlers.stop_all_tasks()
+    n = await task_handler.stop_all_tasks()
     return JSONResponse(content={"message": f"stopped {n} tasks"})
 
 
 @router.delete("/{sha}")
 async def stop_task(sha: str):
-    await handlers.stop_task(sha)
+    await task_handler.stop_task(sha)
     return JSONResponse(content={"message": f"stopped {sha}"})

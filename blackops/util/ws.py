@@ -20,19 +20,6 @@ async def ws_stream(uri: str, message: str, sleep=0):
             yield data
             await asyncio.sleep(sleep)
 
-    # ws = await websockets.connect(uri=uri)
-
-    # async for ws in websockets.connect(uri=uri):
-    #     try:
-    #         while True:
-    #             pong_waiter = await ws.ping()
-    #             await pong_waiter
-    #             await ws.send(message)
-    #             data = await ws.recv()
-    #             yield data
-    #     except websockets.exceptions.ConnectionClosed:
-    #         continue
-
 
 async def reconnecting_generator(generator_factory: Callable, channel: str = "default"):
     gen = generator_factory()
@@ -51,27 +38,12 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
             ConnectionResetError,
             WebSocketException,
         ) as e:
-            # recover from network errors,
-            # for example connection lost
-            # continue where you left
-            # if retries > max_retry:
-            #     msg = (
-            #         f"Stopping, btcturk stream is too unstable (retries {retries}): {e}"
-            #     )
-            #     log_and_publish_error(channel, msg)
-            #     raise e
-            # create a new generator
-
             retries += 1
             gen = generator_factory()
-            msg = f"Reconnecting btc, retries: {retries}: {e}"
+            msg = f"Reconnecting, retries: {retries}: {e}"
             logger.error(msg)
-            # pub.publish_message(channel, msg)
         except Exception as e:
-            # log and raise any other error
-            # for example a KeyError
-
-            msg = f"BT stream lost: {e}"
+            msg = f"WS stream lost: {e}"
             logger.error(msg)
             pub.publish_error(channel, msg)
             raise e

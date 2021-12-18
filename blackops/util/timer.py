@@ -2,7 +2,6 @@ import random
 
 
 def test():
-    """Stupid test function"""
     L = sorted([random.randint(0, i) for i in range(1000000)])
 
 
