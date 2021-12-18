@@ -59,14 +59,20 @@ class BtcturkApiClient(BtcturkBase):
                 logger.error(msg)
                 return {}
 
-    async def get_account_balance(self, assets: Optional[List[str]] = None):
+    async def get_account_balance(self, assets: Optional[List[str]] = None) -> dict:
         res = await self._get(self.balance_url)
 
         balance_list = res.get("data", [])
         if not assets:
-            return balance_list
+            return {
+                balance_info["asset"]: balance_info for balance_info in balance_list
+            }
 
-        return [d for d in balance_list if d["asset"] in assets]
+        return {
+            balance_info["asset"]: balance_info
+            for balance_info in balance_list
+            if balance_info["asset"] in assets
+        }
 
     async def submit_limit_order(
         self, pair_symbol: str, order_type: str, price: float, quantity: float

@@ -102,7 +102,7 @@ class SlidingWindowTrader(RobotBase):
     async def run(self):
         self.channnel = self.sha
 
-        await self.update_balances()
+        await self.update_base_balance()
 
         self.save_start_balances()
 
@@ -121,23 +121,21 @@ class SlidingWindowTrader(RobotBase):
 
             raise Exception(msg)
 
-        # self.remaining_usable_quote_balance = self.max_usable_quote_amount_y
-        # self.quote_step_qty = (
-        #     self.remaining_usable_quote_balance / self.step_count
-        # )  # spend 100 TRY in 10 steps, max 1000
-
     def get_orders(self):
         return self.orders
 
-    async def update_balances(self):
+    async def update_base_balance(self):
         try:
-            balances: List[dict] = await self.follower_exchange.get_account_balance(
-                assets=[self.pair.base.symbol, self.pair.quote.symbol]
+            balances: dict = await self.follower_exchange.get_account_balance(
+                assets=[self.pair.base.symbol]
             )
 
-            self.pair.base.balance, self.pair.quote.balance = [
-                Decimal(balance["free"]) for balance in balances
-            ]
+            base_balances = balances[self.pair.base.symbol]
+            self.pair.base.balance = Decimal(base_balances["free"]) + Decimal(
+                base_balances["locked"]
+            )
+
+            # self.pair.quote.balance = balances[self.pair.quote.symbol]
 
         except Exception as e:
             msg = f"could not read balances: {e}"
@@ -190,7 +188,7 @@ class SlidingWindowTrader(RobotBase):
         # raises Exception if cant't read balance
         while True:
             try:
-                await self.update_balances()
+                await self.update_base_balance()
                 self.current_step = (
                     self.pair.base.balance - self.start_base_balance
                 ) / self.base_step_qty  # so we may have step 1.35 or so
