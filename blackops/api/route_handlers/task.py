@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 from typing import List, OrderedDict
 
@@ -23,28 +24,20 @@ async def get_task_id(sha):
 
 
 async def deserialize_stg_config(sha: str) -> StrategyConfig:
-    config: dict = await get_stg(sha)
-    stg_dict: dict = config.get("config", {})
+    stg_dict: dict = await get_stg(sha)
 
-    # deserialize dict to config
     stg_type = StrategyType(stg_dict.get("type"))
 
-    config_class = STRATEGY_CLASS[stg_type]
+    STG_CLASS = STRATEGY_CLASS[stg_type]
 
-    stg: StrategyConfig = config_class(**stg_dict)
+    stg: StrategyConfig = STG_CLASS(**stg_dict)
 
     return stg
 
 
 def run_task(stg: StrategyConfig):
-    # asyncio.run(start_task(sha))
-    # await create_log_channel(sha)
-
-    task_context.start_task(stg)
-    # task_id = await taskq.start_task(sha, task_func)
-    # await async_redis_client.hset(RUNNING_TASKS, sha, task_id)
-    # await async_redis_client.sadd("RUNNING_TASKS", sha)
-    return stg.sha
+    # run as long as the task is not cancelled
+    asyncio.run(task_context.start_task(stg))
 
 
 async def stop_task(sha: str):
@@ -53,15 +46,6 @@ async def stop_task(sha: str):
 
 
 async def stop_all_tasks():
-
-    # stgs = await list_stgs()
-    # if stgs:
-    #     hashes = [s.get("sha", "") for s in stgs]
-    #     task_ids = await async_redis_client.mget(hashes)
-    #     taskq.revoke(task_ids)
-
-    # taskq.revoke_all()
-
     n = await task_context.cancel_all()
     return n
 

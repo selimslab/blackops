@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import List, Optional
 
+from blackops.domain.asset import Asset, AssetPair
+
 
 @dataclass
 class ExchangeBase(ABC):
@@ -28,6 +30,6 @@ class ExchangeBase(ABC):
         raise NotImplementedError
 
     async def submit_limit_order(
-        self, pair_symbol: str, order_type: str, price: float, quantity: float
-    ):
+        self, pair: AssetPair, order_type: str, price: float, quantity: float
+    ) -> Optional[dict]:
         raise NotImplementedError

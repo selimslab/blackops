@@ -22,24 +22,6 @@ class BtcturkBase(ExchangeBase):
             logger.info(e)
             return {}
 
-    async def long(self, price: float, qty: float, symbol: str):
-        """the order may or may not be executed"""
-        return await self.submit_limit_order(
-            quantity=float(qty),
-            price=float(price),
-            order_type="buy",
-            pair_symbol=symbol,
-        )
-
-    async def short(self, price: float, qty: float, symbol: str):
-        """the order may or may not be executed after we deliver"""
-        return await self.submit_limit_order(
-            quantity=float(qty),
-            price=float(price),
-            order_type="sell",
-            pair_symbol=symbol,
-        )
-
     @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
         purchase_orders = book.get("BO", [])

@@ -1,4 +1,5 @@
 import simplejson as json
+import uvicorn
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,3 +39,7 @@ async def logs():
 @app.get("/")
 async def root():
     return FileResponse("static/index.html")
+
+
+if __name__ == "__main__":
+    uvicorn.run(app)

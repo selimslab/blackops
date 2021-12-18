@@ -102,7 +102,7 @@ class SlidingWindowTrader(RobotBase):
     async def run(self):
         self.channnel = self.sha
 
-        await self.update_base_balance()
+        await self.update_balances()
 
         self.save_start_balances()
 
@@ -124,15 +124,20 @@ class SlidingWindowTrader(RobotBase):
     def get_orders(self):
         return self.orders
 
-    async def update_base_balance(self):
+    async def update_balances(self):
         try:
             balances: dict = await self.follower_exchange.get_account_balance(
-                assets=[self.pair.base.symbol]
+                assets=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
-            base_balances = balances[self.pair.base.symbol]
+            base_balances: dict = balances[self.pair.base.symbol]
             self.pair.base.balance = Decimal(base_balances["free"]) + Decimal(
                 base_balances["locked"]
+            )
+
+            quote_balances: dict = balances[self.pair.quote.symbol]
+            self.pair.quote.balance = Decimal(quote_balances["free"]) + Decimal(
+                quote_balances["locked"]
             )
 
             # self.pair.quote.balance = balances[self.pair.quote.symbol]
@@ -159,9 +164,9 @@ class SlidingWindowTrader(RobotBase):
     async def watch_leader(self):
         async for book in self.leader_book_ticker_stream:
             if book:
+                self.binance_book_ticker_stream_seen += 1
                 self.calculate_window(book)
                 await self.should_transact()
-                self.binance_book_ticker_stream_seen += 1
             await asyncio.sleep(0)
 
     async def watch_follower(self):
@@ -188,7 +193,7 @@ class SlidingWindowTrader(RobotBase):
         # raises Exception if cant't read balance
         while True:
             try:
-                await self.update_base_balance()
+                await self.update_balances()
                 self.current_step = (
                     self.pair.base.balance - self.start_base_balance
                 ) / self.base_step_qty  # so we may have step 1.35 or so
@@ -261,9 +266,8 @@ class SlidingWindowTrader(RobotBase):
 
         price = float(self.best_seller)
         qty = float(self.base_step_qty)  #  we buy base
-        symbol = self.pair.symbol
 
-        await self.send_order("long", price, qty, symbol)
+        await self.send_order("long", price, qty)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -271,28 +275,27 @@ class SlidingWindowTrader(RobotBase):
 
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
-        symbol = self.pair.symbol
 
-        await self.send_order("short", price, qty, symbol)
+        await self.send_order("short", price, qty)
 
-    async def send_order(self, side, price, qty, symbol):
+    async def send_order(self, side, price, qty):
 
         if side == "long":
-            func = self.follower_exchange.long
             theo = self.theo_buy
         elif side == "short":
-            func = self.follower_exchange.short
             theo = self.theo_sell
         else:
             raise Exception("invalid side")
 
         try:
 
-            res = await func(price, qty, symbol)
+            res = await self.follower_exchange.submit_limit_order(
+                self.pair, side, price, qty
+            )
 
             is_ok = res and res.get("success") and res.get("data")
             if not is_ok:
-                msg = f"could not {side} {symbol} at {price} for {qty}: {res}"
+                msg = f"could not {side} at {price} for {qty}: {res}"
                 raise Exception(msg)
 
             data = res.get("data")

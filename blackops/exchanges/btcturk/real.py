@@ -8,6 +8,7 @@ from typing import List, Optional
 
 import aiohttp
 
+from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.btcturk.base import BtcturkBase
 from blackops.util.logger import logger
 from blackops.util.url import update_url_query_params
@@ -75,7 +76,7 @@ class BtcturkApiClient(BtcturkBase):
         }
 
     async def submit_limit_order(
-        self, pair_symbol: str, order_type: str, price: float, quantity: float
+        self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
 
         # TODO can we use decimal instead of float?
@@ -86,7 +87,7 @@ class BtcturkApiClient(BtcturkBase):
             # "newOrderClientId": "ops",
             "orderMethod": "limit",
             "orderType": order_type,
-            "pairSymbol": pair_symbol,
+            "pairSymbol": pair.symbol,
         }
 
         async with self.session.post(

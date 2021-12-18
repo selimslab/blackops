@@ -19,7 +19,7 @@ class ImmutableModel(BaseModel):
         allow_mutation = False
 
 
-class StrategyConfigBase(ImmutableModel):
+class StrategyConfigBase(BaseModel):
     type: str
     # uid: str = Field(default_factory=lambda: str(uuid.uuid4()), const=True, description="unique id")
 
@@ -34,7 +34,7 @@ class SlidingWindowConfig(StrategyConfigBase):
     base: str = Field(..., example="UMA")
     quote: str = Field(..., example="TRY")
     bridge: Optional[str] = Field(default=None, example="USDT")
-    use_bridge = False
+    use_bridge = True
 
     testnet = True
 
@@ -106,7 +106,12 @@ class SlidingWindowConfig(StrategyConfigBase):
             )
 
     def is_valid_bridge(self):
-        if self.use_bridge is False and self.bridge is not None:
+        if self.use_bridge is False and self.bridge:
+            raise ValueError(
+                "do you want to use bridge? if yes, set use_bridge to true, if no, do not send a bridge symbol"
+            )
+
+        if self.use_bridge is True and not self.bridge:
             raise ValueError(
                 "do you want to use bridge? if yes, set use_bridge to true, if no, do not send a bridge symbol"
             )

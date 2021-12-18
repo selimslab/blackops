@@ -46,7 +46,7 @@ async def create_stg(stg: StrategyConfig) -> StrategyConfig:
 
     stg.sha = None
 
-    stg_dict = stg.dict()
+    stg_dict = dict(stg)
 
     sha = dict_to_hash(stg_dict)[:7]
 

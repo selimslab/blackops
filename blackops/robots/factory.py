@@ -15,7 +15,7 @@ from blackops.taskq.redis import STREAM_MAP, async_redis_client
 from blackops.util.logger import logger
 
 
-def sliding_window_factory(stg: SlidingWindowConfig):
+async def sliding_window_factory(stg: SlidingWindowConfig):
     if not isinstance(stg, SlidingWindowConfig):
         raise ValueError(f"wrong strategy type: {stg.type}")
 
@@ -23,14 +23,14 @@ def sliding_window_factory(stg: SlidingWindowConfig):
         raise ValueError(f"sha is not set: {stg}")
     pub_channel = stg.sha
 
-    network = NetworkType(stg.testnet)
+    network = NetworkType.TESTNET if stg.testnet else NetworkType.REAL
 
     follower_exchange: ExchangeBase = create_exchange(
         ExchangeType(stg.follower_exchange), network
     )  # type:ignore
 
     if network == NetworkType.TESTNET and follower_exchange:
-        follower_exchange.test_exchange.add_balance(  # type:ignore
+        await follower_exchange.test_exchange.add_balance(  # type:ignore
             stg.quote, stg.max_usable_quote_amount_y
         )
 
@@ -42,8 +42,8 @@ def sliding_window_factory(stg: SlidingWindowConfig):
 
     bridge_symbol = stg.bridge
     if bridge_symbol:
-        bridge_quote_symbol = bridge_symbol + stg.quote
         base_bridge_symbol = stg.base + bridge_symbol
+        bridge_quote_symbol = bridge_symbol + stg.quote
 
         leader_book_ticker_stream = bn_streams.create_book_stream(
             base_bridge_symbol, pub_channel
@@ -82,11 +82,12 @@ FACTORIES = {
 }
 
 
-def create_trader_from_strategy(stg: StrategyConfig) -> RobotBase:
+async def create_trader_from_strategy(stg: StrategyConfig) -> RobotBase:
     try:
         stg.is_valid()
         factory_func = FACTORIES[StrategyType(stg.type)]
-        robot = factory_func(stg)
+        robot = await factory_func(stg)
         return robot
-    except ValueError:
-        raise ValueError(f"unknown strategy type: {stg.type}")
+    except Exception as e:
+        logger.error(e)
+        raise e

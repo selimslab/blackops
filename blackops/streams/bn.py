@@ -39,7 +39,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
 
                     yield msg
 
-                # await asyncio.sleep(sleep)
+                await asyncio.sleep(0)
 
     except Exception as e:
         await client.close_connection()
