@@ -31,7 +31,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     type = Field("sliding_window", const=True, example="sliding_window")
 
-    base: str = Field(..., example="UMA")
+    base: str = Field(..., example="DOGE")
     quote: str = Field(..., example="TRY")
     bridge: Optional[str] = Field(default=None, example="USDT")
     use_bridge = True
@@ -42,7 +42,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     max_usable_quote_amount_y: Decimal = Field(
         description="eg. use max 5000 TRY for this strategy, if you have less balance, you will get an error when you run the stg",
-        example="5000",
+        example="24000",
     )
 
     base_step_qty: Decimal = Field(

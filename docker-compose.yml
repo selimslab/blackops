@@ -29,5 +29,7 @@ services:
     build: .
     ports:
       - "80:80"
+    restart: always
   redis_server:
     image: "redis:alpine"
+    restart: always
