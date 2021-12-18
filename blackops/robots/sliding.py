@@ -251,6 +251,10 @@ class SlidingWindowTrader(RobotBase):
     def should_long(self):
         #  act only when you are ahead
         # TODO we can just order theo and cancel later
+        # have_usable_balance = (
+        #     self.start_quote_balance - self.pair.quote.balance
+        #     < self.max_usable_quote_amount_y
+        # )
         return self.best_seller and self.theo_buy and self.best_seller <= self.theo_buy
 
     def should_short(self):

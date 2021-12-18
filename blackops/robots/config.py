@@ -92,14 +92,10 @@ class SlidingWindowConfig(StrategyConfigBase):
             raise ValueError(f"{self.follower_exchange} is not supported")
 
     def is_valid_mode(self):
-        if not self.testnet:
-            raise ValueError("real time not supported yet")
-
         if self.testnet == self.use_real_money:
-            return Exception("test or real money ? this is very important")
+            return Exception("test or real money?")
 
     def is_valid_params(self):
-
         if self.max_usable_quote_amount_y > MAX_SPEND_ALLOWED:
             raise Exception(
                 f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
