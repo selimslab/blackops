@@ -1,9 +1,7 @@
-import simplejson as json
 import uvicorn
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from blackops.api.routers.order import router as order_router
 from blackops.api.routers.stg import router as stg_router
@@ -27,12 +25,8 @@ async def validation_exception_handler(request, exc: Exception):
     )
 
 
-templates = Jinja2Templates(directory="templates")
-
-
 @app.get("/monitor/")
 async def logs():
-    # return templates.TemplateResponse("logs.html", {"request": {}, "sha": sha})
     return FileResponse("static/logs.html")
 
 
