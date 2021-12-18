@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 import blackops.api.route_handlers.stg as stg_handler
 from blackops.api.auth import auth
-from blackops.robots.config import ImmutableStrategyConfig, StrategyConfig
+from blackops.robots.config import StrategyConfig
 
 router = APIRouter(dependencies=[Depends(auth)])
 
@@ -39,7 +39,7 @@ async def delete(
 
 @router.put(
     "/",
-    response_model=ImmutableStrategyConfig,
+    response_model=StrategyConfig,
 )
 async def create(stg: StrategyConfig):
     """

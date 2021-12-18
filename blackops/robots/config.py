@@ -14,6 +14,11 @@ class StrategyType(Enum):
     SLIDING_WINDOW = "sliding_window"
 
 
+class ImmutableModel(BaseModel):
+    class Config:
+        allow_mutation = False
+
+
 class StrategyConfigBase(BaseModel):
     type: str
     # uid: str = Field(default_factory=lambda: str(uuid.uuid4()), const=True, description="unique id")
@@ -32,6 +37,7 @@ class SlidingWindowConfig(StrategyConfigBase):
     use_bridge = True
 
     testnet = True
+
     use_real_money = False
 
     max_usable_quote_amount_y: Decimal = Field(
@@ -57,6 +63,10 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     leader_exchange = "binance"
     follower_exchange = "btcturk"
+
+    description: str = "slide down as you buy, slide up as you sell"
+
+    sha: Optional[str] = None
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
@@ -123,16 +133,3 @@ class SlidingWindowConfig(StrategyConfigBase):
 StrategyConfig = SlidingWindowConfig
 
 STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: SlidingWindowConfig}
-
-
-class ImmutableModel(BaseModel):
-    class Config:
-        allow_mutation = False
-
-
-class ImmutableConfig(ImmutableModel):
-    sha: str
-
-
-class ImmutableStrategyConfig(ImmutableConfig):
-    strategy_config: StrategyConfig

@@ -5,12 +5,7 @@ import simplejson as json
 from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
-from blackops.robots.config import (
-    STRATEGY_CLASS,
-    ImmutableStrategyConfig,
-    StrategyConfig,
-    StrategyType,
-)
+from blackops.robots.config import STRATEGY_CLASS, StrategyConfig, StrategyType
 from blackops.taskq.redis import (
     LOG_CHANNELS,
     RUNNING_TASKS,
@@ -45,17 +40,19 @@ async def delete_stg(sha: str):
         raise ValueError("stg not found")
 
 
-async def create_stg(stg: StrategyConfig) -> ImmutableStrategyConfig:
+async def create_stg(stg: StrategyConfig) -> StrategyConfig:
 
     stg.is_valid()
 
-    stg_dict = stg.dict()
+    stg.sha = None
+
+    stg_dict = dict(stg)
 
     sha = dict_to_hash(stg_dict)[:7]
 
-    stg_config = ImmutableStrategyConfig(sha=sha, strategy_config=stg)
+    stg_dict["sha"] = sha
 
     if not await async_redis_client.hexists(STG_MAP, sha):
-        await async_redis_client.hset(STG_MAP, sha, json.dumps(stg_config.dict()))
+        await async_redis_client.hset(STG_MAP, sha, json.dumps(stg_dict))
 
-    return stg_config
+    return StrategyConfig(**stg_dict)
