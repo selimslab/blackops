@@ -21,8 +21,8 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
 
     5. View logs on the home page
     """
-
-    background_tasks.add_task(task_handler.run_task, sha)
+    stg = await task_handler.deserialize_stg_config(sha)
+    background_tasks.add_task(task_handler.run_task, stg)
     return JSONResponse(content={"message": f"started strategy {sha}"})
 
 

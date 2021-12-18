@@ -22,9 +22,7 @@ async def get_task_id(sha):
     return await async_redis_client.hget(RUNNING_TASKS, sha)
 
 
-async def run_task(sha: str):
-    # asyncio.run(start_task(sha))
-    # await create_log_channel(sha)
+async def deserialize_stg_config(sha: str) -> StrategyConfig:
     config: dict = await get_stg(sha)
     stg_dict: dict = config.get("config", {})
 
@@ -35,11 +33,18 @@ async def run_task(sha: str):
 
     stg: StrategyConfig = config_class(**stg_dict)
 
+    return stg
+
+
+def run_task(stg: StrategyConfig):
+    # asyncio.run(start_task(sha))
+    # await create_log_channel(sha)
+
     task_context.start_task(stg)
     # task_id = await taskq.start_task(sha, task_func)
     # await async_redis_client.hset(RUNNING_TASKS, sha, task_id)
     # await async_redis_client.sadd("RUNNING_TASKS", sha)
-    return sha
+    return stg.sha
 
 
 async def stop_task(sha: str):
