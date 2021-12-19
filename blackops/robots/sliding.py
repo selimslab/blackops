@@ -399,20 +399,20 @@ class SlidingWindowTrader(RobotBase):
 
     def broadcast_stats(self):
         message = self.create_stats_message()
+        keys = (
+            "runtime",
+            "base_balance",
+            "quote_balance",
+            "orders",
+            "pnl",
+            "max_pnl",
+            "binance_seen",
+            "btc_seen",
+        )
+        logger.info({k: message[k] for k in keys})
+
         if is_prod:
             pub.publish_stats(self.channnel, message)
-        else:
-            keys = (
-                "runtime",
-                "base_balance",
-                "quote_balance",
-                "orders",
-                "pnl",
-                "max_pnl",
-                "binance_seen",
-                "btc_seen",
-            )
-            logger.info({k: message[k] for k in keys})
 
     async def broadcast_stats_periodical(self):
         while True:
