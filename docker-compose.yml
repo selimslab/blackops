@@ -30,6 +30,11 @@ services:
     ports:
       - "80:80"
     restart: always
+    environment:
+      PROD: ${PROD}
+      BTCTURK_PUBLIC_KEY_PROD: ${BTCTURK_PUBLIC_KEY_PROD} 
+      BTCTURK_PRIVATE_KEY_PROD: ${BTCTURK_PRIVATE_KEY_PROD}
+
   redis_server:
     image: "redis:alpine"
     restart: always

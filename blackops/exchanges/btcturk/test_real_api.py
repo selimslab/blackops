@@ -94,11 +94,7 @@ async def test_bt_api():
 
         # await test_get_account_balance(api_client)
 
-        while True:
-            # res = await api_client.get_account_balance(assets = ["USDT", "TRY"])
-            # pprint.pprint(res)
-            await test_get_account_balance(api_client)
-            await asyncio.sleep(0.7)
+        await test_get_account_balance(api_client)
 
 
 if __name__ == "__main__":
