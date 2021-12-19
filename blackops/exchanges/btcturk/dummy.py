@@ -1,5 +1,7 @@
 import asyncio
 import collections
+import random
+import time
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Dict, List, Optional
@@ -62,15 +64,35 @@ class BtcturkDummy:
         if order_type == "buy":
             cost = Decimal(quantity) * Decimal(price) * self.buy_with_fee
             if quote_balance < cost:
-                raise ValueError("Insufficient funds")
+                return {
+                    "success": False,
+                    "message": f"Insufficient funds: {quote_balance} < {cost}",
+                }
             await self.add_balance(pair.base.symbol, Decimal(quantity))
             await self.subtract_balance(pair.quote.symbol, cost)
+            return {
+                "success": True,
+                "data": {
+                    "id": str(random.randint(1, 1000000)),
+                    "datetime": int(time.time()),
+                },
+            }
 
         elif order_type == "sell":
             if base_balance < quantity:
-                raise ValueError("Insufficient funds")
+                return {
+                    "success": False,
+                    "message": f"Insufficient funds: {base_balance} < {quantity}",
+                }
             await self.subtract_balance(pair.base.symbol, Decimal(quantity))
             await self.add_balance(
                 pair.quote.symbol,
                 Decimal(quantity) * Decimal(price) * self.sell_with_fee,
             )
+            return {
+                "success": True,
+                "data": {
+                    "id": str(random.randint(1, 1000000)),
+                    "datetime": int(time.time()),
+                },
+            }

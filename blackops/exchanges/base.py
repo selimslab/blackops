@@ -8,7 +8,7 @@ from blackops.domain.asset import Asset, AssetPair
 
 @dataclass
 class ExchangeBase(ABC):
-    name: str
+    name: Optional[str] = None
 
     async def get_account_balance(self, assets: Optional[List[str]] = None):
         raise NotImplementedError

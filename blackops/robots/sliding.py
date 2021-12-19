@@ -104,22 +104,12 @@ class SlidingWindowTrader(RobotBase):
 
         await self.update_balances()
 
-        self.save_start_balances()
+        self.start_base_balance = self.pair.base.balance
+        self.start_quote_balance = self.pair.quote.balance
 
         self.params_message = self.create_params_message()
 
         await self.run_streams()
-
-    def save_start_balances(self):
-        self.start_base_balance = self.pair.base.balance
-        self.start_quote_balance = self.pair.quote.balance
-
-        if self.max_usable_quote_amount_y < self.pair.quote.balance:
-            msg = f"max_usable_quote_amount_y {self.max_usable_quote_amount_y} but quote_balance {self.pair.quote.balance}"
-
-            pub.publish_error(self.channnel, msg)
-
-            raise Exception(msg)
 
     def get_orders(self):
         return self.orders
@@ -249,13 +239,17 @@ class SlidingWindowTrader(RobotBase):
             await self.short()
 
     def should_long(self):
-        #  act only when you are ahead
-        # TODO we can just order theo and cancel later
-        # have_usable_balance = (
-        #     self.start_quote_balance - self.pair.quote.balance
-        #     < self.max_usable_quote_amount_y
-        # )
-        return self.best_seller and self.theo_buy and self.best_seller <= self.theo_buy
+        # we don't enforce max_usable_quote_amount_y too strict
+        have_usable_balance = (
+            self.start_quote_balance - self.pair.quote.balance
+            < self.max_usable_quote_amount_y
+        )
+        return (
+            self.best_seller
+            and self.theo_buy
+            and self.best_seller <= self.theo_buy
+            and have_usable_balance
+        )
 
     def should_short(self):
         #  act only when you are ahead
