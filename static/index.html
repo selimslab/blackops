@@ -7,36 +7,164 @@
   />
 </head>
 
-<body class="has-background-dark has-text-success" style="min-height: 100rem;">
-
-
-
-<div class="container">
-
-  <nav class="navbar has-background-dark" role="navigation" aria-label="main navigation">
-    <div class="navbar-brand">
-        <a class="navbar-item is-family-monospace is-size-4 is-bold has-text-success" href="/">
+<body class="has-background-dark has-text-success" style="min-height: 100rem">
+  <div class="container">
+    <nav
+      class="navbar has-background-dark"
+      role="navigation"
+      aria-label="main navigation"
+    >
+      <div class="navbar-brand">
+        <a
+          class="
+            navbar-item
+            is-family-monospace is-size-4 is-bold
+            has-text-success
+          "
+          href="/"
+        >
           BlackOps
         </a>
-    </div>
-</nav>
+      </div>
+    </nav>
 
+    <br />
 
-<br>
+    <div id="app">
+      <p class="has-text-primary-light">
+        Click to create and
+        <a href="/docs" target="_blank" class="has-text-success"
+          >run a strategy</a
+        >
+      </p>
 
-  <div id="app">
-    <div class="columns">
-      <div class="column">
+      <br />
 
+      <div class="column is-one-quarter">
 
-        <a href="/docs" target="_blank" class="has-text-success">Control panel</a>
-        <br>
-        <br>
-        <a href="/monitor" target="_blank" class="has-text-success">Real-time logs</a>
+        <input
+          class="input is-rounded"
+          v-model="sha"
+          v-on:input="connect"
+          placeholder="please enter the sha"
+        />
+      </div>
 
+      <br />
+      <br />
+
+      <h1 class="has-text-danger mb-10">Summary</h1>
+
+      <div class="columns">
+        <div class="column">
+          <pre class="has-background-dark has-text-success">{{ JSON.stringify(stats, null, 2) }}</pre>
+        </div>
+
+        <div class="column" style="height: 30rem; overflow: scroll">
+          <h2 class="has-text-danger">Longs</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="order in long_orders">{{order}}</li>
+          </ul>
+        </div>
+
+        <div class="column" style="height: 30rem; overflow: scroll">
+          <h2 class="has-text-danger">Shorts</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="order in short_orders">{{order}}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="columns"></div>
+
+      <div class="columns">
+        <div class="column" style="height: 25rem; overflow: scroll">
+          <h1 class="has-text-danger">Messages</h1>
+          <br />
+          <br />
+
+          <ul>
+            <li class="" v-for="message in messages">{{message}}</li>
+          </ul>
+        </div>
+
+        <div class="column" style="height: 25rem; overflow: scroll">
+          <h2 class="has-text-danger">Errors</h2>
+          <br />
+          <br />
+
+          <ul>
+            <li v-for="error in errors">{{error}}</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
 
+  <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <script>
+    // Enable pusher logging - don't include this in production
+    Pusher.logToConsole = true;
 
+
+    let stats = {};
+
+    const app = new Vue({
+      el: "#app",
+      data: {
+        sha: null,
+
+        messages: [],
+        errors: [],
+        long_orders: [],
+        short_orders: [],
+        
+        stats: stats
+
+      },
+
+      methods: {
+        connect: function (e) {
+          var channel = pusher.subscribe(app.sha);
+
+          channel.bind("error", function (data) {
+            app.errors.push(data);
+          });
+
+          channel.bind("stats", function (data) {
+            app.stats = data.message;
+          });
+
+          channel.bind("message", function (data) {
+            app.messages.push(data);
+          });
+
+          channel.bind("order", function (data) {
+            order = data.message;
+            if (order.type == "buy") {
+              app.long_orders.push(order);
+            }
+            if (order.type == "sell") {
+              app.short_orders.push(order);
+            }
+          });
+
+
+        },
+      },
+    });
+
+    var pusher = new Pusher("7b2411e6822e2f36b872", {
+      cluster: "eu",
+    });
+
+    app.connect();
+  </script>
 </body>

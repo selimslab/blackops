@@ -106,7 +106,7 @@ class SlidingWindowTrader(RobotBase):
 
         self.save_start_balances()
 
-        self.broadcast_start_params()
+        self.params_message = self.create_params_message()
 
         await self.run_streams()
 
@@ -320,16 +320,9 @@ class SlidingWindowTrader(RobotBase):
 
     # MONITORING
 
-    def broadcast_start_params(self):
-        self.params_message = self.create_params_message()
-        pub.publish_params(self.channnel, self.params_message)
-        logger.info(self.params_message)
-
     def log_order(self, side, order_time, price, qty, theo):
-        order_side = "long" if side == "buy" else "short"
-
         order_log = {
-            "type": order_side,
+            "type": side,
             "time": str(order_time),
             "price": str(price),
             "qty": str(qty),
@@ -402,9 +395,8 @@ class SlidingWindowTrader(RobotBase):
             # "time_diff": self.time_diff,
             "bridge": str(self.bridge_quote),
             "bridge_last_updated": str(self.bridge_last_updated),
+            "start_parameters": self.params_message,
         }
-        if is_prod:
-            stats["params"] = self.params_message
 
         return stats
 
@@ -428,4 +420,4 @@ class SlidingWindowTrader(RobotBase):
     async def broadcast_stats_periodical(self):
         while True:
             self.broadcast_stats()
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.4)
