@@ -271,7 +271,7 @@ class SlidingWindowTrader(RobotBase):
         price = float(self.best_seller)
         qty = float(self.base_step_qty)  #  we buy base
 
-        await self.send_order("long", price, qty)
+        await self.send_order("buy", price, qty)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -280,13 +280,13 @@ class SlidingWindowTrader(RobotBase):
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
 
-        await self.send_order("short", price, qty)
+        await self.send_order("sell", price, qty)
 
     async def send_order(self, side, price, qty):
 
-        if side == "long":
+        if side == "buy":
             theo = self.theo_buy
-        elif side == "short":
+        elif side == "sell":
             theo = self.theo_sell
         else:
             raise Exception("invalid side")
@@ -326,8 +326,10 @@ class SlidingWindowTrader(RobotBase):
         logger.info(self.params_message)
 
     def log_order(self, side, order_time, price, qty, theo):
+        order_side = "long" if side == "buy" else "short"
+
         order_log = {
-            "type": side,
+            "type": order_side,
             "time": str(order_time),
             "price": str(price),
             "qty": str(qty),
