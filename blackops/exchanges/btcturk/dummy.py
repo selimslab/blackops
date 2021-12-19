@@ -49,13 +49,15 @@ class BtcturkDummy:
     ):
         await asyncio.sleep(0.2)  # 300 limit
 
-        balance_list = await self.get_account_balance(
-            [pair.base.symbol, pair.quote.symbol]
+        balances = await self.get_account_balance([pair.base.symbol, pair.quote.symbol])
+
+        base_balances: dict = balances[pair.base.symbol]
+        base_balance = Decimal(base_balances["free"]) + Decimal(base_balances["locked"])
+
+        quote_balances: dict = balances[pair.quote.symbol]
+        quote_balance = Decimal(quote_balances["free"]) + Decimal(
+            quote_balances["locked"]
         )
-        decimal_balances = [
-            Decimal(asset.get("balance", "0")) for asset in balance_list
-        ]
-        base_balance, quote_balance = decimal_balances
 
         if order_type == "buy":
             cost = Decimal(quantity) * Decimal(price) * self.buy_with_fee

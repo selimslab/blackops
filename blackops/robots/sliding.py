@@ -302,21 +302,24 @@ class SlidingWindowTrader(RobotBase):
                 msg = f"could not {side} at {price} for {qty}: {res}"
                 raise Exception(msg)
 
-            data = res.get("data")
+            if res and res.get("data"):
 
-            ts = data.get("datetime")
-            order_time = datetime.fromtimestamp(ts)
+                data = res.get("data", {})
 
-            order_id = data.get("id")
-            self.orders[order_id] = data
+                ts = data.get("datetime")
 
-            self.log_order(side, order_time, price, qty, theo)
+                order_time = datetime.fromtimestamp(ts)
 
-            await self.update_pnl()
+                order_id = data.get("id")
+                self.orders[order_id] = data
+
+                self.log_order(side, order_time, price, qty, theo)
+
+                await self.update_pnl()
 
         except Exception as e:
             logger.info(e)
-            pub.publish_message(self.channnel, str(e))
+            pub.publish_message(self.channnel, f"send_order: {str(e)}")
 
     # MONITORING
 
