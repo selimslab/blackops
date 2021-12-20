@@ -283,6 +283,7 @@ class SlidingWindowTrader(RobotBase):
         qty = float(self.base_step_qty)  #  we buy base
 
         await self.send_order("buy", price, qty)
+        await asyncio.sleep(0.1)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
@@ -292,6 +293,7 @@ class SlidingWindowTrader(RobotBase):
         qty = float(self.base_step_qty)  # we sell base
 
         await self.send_order("sell", price, qty)
+        await asyncio.sleep(0.1)
 
     async def send_order(self, side, price, qty):
 
