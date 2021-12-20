@@ -31,7 +31,7 @@ services:
       - "80:80"
     restart: always
     environment:
-      PROD: ${PROD}
+      DEBUG: ${DEBUG}
       BTCTURK_PUBLIC_KEY_PROD: ${BTCTURK_PUBLIC_KEY_PROD} 
       BTCTURK_PRIVATE_KEY_PROD: ${BTCTURK_PRIVATE_KEY_PROD}
 
