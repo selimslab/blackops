@@ -20,7 +20,7 @@ async def test_get_open_orders(api_client, symbol: str = "USDTTRY"):
     pprint.pprint(res)
 
 
-async def test_get_all_orders(api_client):
+async def test_get_all_orders(api_client, symbol):
 
     last_hour_timestamp = dt.datetime.timestamp(
         dt.datetime.today() - dt.timedelta(hours=10)
@@ -29,7 +29,7 @@ async def test_get_all_orders(api_client):
 
     # "startDate": start_date
 
-    params = {"pairSymbol": "USDTTRY", "limit": 20}
+    params = {"pairSymbol": symbol, "limit": 20}
 
     res = await api_client.get_all_orders(params)
     pprint.pprint(res)
@@ -60,10 +60,10 @@ async def test_cancel_open_orders(api_client, symbol):
 async def test_submit_limit_order(api_client):
 
     res = await api_client.submit_limit_order(
-        quantity=10,
-        price=18.42,
+        quantity=15,
+        price=0.8861,
         order_type="sell",
-        pair=AssetPair(Asset("USDT"), Asset("TRY")),
+        pair=AssetPair(Asset("XRP"), Asset("USDT")),
     )
     pprint.pprint(res)
 
@@ -81,17 +81,17 @@ async def test_get_account_balance(api_client):
 
 async def test_bt_api():
     async with create_api_client() as api_client:
-        await test_submit_limit_order(api_client)
+        # await test_submit_limit_order(api_client)
 
         # await test_get_open_orders(api_client)
 
-        # await test_get_all_orders(api_client)
+        await test_get_all_orders(api_client, "XRPUSDT")
 
         # await test_get_orders_after_an_id(api_client, order_id=5980501563)
 
         # await test_cancel_order(api_client, order_id=5908335899)
 
-        # await test_cancel_open_orders(api_client, "USDTTRY")
+        await test_cancel_open_orders(api_client, "USDTTRY")
 
         # await test_get_account_balance(api_client)
 

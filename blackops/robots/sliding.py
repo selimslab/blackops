@@ -101,6 +101,9 @@ class SlidingWindowTrader(RobotBase):
         "btc_seen",
     )
 
+    long_in_progress: bool = False
+    short_in_progress: bool = False
+
     async def run(self):
         self.channnel = self.sha
 
@@ -129,8 +132,6 @@ class SlidingWindowTrader(RobotBase):
                 assets=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
-            logger.info(f"balances: {balances}")
-
             base_balances: dict = balances[self.pair.base.symbol]
             self.pair.base.balance = Decimal(base_balances["free"]) + Decimal(
                 base_balances["locked"]
@@ -140,8 +141,6 @@ class SlidingWindowTrader(RobotBase):
             self.pair.quote.balance = Decimal(quote_balances["free"]) + Decimal(
                 quote_balances["locked"]
             )
-
-            # self.pair.quote.balance = balances[self.pair.quote.symbol]
 
         except Exception as e:
             msg = f"could not read balances: {e}"
@@ -279,28 +278,34 @@ class SlidingWindowTrader(RobotBase):
         if not self.best_seller:
             return
 
+        if self.long_in_progress:
+            return
+
         price = float(self.best_seller)
         qty = float(self.base_step_qty)  #  we buy base
 
         await self.send_order("buy", price, qty)
-        await asyncio.sleep(0.1)
 
     async def short(self):
         if not self.best_buyer or not self.base_step_qty:
+            return
+
+        if self.short_in_progress:
             return
 
         price = float(self.best_buyer)
         qty = float(self.base_step_qty)  # we sell base
 
         await self.send_order("sell", price, qty)
-        await asyncio.sleep(0.1)
 
     async def send_order(self, side, price, qty):
 
         if side == "buy":
             theo = self.theo_buy
+            self.long_in_progress = True
         elif side == "sell":
             theo = self.theo_sell
+            self.short_in_progress = True
         else:
             raise Exception("invalid side")
 
@@ -339,6 +344,11 @@ class SlidingWindowTrader(RobotBase):
         except Exception as e:
             logger.info(e)
             pub.publish_message(self.channnel, f"send_order: {str(e)}")
+        finally:
+            if side == "buy":
+                self.long_in_progress = False
+            elif side == "sell":
+                self.short_in_progress = False
 
     # MONITORING
 

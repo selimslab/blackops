@@ -4,7 +4,7 @@ import hmac
 import time
 import urllib.parse
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import aiohttp
 
@@ -51,8 +51,8 @@ class BtcturkApiClient(BtcturkBase):
 
         return headers
 
-    async def _get(self, uri: str):
-        async with self.session.get(uri, headers=self._get_headers()) as res:
+    async def _http(self, uri: str, method: Callable):
+        async with method(uri, headers=self._get_headers()) as res:
             if res.status == 200:
                 return await res.json()
             else:
@@ -61,7 +61,7 @@ class BtcturkApiClient(BtcturkBase):
                 return {}
 
     async def get_account_balance(self, assets: Optional[List[str]] = None) -> dict:
-        res = await self._get(self.balance_url)
+        res = await self._http(self.balance_url, self.session.get)
 
         balance_list = res.get("data", [])
         if not assets:
@@ -79,27 +79,23 @@ class BtcturkApiClient(BtcturkBase):
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
 
-        # TODO can we use decimal instead of float?
         params = {
             "quantity": quantity,
             "price": price,
             "stopPrice": price,
-            # "newOrderClientId": "ops",
             "orderMethod": "limit",
             "orderType": order_type,
             "pairSymbol": pair.symbol,
         }
 
         async with self.session.post(
-            self.order_url, headers=self.headers, json=params
+            self.order_url, headers=self._get_headers(), json=params
         ) as res:
-            res_json = await res.json(content_type=None)
-            logger.info(f"submit_limit_order: {res_json}")
-            return res_json
+            return await res.json(content_type=None)
 
     async def get_all_orders(self, params: dict) -> Optional[dict]:
         uri = update_url_query_params(self.all_orders_url, params)
-        return await self._get(uri)
+        return await self._http(uri, self.session.get)
 
     async def get_open_orders(self, symbol: str) -> Optional[dict]:
         if not symbol:
@@ -107,14 +103,14 @@ class BtcturkApiClient(BtcturkBase):
 
         params = {"pairSymbol": symbol}
         uri = update_url_query_params(self.open_orders_url, params)
-        return await self._get(uri)
+        return await self._http(uri, self.session.get)
 
     async def cancel_order(self, order_id: str) -> Optional[dict]:
         if not order_id:
             raise Exception("order id is required")
 
         uri = update_url_query_params(self.order_url, {"id": order_id})
-        return await self._get(uri)
+        return await self._http(uri, self.session.delete)
 
     async def cancel_open_orders(self, symbol: str, bids=True, asks=True):
         """

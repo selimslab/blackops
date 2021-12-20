@@ -21,10 +21,10 @@ async def test():
     stg = SlidingWindowConfig(
         base="XRP",
         quote="USDT",
-        base_step_qty=0.1,
+        base_step_qty=15,
         max_usable_quote_amount_y=100,
-        credit=0.2,
-        step_constant_k=0.1,
+        credit=Decimal("0.0012"),
+        step_constant_k=Decimal("0.0004"),
         use_real_money=True,
         testnet=False,
     )
@@ -37,23 +37,23 @@ async def test():
 
     robot = create_trader_from_strategy(deserialized_config)
 
-    pprint(robot)
+    # pprint(robot)
 
-    await robot.update_balances()
+    # await robot.update_balances()
 
-    pprint(robot.pair)
+    # pprint(robot.pair)
 
-    assert robot.current_step == 0
+    # assert robot.current_step == 0
 
-    await robot.update_balances()
+    # await robot.update_balances()
 
-    assert robot.pair.base.balance == 0
-    assert robot.pair.quote.balance == robot.max_usable_quote_amount_y
+    # assert robot.pair.base.balance == 0
+    # assert robot.pair.quote.balance == robot.max_usable_quote_amount_y
 
-    assert robot.current_step == 0
+    # assert robot.current_step == 0
 
-    robot.follower_book_stream = test_bt_generator()
-    robot.leader_book_ticker_stream = test_bn_generator()
+    # robot.follower_book_stream = test_bt_generator()
+    # robot.leader_book_ticker_stream = test_bn_generator()
 
     # try:
     #     async with timeout(8):
@@ -62,6 +62,8 @@ async def test():
     #     assert robot.pair.base.balance == Decimal("0.3")
     #     assert robot.pair.quote.balance == Decimal("8865.40")
     #     assert len(robot.orders) == 3
+
+    await robot.run()
 
 
 if __name__ == "__main__":
