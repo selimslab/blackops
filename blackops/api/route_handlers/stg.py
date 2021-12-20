@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime
 from typing import List, OrderedDict
 
 import simplejson as json
@@ -44,13 +45,13 @@ async def create_stg(stg: StrategyConfig) -> StrategyConfig:
 
     stg.is_valid()
 
-    sha = dict_to_hash(stg.dict(exclude={"sha"}))[:7]
+    # hash all but sha field, which is used as the key
+    sha = dict_to_hash(stg.dict(exclude={"sha", "created_at"}))[:7]
 
     stg.sha = sha
+    stg.created_at = str(datetime.now().isoformat())
 
     if not await async_redis_client.hexists(STG_MAP, stg.sha):
-        await async_redis_client.hset(
-            STG_MAP, stg.sha, json.dumps(stg.dict(), default=str)
-        )
+        await async_redis_client.hset(STG_MAP, stg.sha, json.dumps(stg.dict()))
 
     return stg
