@@ -7,7 +7,7 @@ from typing import Any, AsyncGenerator, List, Optional
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
-from blackops.environment import is_prod
+from blackops.environment import debug
 from blackops.exchanges.base import ExchangeBase
 from blackops.robots.base import RobotBase
 from blackops.robots.config import StrategyType
@@ -87,6 +87,17 @@ class SlidingWindowTrader(RobotBase):
 
     # fee_percent * Decimal(1.5)
     # Decimal(0.001)
+
+    debug_keys: tuple = (
+        "runtime",
+        "base_balance",
+        "quote_balance",
+        "orders",
+        "pnl",
+        "max_pnl",
+        "binance_seen",
+        "btc_seen",
+    )
 
     async def run(self):
         self.channnel = self.sha
@@ -318,8 +329,7 @@ class SlidingWindowTrader(RobotBase):
             "theo": str(theo),
         }
 
-        if is_prod:
-            pub.publish_order(self.channnel, order_log)
+        pub.publish_order(self.channnel, order_log)
 
         logger.info(order_log)
 
@@ -392,20 +402,11 @@ class SlidingWindowTrader(RobotBase):
 
     def broadcast_stats(self):
         message = self.create_stats_message()
-        keys = (
-            "runtime",
-            "base_balance",
-            "quote_balance",
-            "orders",
-            "pnl",
-            "max_pnl",
-            "binance_seen",
-            "btc_seen",
-        )
-        logger.info({k: message[k] for k in keys})
 
-        if is_prod:
-            pub.publish_stats(self.channnel, message)
+        if debug:
+            logger.info({k: message[k] for k in self.debug_keys})
+
+        pub.publish_stats(self.channnel, message)
 
     async def broadcast_stats_periodical(self):
         while True:
