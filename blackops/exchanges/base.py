@@ -33,3 +33,6 @@ class ExchangeBase(ABC):
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
         raise NotImplementedError
+
+    async def get_open_order_balance(self, symbol: str) -> Decimal:
+        raise NotImplementedError

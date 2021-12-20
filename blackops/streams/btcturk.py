@@ -48,7 +48,7 @@ def create_bt_gen(message_type: MessageType, symbol):
     message = json.dumps(message)
 
     # get sleep from env
-    gen = ws_stream(uri, message, sleep=0.12)  # 0.1 sec = 100 ms
+    gen = ws_stream(uri, message, sleep=0.11)  # 0.1 sec = 100 ms
 
     return gen
 
@@ -65,7 +65,7 @@ def create_book_stream(symbol: str, channel: str = "default"):
 
 
 async def test_orderbook_stream():
-    async for book in create_ws_stream(MessageType.ORDERBOOK, "ETHUSDT"):
+    async for book in create_ws_stream(MessageType.ORDERBOOK, "XRPUSDT"):
         print(book)
 
 

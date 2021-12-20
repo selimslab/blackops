@@ -4,6 +4,7 @@ import hmac
 import time
 import urllib.parse
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Callable, List, Optional
 
 import aiohttp
@@ -104,6 +105,23 @@ class BtcturkApiClient(BtcturkBase):
         params = {"pairSymbol": symbol}
         uri = update_url_query_params(self.open_orders_url, params)
         return await self._http(uri, self.session.get)
+
+    async def get_open_order_balance(self, symbol: str) -> Decimal:
+        open_orders = await self.get_open_orders(symbol)
+
+        open_balance = Decimal("0")
+
+        if open_orders:
+            data = open_orders.get("data", {})
+            bids = data.get("bids", [])
+            asks = data.get("asks", [])
+
+            for ask in asks:
+                open_balance += Decimal(ask.get("leftAmount", "0"))
+            for bid in bids:
+                open_balance -= Decimal(bid.get("leftAmount", "0"))
+
+        return open_balance
 
     async def cancel_order(self, order_id: str) -> Optional[dict]:
         if not order_id:

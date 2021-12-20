@@ -104,6 +104,8 @@ class SlidingWindowTrader(RobotBase):
     long_in_progress: bool = False
     short_in_progress: bool = False
 
+    open_order_balance: Decimal = Decimal("0")
+
     async def run(self):
         self.channnel = self.sha
 
@@ -125,6 +127,18 @@ class SlidingWindowTrader(RobotBase):
 
     def get_orders(self):
         return self.orders
+
+    async def update_open_order_balance(self):
+        prev_order_count = -1
+        while True:
+            await asyncio.sleep(0.2)
+            order_count = len(self.orders)
+            if order_count == prev_order_count:
+                continue
+            self.open_order_balance = (
+                await self.follower_exchange.get_open_order_balance(self.pair.symbol)
+            )
+            prev_order_count = order_count
 
     async def update_balances(self):
         try:
@@ -155,6 +169,7 @@ class SlidingWindowTrader(RobotBase):
             self.watch_follower(),
             self.broadcast_stats_periodical(),
             self.update_balances_periodically(),
+            self.update_open_order_balance(),
         ]  # is this ordering important ?
         if self.bridge_symbol:
             consumers.append(self.watch_bridge())
@@ -247,18 +262,23 @@ class SlidingWindowTrader(RobotBase):
         if self.should_short():
             await self.short()
 
+    def have_usable_balance(self) -> bool:
+        total_used = Decimal("0")
+        used_quote = self.start_quote_balance - self.pair.quote.balance
+        total_used += used_quote
+        if self.best_buyer and self.open_order_balance:
+            open_base_cost = self.open_order_balance * self.best_buyer
+            total_used += open_base_cost
+        return total_used < self.max_usable_quote_amount_y
+
     def should_long(self):
         # we don't enforce max_usable_quote_amount_y too strict
         # we assume no deposits to quote during the task run
-        have_usable_balance = (
-            self.start_quote_balance - self.pair.quote.balance
-            < self.max_usable_quote_amount_y
-        )
         return (
             self.best_seller
             and self.theo_buy
             and self.best_seller <= self.theo_buy
-            and have_usable_balance
+            and self.have_usable_balance()
         )
 
     def should_short(self):
@@ -325,17 +345,16 @@ class SlidingWindowTrader(RobotBase):
                 data = res.get("data", {})
 
                 ts = data.get("datetime")
-
-                order_time = datetime.fromtimestamp(ts)
+                order_time = datetime.fromtimestamp(ts / 1000.0)
 
                 order_id = data.get("id")
                 self.orders[order_id] = data
 
                 # to enforce max amount we need to know about open orders
-                # if side == "buy":
-                #     self.orders_in_progress_balance += qty
-                # elif side == "sell":
-                #     self.orders_in_progress_balance -= qty
+                if side == "buy":
+                    self.orders_in_progress_balance += qty
+                elif side == "sell":
+                    self.orders_in_progress_balance -= qty
 
                 self.log_order(side, order_time, price, qty, theo)
 
@@ -443,4 +462,4 @@ class SlidingWindowTrader(RobotBase):
     async def broadcast_stats_periodical(self):
         while True:
             self.broadcast_stats()
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.2)

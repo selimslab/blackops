@@ -25,8 +25,8 @@ async def test():
         max_usable_quote_amount_y=100,
         credit=Decimal("0.0012"),
         step_constant_k=Decimal("0.0004"),
-        use_real_money=True,
-        testnet=False,
+        use_real_money=False,
+        testnet=True,
     )
 
     pprint(stg)
@@ -39,31 +39,35 @@ async def test():
 
     # pprint(robot)
 
-    # await robot.update_balances()
+    await robot.update_balances()
 
-    # pprint(robot.pair)
+    pprint(robot.pair)
 
-    # assert robot.current_step == 0
+    assert robot.current_step == 0
 
-    # await robot.update_balances()
+    await robot.update_balances()
 
-    # assert robot.pair.base.balance == 0
-    # assert robot.pair.quote.balance == robot.max_usable_quote_amount_y
+    assert robot.pair.base.balance == 0
+    assert robot.pair.quote.balance == robot.max_usable_quote_amount_y
 
-    # assert robot.current_step == 0
+    assert robot.current_step == 0
 
-    # robot.follower_book_stream = test_bt_generator()
-    # robot.leader_book_ticker_stream = test_bn_generator()
+    robot.follower_book_stream = test_bt_generator()
+    robot.leader_book_ticker_stream = test_bn_generator()
 
-    # try:
-    #     async with timeout(8):
-    #         await robot.run()
-    # except asyncio.TimeoutError as e:
-    #     assert robot.pair.base.balance == Decimal("0.3")
-    #     assert robot.pair.quote.balance == Decimal("8865.40")
-    #     assert len(robot.orders) == 3
+    try:
+        async with timeout(8):
+            await robot.run()
+    except asyncio.TimeoutError as e:
+        pass
 
-    await robot.run()
+    assert robot.pair.base.balance == Decimal("0.3")
+    assert robot.pair.quote.balance == Decimal("8865.40")
+    assert len(robot.orders) == 3
+
+    have_usable_balance = robot.have_usable_balance()
+
+    pprint(robot)
 
 
 if __name__ == "__main__":
