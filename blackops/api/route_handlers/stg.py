@@ -44,15 +44,7 @@ async def create_stg(stg: StrategyConfig) -> StrategyConfig:
 
     stg.is_valid()
 
-    stg.sha = None
+    if not await async_redis_client.hexists(STG_MAP, stg.sha):
+        await async_redis_client.hset(STG_MAP, stg.sha, json.dumps(stg.dict()))
 
-    stg_dict = dict(stg)
-
-    sha = dict_to_hash(stg_dict)[:7]
-
-    stg_dict["sha"] = sha
-
-    if not await async_redis_client.hexists(STG_MAP, sha):
-        await async_redis_client.hset(STG_MAP, sha, json.dumps(stg_dict))
-
-    return StrategyConfig(**stg_dict)
+    return stg

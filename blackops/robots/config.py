@@ -1,27 +1,30 @@
+import time
+import uuid
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 import simplejson as json
 from pydantic import BaseModel, Field
 
 from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
+from blackops.exchanges.factory import ExchangeType, NetworkType
 
 MAX_SPEND_ALLOWED = 200000
 
 
-class StrategyType(Enum):
+class StrategyType(str, Enum):
     SLIDING_WINDOW = "sliding_window"
-
-
-class ImmutableModel(BaseModel):
-    class Config:
-        allow_mutation = False
 
 
 class StrategyConfigBase(BaseModel):
     type: str
-    # uid: str = Field(default_factory=lambda: str(uuid.uuid4()), const=True, description="unique id")
+    # created_at: datetime = Field(default_factory=lambda: datetime.now())
+    # : str = Field(default_factory=str(uuid.uuid4)) # Field(default="will be auto generated")
+    sha: str = Field(
+        default_factory=lambda: str(uuid.uuid4()).split("-")[0], description="unique id"
+    )
 
     def is_valid(self):
         raise NotImplementedError
@@ -29,16 +32,21 @@ class StrategyConfigBase(BaseModel):
 
 class SlidingWindowConfig(StrategyConfigBase):
 
-    type = Field("sliding_window", const=True, example="sliding_window")
+    type: StrategyType = Field(
+        StrategyType.SLIDING_WINDOW, const=True, example=StrategyType.SLIDING_WINDOW
+    )
 
     base: str = Field(..., example="DOGE")
     quote: str = Field(..., example="TRY")
     bridge: Optional[str] = Field(default=None, example="USDT")
     use_bridge = True
 
+    # network : NetworkType = NetworkType.TESTNET
     testnet = True
-
     use_real_money = False
+
+    leader_exchange: ExchangeType = ExchangeType.BINANCE
+    follower_exchange: ExchangeType = ExchangeType.BTCTURK
 
     max_usable_quote_amount_y: Decimal = Field(
         description="eg. use max 5000 TRY for this strategy, if you have less balance, you will get an error when you run the stg",
@@ -61,13 +69,6 @@ class SlidingWindowConfig(StrategyConfigBase):
         description="defines window height, high=mid + credit, low = mid-credit",
     )
 
-    leader_exchange = "binance"
-    follower_exchange = "btcturk"
-
-    description: str = "slide down as you buy, slide up as you sell"
-
-    sha: Optional[str] = None
-
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
             raise ValueError(f"{self.base} is not a valid symbol")
@@ -85,10 +86,10 @@ class SlidingWindowConfig(StrategyConfigBase):
             raise ValueError(f"{self.follower_exchange} has no {self.base} / TRY pair ")
 
     def is_valid_exchanges(self):
-        if self.leader_exchange != "binance":
+        if self.leader_exchange != ExchangeType.BINANCE:
             raise ValueError(f"{self.leader_exchange} is not supported")
 
-        if self.follower_exchange != "btcturk":
+        if self.follower_exchange != ExchangeType.BTCTURK:
             raise ValueError(f"{self.follower_exchange} is not supported")
 
     def is_valid_mode(self):
@@ -100,6 +101,15 @@ class SlidingWindowConfig(StrategyConfigBase):
             raise Exception(
                 f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
             )
+
+        if self.credit < 0:
+            raise Exception(f"credit must be positive")
+
+        if self.step_constant_k < 0:
+            raise Exception(f"step_constant_k must be positive")
+
+        if self.base_step_qty < 1:
+            raise Exception(f"base_step_qty must be 1 or more")
 
     def is_valid_bridge(self):
         if self.use_bridge is False and self.bridge:
@@ -129,3 +139,13 @@ class SlidingWindowConfig(StrategyConfigBase):
 StrategyConfig = SlidingWindowConfig
 
 STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: SlidingWindowConfig}
+
+
+class ImmutableStrategy(BaseModel):
+    sha: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
+    type: str
+    config: StrategyConfig
+
+    class Config:
+        allow_mutation = False

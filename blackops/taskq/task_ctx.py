@@ -15,7 +15,7 @@ class TaskContext:
         if self.task_state.get(sha, "") == "RUNNING":
             raise Exception(f"{sha} already running")
 
-        trader = await create_trader_from_strategy(stg)
+        trader = create_trader_from_strategy(stg)
         task = asyncio.create_task(trader.run())
 
         self.tasks[sha] = task

@@ -15,7 +15,7 @@ from blackops.taskq.redis import STREAM_MAP, async_redis_client
 from blackops.util.logger import logger
 
 
-async def sliding_window_factory(stg: SlidingWindowConfig):
+def sliding_window_factory(stg: SlidingWindowConfig):
     if not isinstance(stg, SlidingWindowConfig):
         raise ValueError(f"wrong strategy type: {stg.type}")
 
@@ -30,7 +30,7 @@ async def sliding_window_factory(stg: SlidingWindowConfig):
     )  # type:ignore
 
     if network == NetworkType.TESTNET and follower_exchange:
-        await follower_exchange.test_exchange.add_balance(  # type:ignore
+        follower_exchange.test_exchange.add_balance(  # type:ignore
             stg.quote, stg.max_usable_quote_amount_y
         )
 
@@ -82,11 +82,11 @@ FACTORIES = {
 }
 
 
-async def create_trader_from_strategy(stg: StrategyConfig) -> RobotBase:
+def create_trader_from_strategy(stg: StrategyConfig) -> RobotBase:
     try:
         stg.is_valid()
         factory_func = FACTORIES[StrategyType(stg.type)]
-        robot = await factory_func(stg)
+        robot = factory_func(stg)
         return robot
     except Exception as e:
         logger.error(e)

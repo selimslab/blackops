@@ -5,12 +5,12 @@ import blackops.exchanges.btcturk.factory as btcturk_factory
 from blackops.exchanges.base import ExchangeBase
 
 
-class ExchangeType(Enum):
+class ExchangeType(str, Enum):
     BINANCE = "binance"
     BTCTURK = "btcturk"
 
 
-class NetworkType(Enum):
+class NetworkType(str, Enum):
     TESTNET = "testnet"
     REAL = "real"
 

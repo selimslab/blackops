@@ -10,6 +10,7 @@ from blackops.domain.asset import Asset, AssetPair
 from blackops.environment import is_prod
 from blackops.exchanges.base import ExchangeBase
 from blackops.robots.base import RobotBase
+from blackops.robots.config import StrategyType
 from blackops.taskq.redis import async_redis_client
 from blackops.util.logger import logger
 
@@ -42,35 +43,28 @@ class SlidingWindowTrader(RobotBase):
     step_constant_k: Decimal
 
     # Exchanges
-
     leader_exchange: ExchangeBase
     follower_exchange: ExchangeBase
 
     leader_book_ticker_stream: AsyncGenerator
     follower_book_stream: AsyncGenerator
+    binance_book_ticker_stream_seen: int = 0
+    btc_books_seen: int = 0
 
     # Internals
 
-    name: str = "sliding_window"
-
     bridge_symbol: Optional[str] = None
-
     leader_bridge_quote_stream: Optional[AsyncGenerator] = None
-
     bridge_quote: Decimal = Decimal("1")
-
     bridge_last_updated: Optional[Any] = None
 
     theo_buy: Optional[Decimal] = None
     theo_sell: Optional[Decimal] = None  # sell higher than theo_sell
+    theo_last_updated: datetime = datetime.now()
 
     best_seller: Optional[Decimal] = None
     best_buyer: Optional[Decimal] = None
-
-    task_start_time: datetime = datetime.now()
-    theo_last_updated: datetime = datetime.now()
     bid_ask_last_updated: datetime = datetime.now()
-    time_diff: float = 0
 
     orders: dict = field(
         default_factory=dict
@@ -79,13 +73,8 @@ class SlidingWindowTrader(RobotBase):
     pnl: Decimal = Decimal("0")
     max_pnl: Decimal = Decimal("0")
 
-    binance_book_ticker_stream_seen: int = 0
-    btc_books_seen: int = 0
-
-    start_quote_balance: Decimal = Decimal("0")
-    start_base_balance: Decimal = Decimal("0")
-
     current_step: Decimal = Decimal("0")
+    type: StrategyType = StrategyType.SLIDING_WINDOW
 
     # remaining_usable_quote_balance: Decimal = Decimal("0")
 
@@ -102,7 +91,10 @@ class SlidingWindowTrader(RobotBase):
     async def run(self):
         self.channnel = self.sha
 
-        await self.update_balances()
+        self.task_start_time: datetime = datetime.now()
+
+        # this first call to read balances must be succesful or we exit
+        await self.update_current_step_from_balances()
 
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
@@ -138,7 +130,7 @@ class SlidingWindowTrader(RobotBase):
             raise Exception(msg)
 
     async def run_streams(self):
-        logger.info(f"Start streams for {self.name}")
+        logger.info(f"Start streams for {self.type.name}")
 
         consumers: Any = [
             self.watch_leader(),
@@ -184,11 +176,10 @@ class SlidingWindowTrader(RobotBase):
         while True:
             try:
                 await self.update_balances()
-                self.current_step = (
-                    self.pair.base.balance - self.start_base_balance
-                ) / self.base_step_qty  # so we may have step 1.35 or so
+                self.current_step = self.pair.base.balance / self.base_step_qty
             except Exception as e:
                 logger.info(e)
+                # continue trying to read balances
 
             await asyncio.sleep(0.7)  # 90 rate limit
 
@@ -240,6 +231,7 @@ class SlidingWindowTrader(RobotBase):
 
     def should_long(self):
         # we don't enforce max_usable_quote_amount_y too strict
+        # we assume no deposits to quote during the task run
         have_usable_balance = (
             self.start_quote_balance - self.pair.quote.balance
             < self.max_usable_quote_amount_y
@@ -359,7 +351,7 @@ class SlidingWindowTrader(RobotBase):
 
     def create_params_message(self):
         return {
-            "name": self.name,
+            "name": self.type.name,
             "pair": self.pair.symbol,
             "max_usable_quote_amount_y": str(self.max_usable_quote_amount_y),
             "step_constant_k": str(self.step_constant_k),
@@ -368,6 +360,7 @@ class SlidingWindowTrader(RobotBase):
             "task_start_time": str(self.task_start_time),
             "start_base_balance": str(self.start_base_balance),
             "start_quote_balance": str(self.start_quote_balance),
+            "bridge": str(self.bridge_symbol),
         }
 
     def create_stats_message(self):
@@ -390,7 +383,7 @@ class SlidingWindowTrader(RobotBase):
             "binance_seen": self.binance_book_ticker_stream_seen,
             "btc_seen": self.btc_books_seen,
             # "time_diff": self.time_diff,
-            "bridge": str(self.bridge_quote),
+            "bridge_quote": str(self.bridge_quote),
             "bridge_last_updated": str(self.bridge_last_updated),
             "start_parameters": self.params_message,
         }

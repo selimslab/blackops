@@ -40,10 +40,10 @@ class BtcturkDummy:
         else:
             return all_balances
 
-    async def add_balance(self, symbol: str, val: Decimal):
+    def add_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] += val
 
-    async def subtract_balance(self, symbol: str, val: Decimal):
+    def subtract_balance(self, symbol: str, val: Decimal):
         self.balances[symbol] -= val
 
     async def process_limit_order(
@@ -68,8 +68,8 @@ class BtcturkDummy:
                     "success": False,
                     "message": f"Insufficient funds: {quote_balance} < {cost}",
                 }
-            await self.add_balance(pair.base.symbol, Decimal(quantity))
-            await self.subtract_balance(pair.quote.symbol, cost)
+            self.add_balance(pair.base.symbol, Decimal(quantity))
+            self.subtract_balance(pair.quote.symbol, cost)
             return {
                 "success": True,
                 "data": {
@@ -84,8 +84,8 @@ class BtcturkDummy:
                     "success": False,
                     "message": f"Insufficient funds: {base_balance} < {quantity}",
                 }
-            await self.subtract_balance(pair.base.symbol, Decimal(quantity))
-            await self.add_balance(
+            self.subtract_balance(pair.base.symbol, Decimal(quantity))
+            self.add_balance(
                 pair.quote.symbol,
                 Decimal(quantity) * Decimal(price) * self.sell_with_fee,
             )
