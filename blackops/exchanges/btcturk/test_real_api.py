@@ -61,9 +61,9 @@ async def test_submit_limit_order(api_client):
 
     res = await api_client.submit_limit_order(
         quantity=10,
-        price=15.42,
-        order_type="buy",
-        pair_symbol="USDTTRY",
+        price=18.42,
+        order_type="sell",
+        pair=AssetPair(Asset("USDT"), Asset("TRY")),
     )
     pprint.pprint(res)
 
@@ -81,9 +81,9 @@ async def test_get_account_balance(api_client):
 
 async def test_bt_api():
     async with create_api_client() as api_client:
-        # await test_submit_limit_order(api_client)
+        await test_submit_limit_order(api_client)
 
-        await test_get_open_orders(api_client)
+        # await test_get_open_orders(api_client)
 
         # await test_get_all_orders(api_client)
 
@@ -95,7 +95,7 @@ async def test_bt_api():
 
         # await test_get_account_balance(api_client)
 
-        await test_get_account_balance(api_client)
+        # await test_get_account_balance(api_client)
 
 
 if __name__ == "__main__":

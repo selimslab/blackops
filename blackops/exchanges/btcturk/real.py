@@ -93,7 +93,9 @@ class BtcturkApiClient(BtcturkBase):
         async with self.session.post(
             self.order_url, headers=self.headers, json=params
         ) as res:
-            return await res.json()
+            res_json = await res.json(content_type=None)
+            logger.info(f"submit_limit_order: {res_json}")
+            return res_json
 
     async def get_all_orders(self, params: dict) -> Optional[dict]:
         uri = update_url_query_params(self.all_orders_url, params)
