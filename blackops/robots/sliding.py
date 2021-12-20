@@ -105,7 +105,8 @@ class SlidingWindowTrader(RobotBase):
         self.task_start_time: datetime = datetime.now()
 
         # this first call to read balances must be succesful or we exit
-        await self.update_current_step_from_balances()
+        await self.update_balances()
+        self.current_step = self.pair.base.balance / self.base_step_qty
 
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
@@ -113,6 +114,9 @@ class SlidingWindowTrader(RobotBase):
         self.params_message = self.create_params_message()
 
         await self.run_streams()
+
+    async def stop(self):
+        raise asyncio.CancelledError(f"{self.type.name} stopped")
 
     def get_orders(self):
         return self.orders
@@ -147,7 +151,7 @@ class SlidingWindowTrader(RobotBase):
             self.watch_leader(),
             self.watch_follower(),
             self.broadcast_stats_periodical(),
-            self.update_current_step_from_balances(),
+            self.update_balances_periodically(),
         ]  # is this ordering important ?
         if self.bridge_symbol:
             consumers.append(self.watch_bridge())
@@ -182,7 +186,7 @@ class SlidingWindowTrader(RobotBase):
                 self.bridge_last_updated = datetime.now().time()
             await asyncio.sleep(0)
 
-    async def update_current_step_from_balances(self):
+    async def update_balances_periodically(self):
         # raises Exception if cant't read balance
         while True:
             try:

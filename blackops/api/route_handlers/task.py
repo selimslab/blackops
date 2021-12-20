@@ -35,9 +35,9 @@ async def deserialize_stg_config(sha: str) -> StrategyConfig:
     return stg
 
 
-def run_task(stg: StrategyConfig):
+def run_task(stg: StrategyConfig, timeout_seconds: int):
     # run as long as the task is not cancelled
-    asyncio.run(task_context.start_task(stg))
+    asyncio.run(task_context.start_task(stg, timeout_seconds))
 
 
 async def stop_task(sha: str):

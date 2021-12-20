@@ -126,5 +126,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream("MANAUSDT"))
+    asyncio.run(test_orderbook_stream("ETHUSDT"))
     # asyncio.run(main())

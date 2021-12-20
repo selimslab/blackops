@@ -14,6 +14,8 @@ from blackops.robots.sliding import SlidingWindowTrader
 from blackops.taskq.redis import STREAM_MAP, async_redis_client
 from blackops.util.logger import logger
 
+Robot = SlidingWindowTrader  # union type
+
 
 def sliding_window_factory(stg: SlidingWindowConfig):
     if not isinstance(stg, SlidingWindowConfig):
@@ -82,7 +84,7 @@ FACTORIES = {
 }
 
 
-def create_trader_from_strategy(stg: StrategyConfig) -> RobotBase:
+def create_trader_from_strategy(stg: StrategyConfig) -> Robot:
     try:
         stg.is_valid()
         factory_func = FACTORIES[StrategyType(stg.type)]

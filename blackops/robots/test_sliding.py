@@ -1,8 +1,11 @@
 import asyncio
+from decimal import Decimal
 from pprint import pprint
 
 import simplejson as json
+from async_timeout import timeout
 
+from blackops.exchanges.factory import ExchangeType, NetworkType, create_exchange
 from blackops.robots.config import (
     STRATEGY_CLASS,
     SlidingWindowConfig,
@@ -10,33 +13,49 @@ from blackops.robots.config import (
     StrategyType,
 )
 from blackops.robots.factory import create_trader_from_strategy
+from blackops.streams.test_bn import test_bn_generator
+from blackops.streams.test_bt import test_bt_generator
 
 
 async def test():
-    test_config = SlidingWindowConfig(
+    stg = SlidingWindowConfig(
         base="ETH",
         quote="USDT",
-        base_step_qty=1.23,
-        quote_step_qty=12.43,
-        max_usable_quote_amount_y=100.423453425,
+        base_step_qty=0.1,
+        max_usable_quote_amount_y=10000,
         credit=0.2,
         step_constant_k=0.1,
-        leader_exchange="binance",
     )
 
-    pprint(test_config)
-    pprint(test_config.dict())
-    pprint(json.dumps(test_config.dict()))
+    pprint(stg)
+    pprint(stg.dict())
+    pprint(json.dumps(stg.dict()))
 
-    deserialized_config = SlidingWindowConfig(
-        **json.loads(json.dumps(test_config.dict()))
-    )
+    deserialized_config = SlidingWindowConfig(**json.loads(json.dumps(stg.dict())))
 
     robot = create_trader_from_strategy(deserialized_config)
 
     pprint(robot)
 
-    # await robot.run()
+    assert robot.current_step == 0
+
+    await robot.update_balances()
+
+    assert robot.pair.base.balance == 0
+    assert robot.pair.quote.balance == robot.max_usable_quote_amount_y
+
+    assert robot.current_step == 0
+
+    robot.follower_book_stream = test_bt_generator()
+    robot.leader_book_ticker_stream = test_bn_generator()
+
+    try:
+        async with timeout(8):
+            await robot.run()
+    except asyncio.TimeoutError as e:
+        assert robot.pair.base.balance == Decimal("0.3")
+        assert robot.pair.quote.balance == Decimal("8865.40")
+        assert len(robot.orders) == 3
 
 
 if __name__ == "__main__":

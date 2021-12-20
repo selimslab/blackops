@@ -1,5 +1,7 @@
 import asyncio
 
+from async_timeout import timeout
+
 from blackops.robots.config import StrategyConfig
 from blackops.robots.factory import create_trader_from_strategy
 
@@ -10,7 +12,7 @@ class TaskContext:
         self.traders = {}
         self.task_state = {}
 
-    async def start_task(self, stg: StrategyConfig):
+    async def start_task(self, stg: StrategyConfig, timeout_seconds: int = 3600):
         sha = stg.sha
         if self.task_state.get(sha, "") == "RUNNING":
             raise Exception(f"{sha} already running")
@@ -22,7 +24,8 @@ class TaskContext:
         self.traders[sha] = trader
         self.task_state[sha] = "RUNNING"
 
-        await task
+        async with timeout(timeout_seconds):
+            await task
 
     async def cancel_task(self, sha):
         if sha in self.tasks:

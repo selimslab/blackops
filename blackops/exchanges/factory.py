@@ -3,6 +3,8 @@ from enum import Enum
 import blackops.exchanges.binance.factory as binance_factory
 import blackops.exchanges.btcturk.factory as btcturk_factory
 from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.binance.factory import BinanceBase
+from blackops.exchanges.btcturk.factory import BtcturkApiClient, BtcturkApiClientTestnet
 
 
 class ExchangeType(str, Enum):

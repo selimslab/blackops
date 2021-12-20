@@ -65,7 +65,7 @@ def create_book_stream(symbol: str, channel: str = "default"):
 
 
 async def test_orderbook_stream():
-    async for book in create_ws_stream(MessageType.ORDERBOOK, "ATOMTRY"):
+    async for book in create_ws_stream(MessageType.ORDERBOOK, "ETHUSDT"):
         print(book)
 
 

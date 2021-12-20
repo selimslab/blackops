@@ -1,10 +1,12 @@
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Optional
 
+import pydantic
 import simplejson as json
 from pydantic import BaseModel, Field
 
@@ -20,11 +22,8 @@ class StrategyType(str, Enum):
 
 class StrategyConfigBase(BaseModel):
     type: str
-    # created_at: datetime = Field(default_factory=lambda: datetime.now())
-    # : str = Field(default_factory=str(uuid.uuid4)) # Field(default="will be auto generated")
-    sha: str = Field(
-        default_factory=lambda: str(uuid.uuid4()).split("-")[0], description="unique id"
-    )
+    created_at: str = Field(default_factory=lambda: str(datetime.now().isoformat()))
+    sha: str = Field(default_factory=lambda: uuid.uuid4().hex)
 
     def is_valid(self):
         raise NotImplementedError
@@ -32,11 +31,9 @@ class StrategyConfigBase(BaseModel):
 
 class SlidingWindowConfig(StrategyConfigBase):
 
-    type: StrategyType = Field(
-        StrategyType.SLIDING_WINDOW, const=True, example=StrategyType.SLIDING_WINDOW
-    )
+    type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
-    base: str = Field(..., example="DOGE")
+    base: str = Field(..., example="ETH")
     quote: str = Field(..., example="TRY")
     bridge: Optional[str] = Field(default=None, example="USDT")
     use_bridge = True
@@ -108,8 +105,8 @@ class SlidingWindowConfig(StrategyConfigBase):
         if self.step_constant_k < 0:
             raise Exception(f"step_constant_k must be positive")
 
-        if self.base_step_qty < 1:
-            raise Exception(f"base_step_qty must be 1 or more")
+        if self.base_step_qty < 0:
+            raise Exception(f"base_step_qty must be positive")
 
     def is_valid_bridge(self):
         if self.use_bridge is False and self.bridge:
@@ -139,13 +136,3 @@ class SlidingWindowConfig(StrategyConfigBase):
 StrategyConfig = SlidingWindowConfig
 
 STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: SlidingWindowConfig}
-
-
-class ImmutableStrategy(BaseModel):
-    sha: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
-    type: str
-    config: StrategyConfig
-
-    class Config:
-        allow_mutation = False

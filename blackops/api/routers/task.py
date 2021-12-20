@@ -13,7 +13,9 @@ async def get_all_tasks():
 
 
 @router.put("/{sha}")
-async def run_task(sha: str, background_tasks: BackgroundTasks):
+async def run_task(
+    sha: str, background_tasks: BackgroundTasks, timeout_seconds: int = 3600
+):
     """
     When you give a sha, this will run the given strategy
 
@@ -22,7 +24,7 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
     5. View logs on the home page
     """
     stg = await task_handler.deserialize_stg_config(sha)
-    background_tasks.add_task(task_handler.run_task, stg)
+    background_tasks.add_task(task_handler.run_task, (stg, timeout_seconds))
     return JSONResponse(content={"message": f"started strategy {sha}"})
 
 
