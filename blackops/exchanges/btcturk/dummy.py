@@ -20,8 +20,8 @@ class BtcturkDummy:
     buy_with_fee = Decimal("1") + fee_percent
     sell_with_fee = Decimal("1") - fee_percent
 
-    open_orders: dict = {}
-    all_orders: list = []
+    open_orders: dict = field(default_factory=dict)
+    all_orders: list = field(default_factory=list)
 
     async def get_account_balance(self, assets: Optional[List[str]]) -> dict:
 
