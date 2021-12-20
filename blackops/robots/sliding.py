@@ -128,39 +128,6 @@ class SlidingWindowTrader(RobotBase):
     def get_orders(self):
         return self.orders
 
-    async def update_open_order_balance(self):
-        prev_order_count = -1
-        while True:
-            await asyncio.sleep(0.2)
-            order_count = len(self.orders)
-            if order_count == prev_order_count:
-                continue
-            self.open_order_balance = (
-                await self.follower_exchange.get_open_order_balance(self.pair.symbol)
-            )
-            prev_order_count = order_count
-
-    async def update_balances(self):
-        try:
-            balances: dict = await self.follower_exchange.get_account_balance(
-                assets=[self.pair.base.symbol, self.pair.quote.symbol]
-            )
-
-            base_balances: dict = balances[self.pair.base.symbol]
-            self.pair.base.balance = Decimal(base_balances["free"]) + Decimal(
-                base_balances["locked"]
-            )
-
-            quote_balances: dict = balances[self.pair.quote.symbol]
-            self.pair.quote.balance = Decimal(quote_balances["free"]) + Decimal(
-                quote_balances["locked"]
-            )
-
-        except Exception as e:
-            msg = f"could not read balances: {e}"
-            pub.publish_error(self.channnel, msg)
-            raise Exception(msg)
-
     async def run_streams(self):
         logger.info(f"Start streams for {self.type.name}")
 
@@ -203,6 +170,39 @@ class SlidingWindowTrader(RobotBase):
                 self.bridge_quote = new_quote
                 self.bridge_last_updated = datetime.now().time()
             await asyncio.sleep(0)
+
+    async def update_open_order_balance(self):
+        prev_order_count = -1
+        while True:
+            await asyncio.sleep(0.2)
+            order_count = len(self.orders)
+            if order_count == prev_order_count:
+                continue
+            self.open_order_balance = (
+                await self.follower_exchange.get_open_order_balance(self.pair.symbol)
+            )
+            prev_order_count = order_count
+
+    async def update_balances(self):
+        try:
+            balances: dict = await self.follower_exchange.get_account_balance(
+                assets=[self.pair.base.symbol, self.pair.quote.symbol]
+            )
+
+            base_balances: dict = balances[self.pair.base.symbol]
+            self.pair.base.balance = Decimal(base_balances["free"]) + Decimal(
+                base_balances["locked"]
+            )
+
+            quote_balances: dict = balances[self.pair.quote.symbol]
+            self.pair.quote.balance = Decimal(quote_balances["free"]) + Decimal(
+                quote_balances["locked"]
+            )
+
+        except Exception as e:
+            msg = f"could not read balances: {e}"
+            pub.publish_error(self.channnel, msg)
+            raise Exception(msg)
 
     async def update_balances_periodically(self):
         # raises Exception if cant't read balance

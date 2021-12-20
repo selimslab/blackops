@@ -29,9 +29,15 @@ class BtcturkApiClientTestnet(BtcturkBase):
             logger.error(e)
             raise e
 
+    async def get_open_orders(self, symbol: str) -> Optional[dict]:
+        return await self.test_exchange.get_open_orders(symbol)
+
     async def get_account_balance(self, assets: Optional[List[str]] = None):
         await asyncio.sleep(0.7)  # 90 per min, rate limit
         return await self.test_exchange.get_account_balance(assets)
+
+    async def get_open_order_balance(self, symbol: str) -> Decimal:
+        return Decimal("0")
 
 
 async def test_submit_limit_order():
