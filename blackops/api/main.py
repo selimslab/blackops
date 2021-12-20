@@ -1,5 +1,7 @@
+import asyncio
+
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -25,14 +27,18 @@ async def validation_exception_handler(request, exc: Exception):
     )
 
 
-@app.get("/monitor/")
-async def logs():
-    return FileResponse("static/logs.html")
-
-
 @app.get("/")
 async def root():
     return FileResponse("static/index.html")
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        # data = await websocket.receive_text()
+        await websocket.send_json({"hello": "world"})
+        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":

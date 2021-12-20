@@ -40,8 +40,20 @@
 
       <br />
 
-      <div class="column is-one-quarter">
+      <!-- 
+      <h2>Trader Radio</h2>
 
+      <h3>Running Robots</h3>
+
+      <h1>WebSocket Chat</h1>
+      <h2>Your ID: <span id="ws-id"></span></h2>
+      <form action="" onsubmit="sendMessage(event)">
+        <input type="text" id="messageText" autocomplete="off" />
+        <button>Send</button>
+      </form>
+      <ul id="messages"></ul> -->
+
+      <div class="column is-one-quarter">
         <input
           class="input is-rounded"
           v-model="sha"
@@ -57,7 +69,9 @@
 
       <div class="columns">
         <div class="column">
-          <pre class="has-background-dark has-text-success">{{ JSON.stringify(stats, null, 2) }}</pre>
+          <pre class="has-background-dark has-text-success">
+{{ JSON.stringify(stats, null, 2) }}</pre
+          >
         </div>
 
         <div class="column" style="height: 30rem; overflow: scroll">
@@ -113,7 +127,6 @@
     // Enable pusher logging - don't include this in production
     Pusher.logToConsole = true;
 
-
     let stats = {};
 
     const app = new Vue({
@@ -125,9 +138,8 @@
         errors: [],
         long_orders: [],
         short_orders: [],
-        
-        stats: stats
 
+        stats: stats,
       },
 
       methods: {
@@ -155,11 +167,25 @@
               app.short_orders.push(order);
             }
           });
-
-
         },
       },
     });
+
+    // var ws = new WebSocket("ws://localhost:8000/ws");
+    // ws.onmessage = function (event) {
+    //   var messages = document.getElementById("messages");
+    //   var message = document.createElement("li");
+    //   var content = document.createTextNode(event.data);
+    //   message.appendChild(content);
+    //   messages.appendChild(message);
+    // };
+
+    // function sendMessage(event) {
+    //   var input = document.getElementById("messageText");
+    //   ws.send(input.value);
+    //   input.value = "";
+    //   event.preventDefault();
+    // }
 
     var pusher = new Pusher("7b2411e6822e2f36b872", {
       cluster: "eu",
