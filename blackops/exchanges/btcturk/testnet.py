@@ -46,7 +46,7 @@ async def test_submit_limit_order():
     print(res)
     assert res["success"] is False
 
-    await client.test_exchange.add_balance("TRY", Decimal("2000"))
+    client.test_exchange.add_balance("TRY", Decimal("2000"))
 
     res = await client.submit_limit_order(
         pair=AssetPair(base=Asset("USDT"), quote=Asset("TRY")),

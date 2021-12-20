@@ -70,6 +70,8 @@ class SlidingWindowTrader(RobotBase):
         default_factory=dict
     )  # track your orders and figure out balance
 
+    orders_in_progress_balance: Decimal = Decimal("0")
+
     pnl: Decimal = Decimal("0")
     max_pnl: Decimal = Decimal("0")
 
@@ -126,6 +128,8 @@ class SlidingWindowTrader(RobotBase):
             balances: dict = await self.follower_exchange.get_account_balance(
                 assets=[self.pair.base.symbol, self.pair.quote.symbol]
             )
+
+            logger.info(f"balances: {balances}")
 
             base_balances: dict = balances[self.pair.base.symbol]
             self.pair.base.balance = Decimal(base_balances["free"]) + Decimal(
@@ -260,7 +264,13 @@ class SlidingWindowTrader(RobotBase):
 
     def should_short(self):
         #  act only when you are ahead
-        return self.best_buyer and self.theo_sell and self.best_buyer >= self.theo_sell
+        # TODO we can check if we have enough base balance to short
+        return (
+            self.best_buyer
+            and self.theo_sell
+            and self.best_buyer >= self.theo_sell
+            and self.pair.base.balance
+        )
 
     async def long(self):
         # we buy and sell at the quantized steps
@@ -300,7 +310,7 @@ class SlidingWindowTrader(RobotBase):
 
             is_ok = res and res.get("success") and res.get("data")
             if not is_ok:
-                msg = f"could not {side} at {price} for {qty}: {res}"
+                msg = f"could not {side} {qty} {self.pair.base.symbol} for {price}, reason: {res}"
                 raise Exception(msg)
 
             if res and res.get("data"):
@@ -313,6 +323,12 @@ class SlidingWindowTrader(RobotBase):
 
                 order_id = data.get("id")
                 self.orders[order_id] = data
+
+                # to enforce max amount we need to know about open orders
+                # if side == "buy":
+                #     self.orders_in_progress_balance += qty
+                # elif side == "sell":
+                #     self.orders_in_progress_balance -= qty
 
                 self.log_order(side, order_time, price, qty, theo)
 
