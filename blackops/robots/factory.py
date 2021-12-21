@@ -33,7 +33,7 @@ def sliding_window_factory(stg: SlidingWindowConfig):
 
     if network == NetworkType.TESTNET and follower_exchange:
         follower_exchange.test_exchange.add_balance(  # type:ignore
-            stg.quote, stg.max_usable_quote_amount_y
+            stg.quote, stg.max_usable_quote_amount_y * 3
         )
 
     leader_exchange: ExchangeBase = create_exchange(

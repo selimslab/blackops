@@ -41,16 +41,21 @@ class SlidingWindowTrader(RobotBase):
     best_seller: Optional[Decimal] = None
     best_buyer: Optional[Decimal] = None
 
-    orders: dict = field(
-        default_factory=dict
-    )  # track your orders and figure out balance
-
-    open_order_balance: Decimal = Decimal("0")
-
     current_step: Decimal = Decimal("0")
+
+    # orders
+    longs: list = field(
+        default_factory=list
+    )  # track your orders and figure out balance
+    shorts: list = field(
+        default_factory=list
+    )  # track your orders and figure out balance
 
     long_in_progress: bool = False
     short_in_progress: bool = False
+
+    open_asks: Decimal = Decimal("0")
+    open_bids: Decimal = Decimal("0")
 
     async def run(self):
         self.channnel = self.config.sha
@@ -70,7 +75,7 @@ class SlidingWindowTrader(RobotBase):
         raise asyncio.CancelledError(f"{self.config.type.name} stopped")
 
     def get_orders(self):
-        return self.orders
+        return self.longs + self.shorts
 
     async def run_streams(self):
         logger.info(f"Start streams for {self.config.type.name}")
@@ -119,12 +124,13 @@ class SlidingWindowTrader(RobotBase):
         prev_order_count = -1
         while True:
             await asyncio.sleep(0.2)
-            order_count = len(self.orders)
+            order_count = len(self.longs) + len(self.shorts)
             if order_count == prev_order_count:
                 continue
-            self.open_order_balance = (
-                await self.follower_exchange.get_open_order_balance(self.pair.symbol)
-            )
+            (
+                self.open_asks,
+                self.open_bids,
+            ) = await self.follower_exchange.get_open_asks_and_bids(self.pair.symbol)
             prev_order_count = order_count
 
     async def update_balances(self):
@@ -211,9 +217,16 @@ class SlidingWindowTrader(RobotBase):
         total_used = Decimal("0")
         used_quote = self.start_quote_balance - self.pair.quote.balance
         total_used += used_quote
-        if self.best_buyer and self.open_order_balance:
-            open_base_cost = self.open_order_balance * self.best_buyer
-            total_used += open_base_cost
+        # we may not be able to buy from the best seller
+        safety_margin = Decimal("1.01")
+        if self.best_seller:
+            open_bid_cost = (
+                self.open_bids
+                * self.best_seller
+                * self.follower_exchange.buy_with_fee  # type: ignore
+                * safety_margin
+            )
+            total_used += open_bid_cost
         return total_used < self.config.max_usable_quote_amount_y
 
     def should_long(self):
@@ -223,6 +236,7 @@ class SlidingWindowTrader(RobotBase):
             self.best_seller
             and self.theo_buy
             and self.best_seller <= self.theo_buy
+            and self.pair.quote.balance > self.best_seller * self.config.base_step_qty
             and self.have_usable_balance()
         )
 
@@ -249,7 +263,16 @@ class SlidingWindowTrader(RobotBase):
         price = float(self.best_seller)
         qty = float(self.config.base_step_qty)  #  we buy base
 
-        await self.send_order("buy", price, qty)
+        try:
+            self.long_in_progress = True
+            order_log = await self.send_order("buy", price, qty, self.theo_buy)
+            if order_log:
+                self.longs.append(order_log)
+                await self.stats.update_pnl()
+        except Exception as e:
+            logger.info(e)
+        finally:
+            self.long_in_progress = False
 
     async def short(self):
         if not self.best_buyer or not self.config.base_step_qty:
@@ -261,23 +284,25 @@ class SlidingWindowTrader(RobotBase):
         price = float(self.best_buyer)
         qty = float(self.config.base_step_qty)  # we sell base
 
-        await self.send_order("sell", price, qty)
-
-    async def send_order(self, side, price, qty):
-
-        if side == "buy":
-            theo = self.theo_buy
-            self.long_in_progress = True
-        elif side == "sell":
-            theo = self.theo_sell
+        try:
             self.short_in_progress = True
-        else:
-            raise Exception("invalid side")
+            order_log = await self.send_order("sell", price, qty, self.theo_sell)
+            if order_log:
+                self.shorts.append(order_log)
+                await self.stats.update_pnl()
+        except Exception as e:
+            logger.info(e)
+        finally:
+            self.short_in_progress = False
 
+    async def send_order(self, side, price, qty, theo):
         try:
             res = await self.follower_exchange.submit_limit_order(
                 self.pair, side, price, qty
             )
+            if not res:
+                msg = f"no response for order request {side} {price} {qty}"
+                raise Exception(msg)
 
             is_ok = res and res.get("success") and res.get("data")
             if not is_ok:
@@ -291,17 +316,13 @@ class SlidingWindowTrader(RobotBase):
                 ts = data.get("datetime")
                 order_time = datetime.fromtimestamp(ts / 1000.0)
 
-                self.stats.log_order(side, order_time, price, qty, theo)
-
-                await self.stats.update_pnl()
+                order_log = self.stats.create_order_log(
+                    side, order_time, price, qty, theo
+                )
+                return order_log
         except Exception as e:
             logger.info(e)
             pub.publish_message(self.channnel, f"send_order: {str(e)}")
-        finally:
-            if side == "buy":
-                self.long_in_progress = False
-            elif side == "sell":
-                self.short_in_progress = False
 
 
 @dataclass
@@ -328,7 +349,7 @@ class SlidingWindowStats(RobotStats):
 
         pub.publish_stats(self.robot.channnel, message)
 
-    def log_order(self, side, order_time, price, qty, theo):
+    def create_order_log(self, side, order_time, price, qty, theo):
         order_log = {
             "type": side,
             "time": str(order_time),
@@ -337,19 +358,19 @@ class SlidingWindowStats(RobotStats):
             "theo": str(theo),
         }
 
-        pub.publish_order(self.robot.channnel, order_log)
-
-        logger.info(order_log)
+        return order_log
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
-            if not self.robot.start_quote_balance:
+            if self.robot.pair.base.balance is None or self.robot.best_buyer is None:
                 return None
 
             # await self.update_balances()
 
             approximate_sales_gain: Decimal = (
-                self.robot.pair.base.balance * self.robot.best_buyer * self.robot.follower_exchange.sell_with_fee  # type: ignore
+                self.robot.pair.base.balance
+                * self.robot.best_buyer
+                * self.robot.follower_exchange.sell_with_fee  # type: ignore
             )
 
             return (
@@ -369,7 +390,6 @@ class SlidingWindowStats(RobotStats):
 
     def create_stats_message(self):
         stats = {
-            "config": self.config_dict,
             "current time": datetime.now().time(),
             "running seconds": self.runtime_seconds(),
             "balances": {
@@ -380,8 +400,8 @@ class SlidingWindowStats(RobotStats):
                 "current": {
                     "base": self.robot.pair.base.balance,
                     "quote": self.robot.pair.quote.balance,
+                    "step": self.robot.current_step,
                 },
-                "current step": self.robot.current_step,
                 "pnl": self.pnl,
                 "max pnl ever seen": self.max_pnl,
             },
@@ -404,9 +424,14 @@ class SlidingWindowStats(RobotStats):
                 "books seen": self.btc_books_seen,
             },
             "orders": {
-                "total": len(self.robot.orders),
-                "open orders, approximate amount": self.robot.open_order_balance,
+                "longs": self.robot.longs,
+                "shorts": self.robot.shorts,
+                "open": {
+                    "buy": self.robot.open_bids,
+                    "sell": self.robot.open_asks,
+                },
             },
+            "config": self.config_dict,
         }
 
         return stats

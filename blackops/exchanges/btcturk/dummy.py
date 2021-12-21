@@ -55,7 +55,7 @@ class BtcturkDummy:
         if quote_balance < cost:
             return {
                 "success": False,
-                "message": f"Insufficient funds: {quote_balance} < {cost}",
+                "message": f"Insufficient funds: have {quote_balance} {pair.quote.symbol} but need {cost}",
             }
 
         order_id = str(random.randint(1, 1000000))
@@ -66,13 +66,12 @@ class BtcturkDummy:
 
         self.subtract_balance(pair.quote.symbol, cost)
         self.add_balance(pair.base.symbol, Decimal(quantity))
-        self.subtract_balance(pair.quote.symbol, cost)
 
         order = {
             "success": True,
             "data": {
                 "id": order_id,
-                "datetime": int(time.time()),
+                "datetime": time.time() * 1000,
                 "price": price,
                 "quantity": quantity,
                 "type": order_type,
@@ -95,7 +94,7 @@ class BtcturkDummy:
         if base_balance < quantity:
             return {
                 "success": False,
-                "message": f"Insufficient funds: {base_balance} < {quantity}",
+                "message": f"Insufficient funds: have {base_balance} {pair.base.symbol} but need {quantity}",
             }
 
         order_id = str(random.randint(1, 1000000))
@@ -114,7 +113,7 @@ class BtcturkDummy:
             "success": True,
             "data": {
                 "id": order_id,
-                "datetime": int(time.time()),
+                "datetime": time.time() * 1000,
                 "price": price,
                 "quantity": quantity,
                 "type": order_type,
@@ -125,10 +124,12 @@ class BtcturkDummy:
         del self.open_asks[order_id]
         self.all_orders.append(order)
 
+        return order
+
     async def process_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ):
         if order_type == "buy":
-            await self.buy(pair, order_type, price, quantity)
+            return await self.buy(pair, order_type, price, quantity)
         elif order_type == "sell":
-            await self.sell(pair, order_type, price, quantity)
+            return await self.sell(pair, order_type, price, quantity)

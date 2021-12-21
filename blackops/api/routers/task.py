@@ -41,8 +41,8 @@ async def run_task(
 
 @router.delete("/")
 async def stop_all_tasks():
-    n = await task_handler.stop_all_tasks()
-    return JSONResponse(content={"message": f"stopped {n} tasks"})
+    stopped_shas = await task_handler.stop_all_tasks()
+    return JSONResponse(content={"message": f"stopped {stopped_shas}"})
 
 
 @router.delete("/{sha}")

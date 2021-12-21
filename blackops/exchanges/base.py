@@ -34,5 +34,5 @@ class ExchangeBase(ABC):
     ) -> Optional[dict]:
         raise NotImplementedError
 
-    async def get_open_order_balance(self, symbol: str) -> Decimal:
+    async def get_open_asks_and_bids(self, symbol: str) -> tuple:
         raise NotImplementedError

@@ -37,13 +37,13 @@ class TaskContext:
             raise Exception("Task not found")
 
     async def cancel_all(self):
-        n = 0
+        stopped_shas = []
         for sha in self.task_state:
             if self.task_state.get(sha) == "RUNNING":
                 await self.cancel_task(sha)
-                n += 1
+                stopped_shas.append(sha)
 
-        return n
+        return stopped_shas
         # self.tasks.clear()
 
     def get_orders(self, sha):

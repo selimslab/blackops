@@ -88,22 +88,27 @@ class BtcturkBase(ExchangeBase):
     async def get_open_orders(self, symbol: str) -> Optional[dict]:
         raise NotImplementedError
 
-    async def get_open_order_balance(self, symbol: str) -> Decimal:
+    async def get_open_asks_and_bids(self, symbol: str) -> tuple:
         open_orders = await self.get_open_orders(symbol)
 
-        open_balance = Decimal("0")
+        open_asks: Decimal = Decimal("0")
+        open_bids: Decimal = Decimal("0")
 
         if open_orders:
             data = open_orders.get("data", {})
             bids = data.get("bids", [])
             asks = data.get("asks", [])
 
-            for ask in asks:
-                open_balance -= Decimal(ask.get("leftAmount", "0"))
-            for bid in bids:
-                open_balance += Decimal(bid.get("leftAmount", "0"))
+            if asks:
+                open_asks = Decimal(
+                    sum(Decimal(ask.get("leftAmount", "0")) for ask in asks)
+                )
+            if bids:
+                open_bids = Decimal(
+                    sum(Decimal(bid.get("leftAmount", "0")) for bid in bids)
+                )
 
-        return open_balance
+        return (open_asks, open_bids)
 
     async def cancel_order(self, order_id: str) -> Optional[dict]:
         raise NotImplementedError

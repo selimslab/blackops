@@ -7,7 +7,7 @@
   />
 </head>
 
-<body class="has-background-dark has-text-success" style="min-height: 100rem">
+<body class="has-background-dark has-text-success is-family-sans-serif is-size-5 has-text-left" style="min-height: 100rem">
   <div class="container">
     <nav
       class="navbar has-background-dark"
@@ -32,9 +32,9 @@
 
     <div id="app">
       <p class="has-text-primary-light">
-        Click to create and
+        Click for the
         <a href="/docs" target="_blank" class="has-text-success"
-          >run a strategy</a
+          >control panel</a
         >
       </p>
 
@@ -64,12 +64,33 @@
 
       <br />
       <br />
+<!-- 
+      <button class="button is-danger" onclick="await stopAllTasks()">Stop All Robots</button> -->
 
-      <h1 class="has-text-danger mb-10">Summary</h1>
 
       <div class="columns">
 
         <div class="column">
+
+          <h1 class="has-text-danger mb-10">Config</h1>
+
+          <pre class="has-background-dark has-text-success">
+{{ JSON.stringify(config, null, 2) }}</pre
+          >
+        </div>
+
+
+
+
+      </div>
+
+
+      <div class="columns">
+
+        <div class="column">
+
+          <h1 class="has-text-danger mb-10">Summary</h1>
+
           <pre class="has-background-dark has-text-success">
 {{ JSON.stringify(stats, null, 2) }}</pre
           >
@@ -137,9 +158,10 @@
   <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
   <script>
     // Enable pusher logging - don't include this in production
-    Pusher.logToConsole = true;
+    Pusher.logToConsole = false;
 
     let stats = {};
+    let config = {};
 
     const app = new Vue({
       el: "#app",
@@ -152,6 +174,7 @@
         short_orders: [],
 
         stats: stats,
+        config : config,
       },
 
       methods: {
@@ -163,7 +186,16 @@
           });
 
           channel.bind("stats", function (data) {
-            app.stats = JSON.parse(data.message);
+            let stats = JSON.parse(data.message)
+            app.stats = stats;
+            app.config = stats.config;
+            delete stats.config
+            
+            app.long_orders = stats.orders.longs;
+            app.short_orders = stats.orders.shorts;
+
+            stats.orders.longs = stats.orders.longs.length 
+            stats.orders.shorts = stats.orders.shorts.length
           });
 
           channel.bind("message", function (data) {
@@ -182,6 +214,7 @@
         },
       },
     });
+
 
     // var ws = new WebSocket("ws://localhost:8000/ws");
     // ws.onmessage = function (event) {
@@ -204,5 +237,15 @@
     });
 
     app.connect();
+
+
+    // async function stopAllTasks(){
+    //     const response = await fetch('http://localhost:8000/task', {
+    //       method: 'DELETE',
+    //     });
+    //     alert(response);
+    //   };
+
+
   </script>
 </body>

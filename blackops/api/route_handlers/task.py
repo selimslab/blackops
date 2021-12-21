@@ -46,8 +46,7 @@ async def stop_task(sha: str):
 
 
 async def stop_all_tasks():
-    n = await task_context.cancel_all()
-    return n
+    return await task_context.cancel_all()
 
 
 def get_tasks():
