@@ -62,15 +62,9 @@ def sliding_window_factory(stg: SlidingWindowConfig):
     follower_book_stream = btc_streams.create_book_stream(pair.symbol, pub_channel)
 
     trader = SlidingWindowTrader(
-        sha=stg.sha,
-        bridge_symbol=bridge_symbol,
+        config=stg,
         leader_exchange=leader_exchange,
         follower_exchange=follower_exchange,
-        pair=pair,
-        max_usable_quote_amount_y=stg.max_usable_quote_amount_y,
-        base_step_qty=stg.base_step_qty,
-        credit=stg.credit,
-        step_constant_k=stg.step_constant_k,
         leader_book_ticker_stream=leader_book_ticker_stream,
         leader_bridge_quote_stream=leader_bridge_quote_stream,
         follower_book_stream=follower_book_stream,

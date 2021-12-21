@@ -15,7 +15,7 @@ async def create_api_client():
     await api_client._close_session()
 
 
-async def test_get_open_orders(api_client, symbol: str = "USDTTRY"):
+async def test_get_open_orders(api_client, symbol: str):
     res = await api_client.get_open_orders(symbol)
     pprint.pprint(res)
 
@@ -61,7 +61,7 @@ async def test_submit_limit_order(api_client):
 
     res = await api_client.submit_limit_order(
         quantity=15,
-        price=0.8861,
+        price=1,
         order_type="sell",
         pair=AssetPair(Asset("XRP"), Asset("USDT")),
     )
@@ -83,7 +83,7 @@ async def test_bt_api():
     async with create_api_client() as api_client:
         # await test_submit_limit_order(api_client)
 
-        await test_get_open_orders(api_client)
+        await test_get_open_orders(api_client, "XRPUSDT")
 
         # await test_get_all_orders(api_client, "XRPUSDT")
 

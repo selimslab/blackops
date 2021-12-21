@@ -61,20 +61,8 @@ class BtcturkApiClient(BtcturkBase):
                 logger.error(msg)
                 return {}
 
-    async def get_account_balance(self, assets: Optional[List[str]] = None) -> dict:
-        res = await self._http(self.balance_url, self.session.get)
-
-        balance_list = res.get("data", [])
-        if not assets:
-            return {
-                balance_info["asset"]: balance_info for balance_info in balance_list
-            }
-
-        return {
-            balance_info["asset"]: balance_info
-            for balance_info in balance_list
-            if balance_info["asset"] in assets
-        }
+    async def _get_account_balance(self, assets: Optional[List[str]] = None) -> dict:
+        return await self._http(self.balance_url, self.session.get)
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
@@ -106,60 +94,12 @@ class BtcturkApiClient(BtcturkBase):
         uri = update_url_query_params(self.open_orders_url, params)
         return await self._http(uri, self.session.get)
 
-    async def get_open_order_balance(self, symbol: str) -> Decimal:
-        open_orders = await self.get_open_orders(symbol)
-
-        open_balance = Decimal("0")
-
-        if open_orders:
-            data = open_orders.get("data", {})
-            bids = data.get("bids", [])
-            asks = data.get("asks", [])
-
-            for ask in asks:
-                open_balance += Decimal(ask.get("leftAmount", "0"))
-            for bid in bids:
-                open_balance -= Decimal(bid.get("leftAmount", "0"))
-
-        return open_balance
-
     async def cancel_order(self, order_id: str) -> Optional[dict]:
         if not order_id:
             raise Exception("order id is required")
 
         uri = update_url_query_params(self.order_url, {"id": order_id})
         return await self._http(uri, self.session.delete)
-
-    async def cancel_open_orders(self, symbol: str, bids=True, asks=True):
-        """
-        we need order ids
-
-        either read from the saved
-
-        or get open orders
-        """
-        res = await self.get_open_orders(symbol)
-        if not res:
-            return
-
-        data = res.get("data", {})
-        asks = data.get("asks", [])
-        bids = data.get("bids", [])
-
-        results = []
-        if bids:
-            for order in bids:
-                order_id = order.get("id")
-                res = await self.cancel_order(order_id)
-                results.append(res)
-
-        if asks:
-            for order in asks:
-                order_id = order.get("id")
-                res = await self.cancel_order(order_id)
-                results.append(res)
-
-        return results
 
     async def _close_session(self):
         await self.session.close()
