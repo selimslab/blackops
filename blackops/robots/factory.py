@@ -63,6 +63,7 @@ def sliding_window_factory(stg: SlidingWindowConfig):
 
     trader = SlidingWindowTrader(
         config=stg,
+        pair=pair,
         leader_exchange=leader_exchange,
         follower_exchange=follower_exchange,
         leader_book_ticker_stream=leader_book_ticker_stream,

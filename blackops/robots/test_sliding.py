@@ -100,7 +100,7 @@ async def test_run():
     await robot.update_balances()
 
     assert robot.pair.base.balance == 0
-    assert robot.pair.quote.balance == robot.max_usable_quote_amount_y
+    assert robot.pair.quote.balance == robot.config.max_usable_quote_amount_y
 
     assert robot.current_step == 0
 
@@ -135,8 +135,10 @@ async def test_serialize():
     )
     robot = create_trader_from_strategy(stg)
 
-    print(asdict(robot))
+    deserialized_config = SlidingWindowConfig(**json.loads(json.dumps(stg.dict())))
+
+    print(deserialized_config)
 
 
 if __name__ == "__main__":
-    asyncio.run(test_run())
+    asyncio.run(test_serialize())

@@ -1,10 +1,11 @@
 import asyncio
 import itertools
-import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, getcontext
 from typing import Any, AsyncGenerator, List, Optional
+
+import simplejson as json
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
@@ -21,6 +22,7 @@ getcontext().prec = 6
 @dataclass
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
+    pair: AssetPair
 
     # Exchanges
     leader_exchange: ExchangeBase
@@ -50,33 +52,28 @@ class SlidingWindowTrader(RobotBase):
     long_in_progress: bool = False
     short_in_progress: bool = False
 
-    def __post_init__(self):
-        self.pair: AssetPair = AssetPair(
-            Asset(self.config.base), Asset(self.config.quote)
-        )
-        self.channnel = self.config.sha
-
     async def run(self):
+        self.channnel = self.config.sha
 
         self.stats = SlidingWindowStats(robot=self, task_start_time=datetime.now())
 
         # this first call to read balances must be succesful or we exit
         await self.update_balances()
-        self.current_step = self.pair.base.balance / self.config.base_step_qty
-
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
+
+        self.current_step = self.pair.base.balance / self.config.base_step_qty
 
         await self.run_streams()
 
     async def stop(self):
-        raise asyncio.CancelledError(f"{self.type.name} stopped")
+        raise asyncio.CancelledError(f"{self.config.type.name} stopped")
 
     def get_orders(self):
         return self.orders
 
     async def run_streams(self):
-        logger.info(f"Start streams for {self.type.name}")
+        logger.info(f"Start streams for {self.config.type.name}")
 
         consumers: Any = [
             self.watch_leader(),
@@ -318,25 +315,16 @@ class SlidingWindowStats(RobotStats):
     binance_book_ticker_stream_seen: int = 0
     btc_books_seen: int = 0
 
-    debug_keys: tuple = (
-        "runtime",
-        "base_balance",
-        "quote_balance",
-        "orders",
-        "pnl",
-        "max_pnl",
-        "binance_seen",
-        "btc_seen",
-    )
-
     def __post_init__(self):
-        self.config_dict = json.dumps(self.robot.config.dict())
+        self.config_dict = self.robot.config.dict()
 
     def broadcast_stats(self):
         message = self.create_stats_message()
 
-        if debug:
-            logger.info({k: message[k] for k in self.debug_keys})
+        # if debug:
+        #     logger.info(message)
+
+        message = json.dumps(message, default=str)
 
         pub.publish_stats(self.robot.channnel, message)
 
@@ -379,40 +367,45 @@ class SlidingWindowStats(RobotStats):
             self.pnl = pnl
             self.max_pnl = max(self.max_pnl, pnl)
 
-    def save_start_balances(self, start_balances: dict):
-        self.start_balances = start_balances
-
     def create_stats_message(self):
         stats = {
             "config": self.config_dict,
-            "current time": str(datetime.now().time()),
-            "running seconds": str(self.runtime_seconds()),
+            "current time": datetime.now().time(),
+            "running seconds": self.runtime_seconds(),
             "balances": {
-                "start base": self.robot.start_base_balance,
-                "start quote": self.robot.start_quote_balance,
-                "base_balance": str(self.robot.pair.base.balance),
-                "quote_balance": str(self.robot.pair.quote.balance),
-                "current_step": str(self.robot.current_step),
-                "pnl": str(self.pnl),
-                "max_pnl": str(self.max_pnl),
+                "start": {
+                    "base": self.robot.start_base_balance,
+                    "quote": self.robot.start_quote_balance,
+                },
+                "current": {
+                    "base": self.robot.pair.base.balance,
+                    "quote": self.robot.pair.quote.balance,
+                },
+                "current step": self.robot.current_step,
+                "pnl": self.pnl,
+                "max pnl ever seen": self.max_pnl,
             },
             "binance": {
-                "theo_buy": str(self.robot.theo_buy),
-                "theo_sell": str(self.robot.theo_sell),
-                "theo_last_updated": str(self.theo_last_updated.time()),
-                "binance_seen": self.binance_book_ticker_stream_seen,
-                "bridge": {
-                    "bridge_quote": str(self.robot.bridge_quote),
-                    "bridge_last_updated": str(self.bridge_last_updated),
+                "theo": {
+                    "buy": self.robot.theo_buy,
+                    "sell": self.robot.theo_sell,
+                    "last_updated": self.theo_last_updated.time(),
                 },
+                "bridge": {
+                    "bridge_quote": self.robot.bridge_quote,
+                    "bridge_last_updated": self.bridge_last_updated,
+                },
+                "books seen": self.binance_book_ticker_stream_seen,
             },
             "btcturk": {
-                "best_ask": str(self.robot.best_seller),
-                "best_bid": str(self.robot.best_buyer),
-                "bid_ask_last_updated": str(self.bid_ask_last_updated.time()),
-                "btc_seen": self.btc_books_seen,
-                "orders": len(self.robot.orders),
-                "open order balance": str(self.robot.open_order_balance),
+                "bid": self.robot.best_buyer,
+                "ask": self.robot.best_seller,
+                "last_updated": self.bid_ask_last_updated.time(),
+                "books seen": self.btc_books_seen,
+            },
+            "orders": {
+                "total": len(self.robot.orders),
+                "open orders, approximate amount": self.robot.open_order_balance,
             },
         }
 

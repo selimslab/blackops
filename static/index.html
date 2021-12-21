@@ -68,56 +68,68 @@
       <h1 class="has-text-danger mb-10">Summary</h1>
 
       <div class="columns">
+
         <div class="column">
           <pre class="has-background-dark has-text-success">
 {{ JSON.stringify(stats, null, 2) }}</pre
           >
         </div>
 
-        <div class="column" style="height: 30rem; overflow: scroll">
-          <h2 class="has-text-danger">Longs</h2>
-          <br />
-          <br />
+        <div class="column">
 
-          <ul>
-            <li v-for="order in long_orders">{{order}}</li>
-          </ul>
+          <div style="height: 32rem; overflow: scroll">
+            <h2 class="has-text-danger">Longs</h2>
+            <br />
+            <br />
+  
+            <ul>
+              <li v-for="order in long_orders">{{order}}</li>
+            </ul>
+  
+          </div>
+
+          <div style="height: 32rem; overflow: scroll">
+            <h1 class="has-text-danger">Messages</h1>
+            <br />
+            <br />
+  
+            <ul>
+              <li class="" v-for="message in messages">{{message}}</li>
+            </ul>
+
+          </div>
+
+
         </div>
 
-        <div class="column" style="height: 30rem; overflow: scroll">
-          <h2 class="has-text-danger">Shorts</h2>
-          <br />
-          <br />
 
-          <ul>
-            <li v-for="order in short_orders">{{order}}</li>
-          </ul>
+        <div class="column">
+          <div style="height: 32rem; overflow: scroll">
+
+            <h2 class="has-text-danger">Shorts</h2>
+            <br />
+            <br />
+
+            <ul>
+              <li v-for="order in short_orders">{{order}}</li>
+            </ul>
+          </div>
+
+
+            <div style="height: 32rem; overflow: scroll">
+              <h2 class="has-text-danger">Errors</h2>
+              <br />
+              <br />
+    
+              <ul>
+                <li v-for="error in errors">{{error}}</li>
+              </ul>
+            </div>
+
         </div>
-      </div>
 
-      <div class="columns"></div>
 
-      <div class="columns">
-        <div class="column" style="height: 25rem; overflow: scroll">
-          <h1 class="has-text-danger">Messages</h1>
-          <br />
-          <br />
 
-          <ul>
-            <li class="" v-for="message in messages">{{message}}</li>
-          </ul>
-        </div>
-
-        <div class="column" style="height: 25rem; overflow: scroll">
-          <h2 class="has-text-danger">Errors</h2>
-          <br />
-          <br />
-
-          <ul>
-            <li v-for="error in errors">{{error}}</li>
-          </ul>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -151,7 +163,7 @@
           });
 
           channel.bind("stats", function (data) {
-            app.stats = data.message;
+            app.stats = JSON.parse(data.message);
           });
 
           channel.bind("message", function (data) {
