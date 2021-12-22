@@ -2,12 +2,12 @@
 files: ^blackops/ # just check the files under src/ 
 default_stages: [commit, push] # run on commit and push 
 repos:
-  - repo: local
-    hooks:
-      - id: mypy-local
-        name: mypy-local
-        entry: bash scripts/mypy.sh
-        language: system
+  # - repo: local
+  #   hooks:
+  #     - id: mypy-local
+  #       name: mypy-local
+  #       entry: bash scripts/mypy.sh
+  #       language: system
 
   # - repo: local
   #   hooks:
