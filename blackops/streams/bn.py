@@ -44,17 +44,17 @@ async def binance_stream_generator(symbol: str, stream_type: str):
     except Exception as e:
         await client.close_connection()
         msg = f"binance stream disconnected: {e}"
-        logger.error(msg)
+        logger.error(f"binance_stream_generator: {msg}")
         raise e
 
 
 def log_and_publish_error(channel, msg):
-    logger.error(msg)
+    logger.error(f"log_and_publish_error: {msg}")
     pub.publish_error(channel, msg)
 
 
 def log_and_publish_message(channel, msg):
-    logger.error(msg)
+    logger.error(f"log_and_publish_message: {msg}")
     pub.publish_message(channel, msg)
 
 

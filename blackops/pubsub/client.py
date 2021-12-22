@@ -11,4 +11,4 @@ try:
         ssl=True,
     )
 except ConnectionError as e:
-    logger.error(e)
+    logger.error(f"pusher: {e}")

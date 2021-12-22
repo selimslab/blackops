@@ -24,7 +24,7 @@ class BtcturkApiClientTestnet(BtcturkBase):
             )
             return res.dict()
         except Exception as e:
-            logger.error(e)
+            logger.error(f"submit_limit_order: {e}")
             raise e
 
     async def get_open_orders(self, pair: AssetPair) -> dict:

@@ -57,7 +57,7 @@ class BtcturkApiClient(BtcturkBase):
                 return await res.json()
             else:
                 msg = f"{str(res.status)} {res.reason} {uri}"
-                logger.error(msg)
+                logger.error(f"_hhtp: {msg}")
                 return {}
 
     async def _get_account_balance(self) -> dict:

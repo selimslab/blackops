@@ -130,7 +130,9 @@ class SlidingWindowTrader(RobotBase):
             (
                 self.open_asks,
                 self.open_bids,
-            ) = await self.follower_exchange.get_open_asks_and_bids(self.pair)
+            ) = await self.follower_exchange.get_open_asks_and_bids(
+                self.pair
+            )  #  type: ignore
             prev_order_count = order_count
 
     async def update_balances(self):
@@ -297,7 +299,7 @@ class SlidingWindowTrader(RobotBase):
 
     async def send_order(self, side, price, qty, theo):
         try:
-            res = await self.follower_exchange.submit_limit_order(
+            res: Optional[dict] = await self.follower_exchange.submit_limit_order(
                 self.pair, side, price, qty
             )
             if not res:

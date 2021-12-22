@@ -58,6 +58,7 @@ class BtcturkBase(ExchangeBase):
             raise Exception("Could not get account balance")
 
         balance_list = res.get("data", [])
+
         # btc calls asset, we call symbol
         try:
             balance_dict = {
@@ -82,7 +83,7 @@ class BtcturkBase(ExchangeBase):
             else:
                 return balance_dict
         except Exception as e:
-            logger.error(e)
+            logger.error(f"get_account_balance: {e}")
             raise e
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:

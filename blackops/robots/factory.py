@@ -86,5 +86,5 @@ def create_trader_from_strategy(stg: StrategyConfig) -> Robot:
         robot = factory_func(stg)
         return robot
     except Exception as e:
-        logger.error(e)
+        logger.error(f"create_trader_from_strategy: {e}")
         raise e

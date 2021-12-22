@@ -69,5 +69,11 @@ async def test_orderbook_stream():
         print(book)
 
 
+async def test_obdiff_stream():
+    async for book in create_ws_stream(MessageType.OBDIFF, "USDTTRY"):
+        print(book)
+
+
 if __name__ == "__main__":
     asyncio.run(test_orderbook_stream())
+    # asyncio.run(test_obdiff_stream())

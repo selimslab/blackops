@@ -41,9 +41,9 @@ async def reconnecting_generator(generator_factory: Callable, channel: str = "de
             retries += 1
             gen = generator_factory()
             msg = f"Reconnecting, retries: {retries}: {e}"
-            logger.error(msg)
+            logger.error(f"reconnecting_generator: {msg}")
         except Exception as e:
             msg = f"WS stream lost: {e}"
-            logger.error(msg)
+            logger.error(f"reconnecting_generator: {msg}")
             pub.publish_error(channel, msg)
             raise e

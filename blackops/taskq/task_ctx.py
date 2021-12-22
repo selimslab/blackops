@@ -41,7 +41,7 @@ class TaskContext:
         except TimeoutError:
             self.task_state[sha] = TaskStatus.COMPLETED
         except Exception as e:
-            logger.error(f"{sha} failed: {e}")
+            logger.error(f"start_task: {sha} failed: {e}")
             self.task_state[sha] = TaskStatus.FAILED
         finally:
             self._clean_task(sha)
