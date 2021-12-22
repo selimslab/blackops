@@ -1,0 +1,2 @@
+dmypy run blackops/*.py
+ 
