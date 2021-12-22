@@ -1,5 +1,6 @@
 import asyncio
-import json
+
+import simplejson as json  # type: ignore
 
 
 async def create_bt_test_generator(data):

@@ -1,6 +1,7 @@
 import asyncio
-import json
 from enum import Enum
+
+import simplejson as json  # type: ignore
 
 from blackops.util.logger import logger
 from blackops.util.ws import reconnecting_generator, ws_stream

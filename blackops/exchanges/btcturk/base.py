@@ -1,7 +1,8 @@
-import json
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import List, Optional
+
+import simplejson as json  # type: ignore
 
 from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.base import ExchangeBase
