@@ -124,19 +124,11 @@ class BtcturkBase(ExchangeBase):
 
             if open_asks:
                 open_ask_amount = Decimal(
-                    sum(
-                        Decimal(ask.get("leftAmount", "0"))
-                        for ask in open_asks
-                        if ask and isinstance(ask, dict)
-                    )
+                    sum(Decimal(ask.get("leftAmount", "0")) for ask in open_asks)
                 )
             if open_bids:
                 open_bid_amount = Decimal(
-                    sum(
-                        Decimal(bid.get("leftAmount", "0"))
-                        for bid in open_bids
-                        if bid and isinstance(bid, dict)
-                    )
+                    sum(Decimal(bid.get("leftAmount", "0")) for bid in open_bids)
                 )
 
         return (open_asks, open_bids, open_ask_amount, open_bid_amount)

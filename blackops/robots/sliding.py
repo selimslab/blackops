@@ -132,14 +132,17 @@ class SlidingWindowTrader(RobotBase):
             if order_count == prev_order_count:
                 continue
 
-            (
-                self.open_asks,
-                self.open_bids,
-                self.open_ask_amount,
-                self.open_bid_amount,
-            ) = await self.follower_exchange.get_open_asks_and_bids(  #  type: ignore
-                self.pair
-            )
+            try:
+                (
+                    self.open_asks,
+                    self.open_bids,
+                    self.open_ask_amount,
+                    self.open_bid_amount,
+                ) = await self.follower_exchange.get_open_asks_and_bids(  #  type: ignore
+                    self.pair
+                )
+            except Exception as e:
+                logger.error(f"update_open_order_balance: {e}")
             prev_order_count = order_count
 
     async def update_balances(self):
