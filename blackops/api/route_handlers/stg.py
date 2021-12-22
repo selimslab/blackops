@@ -1,7 +1,7 @@
-import json
 from datetime import datetime
 from typing import List
 
+import simplejson as json  # type: ignore
 from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
