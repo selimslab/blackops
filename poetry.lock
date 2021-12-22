@@ -955,6 +955,14 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "types-simplejson"
+version = "3.17.2"
+description = "Typing stubs for simplejson"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "typing-extensions"
 version = "4.0.1"
 description = "Backported and Experimental Type Hints for Python 3.6+"
@@ -1121,7 +1129,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8.12"
-content-hash = "db2ff7b59be879d12557989b92dcab63844ec0a9537400860317f5be9e755914"
+content-hash = "16e16efeb221a3ca49591538b00d0bff60bf689718dae541f40acb7ff229c72e"
 
 [metadata.files]
 aiodns = [
@@ -2105,6 +2113,10 @@ toml = [
 tomli = [
     {file = "tomli-1.2.2-py3-none-any.whl", hash = "sha256:f04066f68f5554911363063a30b108d2b5a5b1a010aa8b6132af78489fe3aade"},
     {file = "tomli-1.2.2.tar.gz", hash = "sha256:c6ce0015eb38820eaf32b5db832dbc26deb3dd427bd5f6556cf0acac2c214fee"},
+]
+types-simplejson = [
+    {file = "types-simplejson-3.17.2.tar.gz", hash = "sha256:37ee5a1e30c69196ab52672664509dc40b9c2fed7dacdb5587701e0b768b6bfb"},
+    {file = "types_simplejson-3.17.2-py3-none-any.whl", hash = "sha256:a1ea755d518bb87038c7a2aaefc77d3ad43976dee5566dfd6ca5aa5758ec7a0f"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.0.1-py3-none-any.whl", hash = "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"},

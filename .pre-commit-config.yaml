@@ -9,7 +9,6 @@ repos:
       types: [python] # trigger for commits changing Python files
       require_serial: true # so that script is only called once per commit
       verbose: true
-      args: [--ignore-missing-imports]
 
 
   - repo: https://github.com/timothycrosley/isort
