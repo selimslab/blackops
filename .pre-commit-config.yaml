@@ -2,6 +2,15 @@
 files: ^blackops/ # just check the files under src/ 
 default_stages: [commit, push] # run on commit and push 
 repos:
+  - repo: local
+    hooks:
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: This hook trims trailing whitespace.
+        entry: trailing-whitespace-fixer
+        language: python
+        types: [text]
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.921
     hooks:
