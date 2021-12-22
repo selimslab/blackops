@@ -4,12 +4,10 @@ default_stages: [commit, push] # run on commit and push
 repos:
   - repo: local
     hooks:
-      - id: trailing-whitespace
-        name: Trim Trailing Whitespace
-        description: This hook trims trailing whitespace.
-        entry: trailing-whitespace-fixer
-        language: python
-        types: [text]
+      - id: clean
+        name: clean
+        entry: bash scripts/clean.sh
+        language: script
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.921
