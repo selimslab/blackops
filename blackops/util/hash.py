@@ -1,5 +1,6 @@
 import hashlib
-import json
+
+import simplejson as json  # type: ignore
 
 
 def dict_to_hash(d: dict) -> str:
