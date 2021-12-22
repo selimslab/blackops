@@ -34,6 +34,8 @@ class BtcturkBase(ExchangeBase):
 
     @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
+        if not book:
+            return None
         purchase_orders = book.get("BO", [])
         if purchase_orders:
             prices = [order.get("P") for order in purchase_orders]
@@ -43,6 +45,8 @@ class BtcturkBase(ExchangeBase):
 
     @staticmethod
     def get_best_ask(book: dict) -> Optional[Decimal]:
+        if not book:
+            return None
         sales_orders = book.get("AO", [])
         if sales_orders:
             prices = [order.get("P") for order in sales_orders]
@@ -55,7 +59,7 @@ class BtcturkBase(ExchangeBase):
 
     async def get_account_balance(self, symbols: Optional[List[str]] = None) -> dict:
         res = await self._get_account_balance()
-        if not res:
+        if not res or not isinstance(res, dict):
             raise Exception("Could not get account balance")
 
         balance_list = res.get("data", [])

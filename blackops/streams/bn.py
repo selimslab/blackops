@@ -34,7 +34,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
                         'm': 'Max reconnect retries reached'
                     }
                     """
-                    if msg.get("e", "") == "error":
+                    if msg and isinstance(msg, dict) and msg.get("e", "") == "error":
                         raise BinanceWebSocketException(msg)
 
                     yield msg
