@@ -13,63 +13,27 @@ from blackops.util.logger import logger
 class BtcturkApiClientTestnet(BtcturkBase):
     name: str = "btcturk_testnet"
 
-    test_exchange: BtcturkDummy = BtcturkDummy()
+    dummy_exchange: BtcturkDummy = BtcturkDummy()
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
-    ):
+    ) -> dict:
         try:
-            return await self.test_exchange.process_limit_order(
+            res = await self.dummy_exchange._submit_limit_order(
                 pair=pair,
                 order_type=order_type,
                 price=price,
                 quantity=quantity,
             )
+            return res.dict()
         except Exception as e:
             logger.error(e)
             raise e
 
-    async def get_open_orders(self, symbol: str) -> Optional[dict]:
-        return await self.test_exchange.get_open_orders(symbol)
+    async def get_open_orders(self, pair: AssetPair) -> dict:
+        res = await self.dummy_exchange.get_open_orders(pair)
+        return res.dict()
 
-    async def _get_account_balance(self, assets: Optional[List[str]] = None):
-        return await self.test_exchange.get_account_balance()
-
-    async def get_open_order_balance(self, symbol: str) -> Decimal:
-        return Decimal("0")
-
-
-async def test_submit_limit_order():
-    client = BtcturkApiClientTestnet()
-    res = await client.submit_limit_order(
-        pair=AssetPair(base=Asset("BTC"), quote=Asset("USD")),
-        order_type="buy",
-        price=0.000001,
-        quantity=100,
-    )
-
-    print(res)
-    assert res["success"] is False
-
-    client.test_exchange.add_balance("TRY", Decimal("2000"))
-
-    res = await client.submit_limit_order(
-        pair=AssetPair(base=Asset("USDT"), quote=Asset("TRY")),
-        order_type="buy",
-        price=16.42,
-        quantity=100,
-    )
-    print(res)
-    assert res["success"] is True
-
-    res = await client.get_account_balance()
-    print(res)
-    expected = {
-        "TRY": {"free": Decimal("355.044399999999829162788956"), "locked": 0},
-        "USDT": {"free": Decimal("100"), "locked": 0},
-    }
-    assert res == expected
-
-
-if __name__ == "__main__":
-    asyncio.run(test_submit_limit_order())
+    async def _get_account_balance(self):
+        res = await self.dummy_exchange.mock_account_balance()
+        return res.dict()

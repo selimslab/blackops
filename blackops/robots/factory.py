@@ -32,15 +32,15 @@ def sliding_window_factory(stg: SlidingWindowConfig):
     )  # type:ignore
 
     if network == NetworkType.TESTNET and follower_exchange:
-        follower_exchange.test_exchange.add_balance(  # type:ignore
-            stg.quote, stg.max_usable_quote_amount_y * 3
+        follower_exchange.dummy_exchange.add_balance(  # type:ignore
+            Asset(symbol=stg.quote), stg.max_usable_quote_amount_y * 3
         )
 
     leader_exchange: ExchangeBase = create_exchange(
         ExchangeType(stg.leader_exchange), network
     )  # type:ignore
 
-    pair = AssetPair(Asset(stg.base), Asset(stg.quote))
+    pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
 
     bridge_symbol = stg.bridge
     if bridge_symbol:

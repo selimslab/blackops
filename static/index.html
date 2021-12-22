@@ -74,9 +74,9 @@
 
           <h1 class="has-text-danger mb-10">Config</h1>
 
-          <pre class="has-background-dark has-text-success">
-{{ JSON.stringify(config, null, 2) }}</pre
-          >
+          <pre class="has-background-dark has-text-success">{{ JSON.stringify(config, null, 2) }}</pre>
+
+          
         </div>
 
 
@@ -91,29 +91,31 @@
 
           <h1 class="has-text-danger mb-10">Summary</h1>
 
-          <pre class="has-background-dark has-text-success">
-{{ JSON.stringify(stats, null, 2) }}</pre
-          >
+          <pre class="has-background-dark has-text-success">{{ JSON.stringify(stats, null, 2) }}</pre>
+          
+  
         </div>
 
         <div class="column">
 
+          <h2 class="has-text-danger">Longs</h2>
+
           <div style="height: 32rem; overflow: scroll">
-            <h2 class="has-text-danger">Longs</h2>
-            <br />
-            <br />
+
   
             <ul>
-              <li v-for="order in long_orders">{{order}}</li>
+              <li v-for="order in long_orders">
+                
+          <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
+                      
+             </li>
             </ul>
   
           </div>
 
+          <h1 class="has-text-danger">Messages</h1>
+ 
           <div style="height: 32rem; overflow: scroll">
-            <h1 class="has-text-danger">Messages</h1>
-            <br />
-            <br />
-  
             <ul>
               <li class="" v-for="message in messages">{{message}}</li>
             </ul>
@@ -125,25 +127,30 @@
 
 
         <div class="column">
+          <h2 class="has-text-danger">Shorts</h2>
+
           <div style="height: 32rem; overflow: scroll">
 
-            <h2 class="has-text-danger">Shorts</h2>
-            <br />
-            <br />
 
             <ul>
-              <li v-for="order in short_orders">{{order}}</li>
+              <li v-for="order in short_orders">
+                <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
+
+             </li>
             </ul>
           </div>
 
 
+          <h2 class="has-text-danger">Errors</h2>
             <div style="height: 32rem; overflow: scroll">
-              <h2 class="has-text-danger">Errors</h2>
-              <br />
-              <br />
-    
               <ul>
-                <li v-for="error in errors">{{error}}</li>
+                <li v-for="error in errors">
+
+                  <pre class="has-background-dark has-text-success">{{ JSON.stringify(error, null, 2) }}</pre>
+                    
+                  
+
+                </li>
               </ul>
             </div>
 

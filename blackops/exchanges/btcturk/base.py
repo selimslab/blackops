@@ -2,31 +2,19 @@ import json
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
+from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.btcturk.models import (
+    AccountBalanceResponse,
+    OpenOrdersData,
+    OpenOrdersResponse,
+    OrderData,
+    OrderType,
+    SubmitOrderResponse,
+)
 from blackops.util.logger import logger
-
-
-class OrderSide(Enum):
-    BUY = "buy"
-    SELL = "sell"
-
-
-@dataclass
-class AssetBalance:
-    asset: str
-    free: Decimal = Decimal("0")
-    locked: Decimal = Decimal("0")
-
-
-@dataclass
-class Order:
-    id: str
-    leftAmount: str
-    price: str
-    quantity: str
-    order_type: str
 
 
 @dataclass
@@ -62,34 +50,47 @@ class BtcturkBase(ExchangeBase):
             return min(prices)
         return None
 
-    async def _get_account_balance(self, assets: Optional[List[str]] = None) -> dict:
+    async def _get_account_balance(self) -> dict:
         raise NotImplementedError
 
-    async def get_account_balance(self, assets: Optional[List[str]] = None) -> dict:
-        res = await self._get_account_balance(assets)
+    async def get_account_balance(self, symbols: Optional[List[str]] = None) -> dict:
+        res = await self._get_account_balance()
+        if not res:
+            raise Exception("Could not get account balance")
+
         balance_list = res.get("data", [])
-        balance_dict = {
-            balance_info["asset"]: balance_info for balance_info in balance_list
-        }
-
-        if assets:
-            for asset in assets:
-                if asset not in balance_dict:
-                    balance_dict[asset] = asdict(AssetBalance(asset))
-
-            return {
-                asset: balance_info
-                for asset, balance_info in balance_dict.items()
-                if asset in assets
+        # btc calls asset, we call symbol
+        try:
+            balance_dict = {
+                balance_info["asset"]: balance_info for balance_info in balance_list
             }
-        else:
-            return balance_dict
+        except KeyError:
+            balance_dict = {
+                balance_info["symbol"]: balance_info for balance_info in balance_list
+            }
 
-    async def get_open_orders(self, symbol: str) -> Optional[dict]:
+        try:
+            if symbols:
+                for symbol in symbols:
+                    if symbol not in balance_dict:
+                        balance_dict[symbol] = Asset(symbol=symbol).dict()
+
+                return {
+                    symbol: balance_info
+                    for symbol, balance_info in balance_dict.items()
+                    if symbol in symbols
+                }
+            else:
+                return balance_dict
+        except Exception as e:
+            logger.error(e)
+            raise e
+
+    async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
         raise NotImplementedError
 
-    async def get_open_asks_and_bids(self, symbol: str) -> tuple:
-        open_orders = await self.get_open_orders(symbol)
+    async def get_open_asks_and_bids(self, pair: AssetPair) -> tuple:
+        open_orders = await self.get_open_orders(pair)
 
         open_asks: Decimal = Decimal("0")
         open_bids: Decimal = Decimal("0")
@@ -110,39 +111,39 @@ class BtcturkBase(ExchangeBase):
 
         return (open_asks, open_bids)
 
-    async def cancel_order(self, order_id: str) -> Optional[dict]:
-        raise NotImplementedError
+    # async def cancel_order(self, order_id: str) -> Optional[dict]:
+    #     raise NotImplementedError
 
-    async def cancel_open_orders(self, symbol: str, bids=True, asks=True):
-        """
-        we need order ids
+    # async def cancel_open_orders(self, pair: AssetPair, bids=True, asks=True):
+    #     """
+    #     we need order ids
 
-        either read from the saved
+    #     either read from the saved
 
-        or get open orders
-        """
-        res = await self.get_open_orders(symbol)
-        if not res:
-            return
+    #     or get open orders
+    #     """
+    #     res = await self.get_open_orders(pair)
+    #     if not res:
+    #         return
 
-        data = res.get("data", {})
-        asks = data.get("asks", [])
-        bids = data.get("bids", [])
+    #     data = res.get("data", {})
+    #     asks = data.get("asks", [])
+    #     bids = data.get("bids", [])
 
-        results = []
-        if bids:
-            for order in bids:
-                order_id = order.get("id")
-                res = await self.cancel_order(order_id)
-                results.append(res)
+    #     results = []
+    #     if bids:
+    #         for order in bids:
+    #             order_id = order.get("id")
+    #             res = await self.cancel_order(order_id)
+    #             results.append(res)
 
-        if asks:
-            for order in asks:
-                order_id = order.get("id")
-                res = await self.cancel_order(order_id)
-                results.append(res)
+    #     if asks:
+    #         for order in asks:
+    #             order_id = order.get("id")
+    #             res = await self.cancel_order(order_id)
+    #             results.append(res)
 
-        return results
+    #     return results
 
 
 def test_btc_base():

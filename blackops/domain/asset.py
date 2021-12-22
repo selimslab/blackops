@@ -1,11 +1,17 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from pydantic.main import BaseModel
 
-@dataclass
-class Asset:
-    symbol: str
+AssetSymbol = str
+AssetPairSymbol = str
+
+
+class Asset(BaseModel):
+    symbol: AssetSymbol
     balance: Decimal = Decimal("0")
+    free: Decimal = Decimal("0")
+    locked: Decimal = Decimal("0")
 
     def __str__(self):
         return f"{self.symbol}"
@@ -17,7 +23,7 @@ class AssetPair:
     quote: Asset
 
     def __post_init__(self):
-        self.symbol = self.base.symbol + self.quote.symbol
+        self.symbol: AssetPairSymbol = self.base.symbol + self.quote.symbol
 
     def __str__(self):
-        return f"{self.base}{self.quote}"
+        return f"{self.base}_{self.quote}"

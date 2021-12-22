@@ -11,6 +11,7 @@ import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
 from blackops.environment import debug
 from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.btcturk.base import BtcturkBase
 from blackops.robots.base import RobotBase
 from blackops.robots.config import SlidingWindowConfig, StrategyType
 from blackops.robots.stats import RobotStats
@@ -130,13 +131,13 @@ class SlidingWindowTrader(RobotBase):
             (
                 self.open_asks,
                 self.open_bids,
-            ) = await self.follower_exchange.get_open_asks_and_bids(self.pair.symbol)
+            ) = await self.follower_exchange.get_open_asks_and_bids(self.pair)
             prev_order_count = order_count
 
     async def update_balances(self):
         try:
             balances: dict = await self.follower_exchange.get_account_balance(
-                assets=[self.pair.base.symbol, self.pair.quote.symbol]
+                symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
             base_balances: dict = balances[self.pair.base.symbol]
@@ -316,10 +317,16 @@ class SlidingWindowTrader(RobotBase):
                 ts = data.get("datetime")
                 order_time = datetime.fromtimestamp(ts / 1000.0)
 
-                order_log = self.stats.create_order_log(
-                    side, order_time, price, qty, theo
-                )
+                order_log = {
+                    "time": str(order_time),
+                    "type": side,
+                    "price": str(price),
+                    "qty": str(qty),
+                    "theo": str(theo),
+                }
+
                 return order_log
+
         except Exception as e:
             logger.info(e)
             pub.publish_message(self.channnel, f"send_order: {str(e)}")
@@ -348,17 +355,6 @@ class SlidingWindowStats(RobotStats):
         message = json.dumps(message, default=str)
 
         pub.publish_stats(self.robot.channnel, message)
-
-    def create_order_log(self, side, order_time, price, qty, theo):
-        order_log = {
-            "type": side,
-            "time": str(order_time),
-            "price": str(price),
-            "qty": str(qty),
-            "theo": str(theo),
-        }
-
-        return order_log
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:

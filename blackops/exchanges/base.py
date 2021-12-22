@@ -10,7 +10,7 @@ from blackops.domain.asset import Asset, AssetPair
 class ExchangeBase(ABC):
     name: Optional[str] = None
 
-    async def get_account_balance(self, assets: Optional[List[str]] = None):
+    async def get_account_balance(self, symbols: Optional[List[str]] = None):
         raise NotImplementedError
 
     @staticmethod
@@ -32,7 +32,4 @@ class ExchangeBase(ABC):
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
-        raise NotImplementedError
-
-    async def get_open_asks_and_bids(self, symbol: str) -> tuple:
         raise NotImplementedError
