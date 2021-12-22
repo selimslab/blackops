@@ -130,9 +130,9 @@ class SlidingWindowTrader(RobotBase):
             (
                 self.open_asks,
                 self.open_bids,
-            ) = await self.follower_exchange.get_open_asks_and_bids(
+            ) = await self.follower_exchange.get_open_asks_and_bids(  #  type: ignore
                 self.pair
-            )  #  type: ignore
+            )
             prev_order_count = order_count
 
     async def update_balances(self):
@@ -163,7 +163,7 @@ class SlidingWindowTrader(RobotBase):
                 await self.update_balances()
                 self.current_step = self.pair.base.balance / self.config.base_step_qty
             except Exception as e:
-                logger.info(e)
+                logger.info(f"update_balances_periodically: {e}")
                 # continue trying to read balances
 
             await asyncio.sleep(0.7)  # 90 rate limit
@@ -205,7 +205,7 @@ class SlidingWindowTrader(RobotBase):
             self.stats.bid_ask_last_updated = datetime.now()
 
         except Exception as e:
-            logger.info(e)
+            logger.info(f"update_follower_prices: {e}")
 
     async def should_transact(self):
         if self.should_long():
@@ -271,7 +271,7 @@ class SlidingWindowTrader(RobotBase):
             if order_log:
                 self.longs.append(order_log)
         except Exception as e:
-            logger.info(e)
+            logger.info(f"long: {e}")
         finally:
             self.long_in_progress = False
             await self.stats.update_pnl()
@@ -292,7 +292,7 @@ class SlidingWindowTrader(RobotBase):
             if order_log:
                 self.shorts.append(order_log)
         except Exception as e:
-            logger.info(e)
+            logger.info(f"short: {e}")
         finally:
             self.short_in_progress = False
             await self.stats.update_pnl()
@@ -327,7 +327,7 @@ class SlidingWindowTrader(RobotBase):
             return order_log
 
         except Exception as e:
-            logger.info(e)
+            logger.info(f"send_order: {e}")
             pub.publish_message(self.channnel, f"send_order: {str(e)}")
 
 
@@ -356,9 +356,6 @@ class SlidingWindowStats(RobotStats):
 
     def broadcast_stats(self):
         message = self.create_stats_message()
-
-        # if debug:
-        #     logger.info(message)
 
         message = json.dumps(message, default=str)
 

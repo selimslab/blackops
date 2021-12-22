@@ -91,7 +91,7 @@ async def reconnecting_binance_generator(
             gen = generator_factory()
 
             msg = f"Reconnecting binance ({retries}), {e}"
-            logger.info(msg)
+            logger.info(f"reconnecting_binance_generator: {msg}")
             continue
 
         except Exception as e:
