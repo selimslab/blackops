@@ -1,8 +1,7 @@
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from decimal import Decimal
-from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.base import ExchangeBase

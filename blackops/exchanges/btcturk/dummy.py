@@ -1,10 +1,8 @@
 import asyncio
-import collections
 import random
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Dict, List, Optional
 
 from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.btcturk.models import (
@@ -124,7 +122,7 @@ class BtcturkDummy:
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> SubmitOrderResponse:
 
-        self._init_asset_if_not_exists(pair.base)
+        self._init_asset_if_not_exists(pair.base.symbol)
         self._init_asset_if_not_exists(pair.quote.symbol)
         self._init_pair_if_not_exists(pair.symbol)
 

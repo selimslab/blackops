@@ -13,7 +13,7 @@ from blackops.util.logger import logger
 
 
 async def ws_stream(uri: str, message: str, sleep=0):
-    async with websockets.connect(uri=uri) as ws:
+    async with websockets.connect(uri=uri) as ws:  # type: ignore
         while True:
             await ws.send(message)
             data = await ws.recv()

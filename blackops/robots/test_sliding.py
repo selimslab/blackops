@@ -1,10 +1,9 @@
 import asyncio
-from dataclasses import asdict
+import json
 from datetime import datetime
 from decimal import Decimal
 from pprint import pprint
 
-import simplejson as json
 from async_timeout import timeout
 
 from blackops.exchanges.factory import ExchangeType, NetworkType, create_exchange

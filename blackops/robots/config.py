@@ -1,13 +1,10 @@
-import time
 import uuid
-from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional
+from typing import Optional
 
 import pydantic
-import simplejson as json
 from pydantic import BaseModel, Field
 
 from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES

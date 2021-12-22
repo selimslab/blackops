@@ -4,8 +4,7 @@ import hmac
 import time
 import urllib.parse
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import aiohttp
 

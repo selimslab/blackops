@@ -1,11 +1,10 @@
 import asyncio
 import itertools
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, getcontext
-from typing import Any, AsyncGenerator, List, Optional
-
-import simplejson as json
+from typing import Any, AsyncGenerator, Optional
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair

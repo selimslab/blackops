@@ -1,4 +1,3 @@
-
 # Remove unused imports
 autoflake --in-place -r blackops/
 

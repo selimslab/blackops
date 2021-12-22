@@ -1,4 +1,3 @@
-import simplejson as json
 from fastapi import APIRouter, Depends, HTTPException
 
 import blackops.api.route_handlers.stg as stg_handler
