@@ -3,7 +3,7 @@ files: ^blackops/ # just check the files under src/
 default_stages: [commit, push] # run on commit and push 
 repos:
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.812
+    rev: v0.921
     hooks:
     - id: mypy
       types: [python] # trigger for commits changing Python files
@@ -13,18 +13,18 @@ repos:
 
 
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.9.1
+    rev: 5.10.1
     hooks:
     - id: isort
       args: [--filter-files, "--profile", "black"] # be cmpatible with black
       files: \.py$ # only sort .py 
 
   - repo: https://github.com/ambv/black
-    rev: 21.5b0
+    rev: 21.12b0
     hooks:
     - id: black
 
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.1
+    rev: 3.9.2
     hooks:
     - id: flake8
