@@ -55,8 +55,11 @@ class SlidingWindowTrader(RobotBase):
     long_in_progress: bool = False
     short_in_progress: bool = False
 
-    open_asks: Decimal = Decimal("0")
-    open_bids: Decimal = Decimal("0")
+    open_ask_amount: Decimal = Decimal("0")
+    open_bid_amount: Decimal = Decimal("0")
+
+    open_asks: list = field(default_factory=list)
+    open_bids: list = field(default_factory=list)
 
     async def run(self):
         self.channnel = self.config.sha
@@ -128,9 +131,12 @@ class SlidingWindowTrader(RobotBase):
             order_count = len(self.longs) + len(self.shorts)
             if order_count == prev_order_count:
                 continue
+
             (
                 self.open_asks,
                 self.open_bids,
+                self.open_ask_amount,
+                self.open_bid_amount,
             ) = await self.follower_exchange.get_open_asks_and_bids(  #  type: ignore
                 self.pair
             )
@@ -224,12 +230,15 @@ class SlidingWindowTrader(RobotBase):
         safety_margin = Decimal("1.01")
         if self.best_seller:
             open_bid_cost = (
-                self.open_bids
+                self.open_bid_amount  # 3 ETH
                 * self.best_seller
                 * self.follower_exchange.buy_with_fee  # type: ignore
                 * safety_margin
             )
-            total_used += open_bid_cost
+            open_ask_gain = (
+                self.open_ask_amount * self.best_buyer * self.follower_exchange.sell_with_fee  # type: ignore
+            )
+            total_used += open_bid_cost - open_ask_gain
         return total_used < self.config.max_usable_quote_amount_y
 
     def should_long(self):
@@ -241,7 +250,7 @@ class SlidingWindowTrader(RobotBase):
             and self.best_seller <= self.theo_buy
             and self.pair.quote.balance > self.best_seller * self.config.base_step_qty
             and self.have_usable_balance()
-        )
+        )  #
 
     def should_short(self):
         #  act only when you are ahead
@@ -268,6 +277,14 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             self.long_in_progress = True
+
+            try:
+                if self.open_bids:
+                    for order in self.open_bids:
+                        await self.follower_exchange.cancel_order(order.get("id"))
+            except Exception as e:
+                logger.error(f"cancel longs: {e}")
+
             order_log = await self.send_order("buy", price, qty, self.theo_buy)
             if order_log:
                 self.longs.append(order_log)
@@ -289,6 +306,14 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             self.short_in_progress = True
+            # cancel old
+            try:
+                if self.open_asks:
+                    for order in self.open_asks:
+                        await self.follower_exchange.cancel_order(order.get("id"))
+            except Exception as e:
+                logger.error(f"cancel shorts: {e}")
+
             order_log = await self.send_order("sell", price, qty, self.theo_sell)
             if order_log:
                 self.shorts.append(order_log)
@@ -303,7 +328,6 @@ class SlidingWindowTrader(RobotBase):
             res: Optional[dict] = await self.follower_exchange.submit_limit_order(
                 self.pair, side, price, qty
             )
-
             ok = (
                 res
                 and isinstance(res, dict)
@@ -316,11 +340,14 @@ class SlidingWindowTrader(RobotBase):
 
             data = res.get("data", {})
 
+            order_id = data.get("id")
+
             ts = data.get("datetime")
             order_time = datetime.fromtimestamp(ts / 1000.0)
 
             order_log = {
                 "time": str(order_time),
+                "id": order_id,
                 "type": side,
                 "price": str(price),
                 "qty": str(qty),

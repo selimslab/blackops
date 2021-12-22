@@ -14,6 +14,8 @@ class BinanceBase(ExchangeBase):
 
     @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
+        if not book:
+            return None
         try:
             best_bid = book.get("data", {}).get("b")
             if best_bid:
@@ -25,7 +27,8 @@ class BinanceBase(ExchangeBase):
 
     @staticmethod
     def get_best_ask(book: dict) -> Optional[Decimal]:
-
+        if not book:
+            return None
         try:
             best_ask = book.get("data", {}).get("a")
             if best_ask:

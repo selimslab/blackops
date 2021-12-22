@@ -154,12 +154,12 @@ class BtcturkApiClient(BtcturkBase):
     #     uri = update_url_query_params(self.all_orders_url, params)
     #     return await self._http(uri, self.session.get)
 
-    # async def cancel_order(self, order_id: str) -> Optional[dict]:
-    #     if not order_id:
-    #         raise Exception("order id is required")
+    async def cancel_order(self, order_id: str) -> Optional[dict]:
+        if not order_id:
+            raise Exception("order id is required")
 
-    #     uri = update_url_query_params(self.order_url, {"id": order_id})
-    #     return await self._http(uri, self.session.delete)
+        uri = update_url_query_params(self.order_url, {"id": order_id})
+        return await self._http(uri, self.session.delete)
 
     # def get_ticker(pair:str):
     #     ticker_path = "/api/v2/ticker"

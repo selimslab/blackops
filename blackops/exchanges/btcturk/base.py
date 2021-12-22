@@ -38,9 +38,14 @@ class BtcturkBase(ExchangeBase):
             return None
         purchase_orders = book.get("BO", [])
         if purchase_orders:
-            prices = [order.get("P") for order in purchase_orders]
-            prices = [Decimal(price) for price in prices if price]
-            return max(prices)
+            str_prices = [
+                order.get("P")
+                for order in purchase_orders
+                if order and isinstance(order, dict)
+            ]
+            if str_prices:
+                prices = [Decimal(price) for price in str_prices if price]
+                return max(prices)
         return None
 
     @staticmethod
@@ -49,9 +54,16 @@ class BtcturkBase(ExchangeBase):
             return None
         sales_orders = book.get("AO", [])
         if sales_orders:
-            prices = [order.get("P") for order in sales_orders]
-            prices = [Decimal(price) for price in prices if price]
-            return min(prices)
+            str_prices = [
+                order.get("P")
+                for order in sales_orders
+                if order and isinstance(order, dict)
+            ]
+            if str_prices:
+                prices: List[Decimal] = [
+                    Decimal(price) for price in str_prices if price
+                ]
+                return min(prices)
         return None
 
     async def _get_account_balance(self) -> dict:
@@ -92,32 +104,42 @@ class BtcturkBase(ExchangeBase):
             raise e
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
+        """
+        new in the bottom of the page
+        """
         raise NotImplementedError
 
     async def get_open_asks_and_bids(self, pair: AssetPair) -> tuple:
-        open_orders = await self.get_open_orders(pair)
+        open_orders: Optional[dict] = await self.get_open_orders(pair)
 
-        open_asks: Decimal = Decimal("0")
-        open_bids: Decimal = Decimal("0")
+        open_ask_amount: Decimal = Decimal("0")
+        open_bid_amount: Decimal = Decimal("0")
+        open_bids: list = []
+        open_asks: list = []
 
         if open_orders:
             data = open_orders.get("data", {})
-            bids = data.get("bids", [])
-            asks = data.get("asks", [])
+            open_bids = data.get("bids", [])
+            open_asks = data.get("asks", [])
 
-            if asks:
-                open_asks = Decimal(
-                    sum(Decimal(ask.get("leftAmount", "0")) for ask in asks)
+            if open_asks:
+                open_ask_amount = Decimal(
+                    sum(
+                        Decimal(ask.get("leftAmount", "0"))
+                        for ask in open_asks
+                        if ask and isinstance(ask, dict)
+                    )
                 )
-            if bids:
-                open_bids = Decimal(
-                    sum(Decimal(bid.get("leftAmount", "0")) for bid in bids)
+            if open_bids:
+                open_bid_amount = Decimal(
+                    sum(
+                        Decimal(bid.get("leftAmount", "0"))
+                        for bid in open_bids
+                        if bid and isinstance(bid, dict)
+                    )
                 )
 
-        return (open_asks, open_bids)
-
-    # async def cancel_order(self, order_id: str) -> Optional[dict]:
-    #     raise NotImplementedError
+        return (open_asks, open_bids, open_ask_amount, open_bid_amount)
 
     # async def cancel_open_orders(self, pair: AssetPair, bids=True, asks=True):
     #     """

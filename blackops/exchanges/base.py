@@ -33,3 +33,6 @@ class ExchangeBase(ABC):
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
         raise NotImplementedError
+
+    async def cancel_order(self, order_id: str) -> Optional[dict]:
+        raise NotImplementedError
