@@ -260,6 +260,7 @@ class SlidingWindowTrader(RobotBase):
             and self.theo_sell
             and self.best_buyer >= self.theo_sell
             and self.pair.base.balance
+            and self.pair.base.balance >= self.config.base_step_qty
         )
 
     async def long(self):
