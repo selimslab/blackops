@@ -123,7 +123,7 @@ class BtcturkDummy:
     ) -> SubmitOrderResponse:
 
         self._init_asset_if_not_exists(pair.base.symbol)
-        self._init_asset_if_not_exists(pair.quote.symbol)
+        self._init_asset_if_not_exists(pair.quote)
         self._init_pair_if_not_exists(pair.symbol)
 
         order = OrderData(
