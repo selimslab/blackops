@@ -268,11 +268,11 @@ class SlidingWindowTrader(RobotBase):
             order_log = await self.send_order("buy", price, qty, self.theo_buy)
             if order_log:
                 self.longs.append(order_log)
-                await self.stats.update_pnl()
         except Exception as e:
             logger.info(e)
         finally:
             self.long_in_progress = False
+            await self.stats.update_pnl()
 
     async def short(self):
         if not self.best_buyer or not self.config.base_step_qty:
@@ -289,11 +289,11 @@ class SlidingWindowTrader(RobotBase):
             order_log = await self.send_order("sell", price, qty, self.theo_sell)
             if order_log:
                 self.shorts.append(order_log)
-                await self.stats.update_pnl()
         except Exception as e:
             logger.info(e)
         finally:
             self.short_in_progress = False
+            await self.stats.update_pnl()
 
     async def send_order(self, side, price, qty, theo):
         try:
@@ -304,31 +304,38 @@ class SlidingWindowTrader(RobotBase):
                 msg = f"no response for order request {side} {price} {qty}"
                 raise Exception(msg)
 
-            is_ok = res and res.get("success") and res.get("data")
-            if not is_ok:
+            ok = res and res.get("success", False) and res.get("data", None)
+            if not ok:
                 msg = f"could not {side} {qty} {self.pair.base.symbol} for {price}, reason: {res}"
                 raise Exception(msg)
 
-            if res and res.get("data"):
+            data = res.get("data", {})
 
-                data = res.get("data", {})
+            ts = data.get("datetime")
+            order_time = datetime.fromtimestamp(ts / 1000.0)
 
-                ts = data.get("datetime")
-                order_time = datetime.fromtimestamp(ts / 1000.0)
+            order_log = {
+                "time": str(order_time),
+                "type": side,
+                "price": str(price),
+                "qty": str(qty),
+                "theo": str(theo),
+            }
 
-                order_log = {
-                    "time": str(order_time),
-                    "type": side,
-                    "price": str(price),
-                    "qty": str(qty),
-                    "theo": str(theo),
-                }
-
-                return order_log
+            return order_log
 
         except Exception as e:
             logger.info(e)
             pub.publish_message(self.channnel, f"send_order: {str(e)}")
+
+
+@dataclass
+class OrderLog:
+    time: str
+    type: str
+    price: str
+    qty: str
+    theo: str
 
 
 @dataclass
