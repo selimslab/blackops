@@ -302,13 +302,13 @@ class SlidingWindowTrader(RobotBase):
             res: Optional[dict] = await self.follower_exchange.submit_limit_order(
                 self.pair, side, price, qty
             )
-            if not res:
-                msg = f"no response for order request {side} {price} {qty}"
+            if not res or not isinstance(res, dict):
+                msg = f"bad response for order request {side} {price} {qty}, response: {res}"
                 raise Exception(msg)
 
             ok = res and res.get("success", False) and res.get("data", None)
             if not ok:
-                msg = f"could not {side} {qty} {self.pair.base.symbol} for {price}, reason: {res}"
+                msg = f"could not {side} {qty} {self.pair.base.symbol} for {price}, response: {res}"
                 raise Exception(msg)
 
             data = res.get("data", {})
@@ -365,8 +365,6 @@ class SlidingWindowStats(RobotStats):
         try:
             if self.robot.pair.base.balance is None or self.robot.best_buyer is None:
                 return None
-
-            # await self.update_balances()
 
             approximate_sales_gain: Decimal = (
                 self.robot.pair.base.balance
