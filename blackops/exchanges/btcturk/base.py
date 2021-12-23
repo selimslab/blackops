@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
@@ -123,6 +124,17 @@ class BtcturkBase(ExchangeBase):
         except Exception as e:
             logger.error(f"cancel longs: {e}")
             raise e
+
+    @staticmethod
+    def parse_submit_order_response(res: dict):
+        data = res.get("data", {})
+
+        order_id = data.get("id")
+
+        ts = data.get("datetime")
+        order_time = datetime.fromtimestamp(ts / 1000.0)
+
+        return order_time
 
     async def _close_session(self):
         pass

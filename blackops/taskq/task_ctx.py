@@ -46,12 +46,15 @@ class TaskContext:
             pub.publish_message(channel=stg.sha, message=msg)
             return self.task_state[sha]
         except Exception as e:
-            logger.error(f"start_task: {sha} failed: {e}")
             self.task_state[sha] = TaskStatus.FAILED
-            await self.clean_task(sha)
-            msg = f"error: {e}, restarting task {sha}"
+
+            # log
+            msg = f"start_task: {sha} failed: {e}, restarting task {sha}"
             pub.publish_error(channel=stg.sha, message=msg)
             logger.error(msg)
+
+            # restart robot
+            await self.clean_task(sha)
             # TODO this will break timeout, fix it
             await self.start_task(stg, timeout_seconds)
 
@@ -62,16 +65,22 @@ class TaskContext:
                 await trader.close()
         except Exception as e:
             logger.error(f"close_trader: {e}")
+            raise e
 
     async def clean_task(self, sha):
-        await self.close_trader(sha)
-        del self.tasks[sha]
-        del self.traders[sha]
+        try:
+            await self.close_trader(sha)
+            del self.traders[sha]
+
+            self.tasks[sha].cancel()
+            del self.tasks[sha]
+        except Exception as e:
+            logger.error(f"clean_task: {e}")
+            raise e
 
     async def cancel_task(self, sha):
         if sha not in self.tasks:
             return
-        self.tasks[sha].cancel()
         await self.clean_task(sha)
         self.task_state[sha] = TaskStatus.STOPPED
 

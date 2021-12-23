@@ -42,8 +42,8 @@ class SubmitOrderResponse(BaseModel):
 
 
 class OpenOrdersData(BaseModel):
-    bids: Dict[OrderId, OrderData] = Field(default_factory=dict)
-    asks: Dict[OrderId, OrderData] = Field(default_factory=dict)
+    bids: List[OrderData] = Field(default_factory=list)
+    asks: List[OrderData] = Field(default_factory=list)
 
 
 class OpenOrdersResponse(BaseModel):

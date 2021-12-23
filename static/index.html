@@ -98,23 +98,7 @@
 
         <div class="column">
 
-          <h2 class="has-text-danger">Longs</h2>
-
-          <div style="height: 32rem; overflow: scroll">
-
-  
-            <ul>
-              <li v-for="order in long_orders">
-                
-          <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
-                      
-             </li>
-            </ul>
-  
-          </div>
-
-          <h1 class="has-text-danger">Messages</h1>
- 
+          <h2 class="has-text-danger">Messages</h2>
           <div style="height: 32rem; overflow: scroll">
             <ul>
               <li class="" v-for="message in messages">{{message}}</li>
@@ -123,17 +107,59 @@
           </div>
 
 
+          <h2 class="has-text-danger">Delivered Buy Orders</h2>
+          <div style="height: 32rem; overflow: scroll">
+
+            <ul>
+              <li v-for="order in buy_orders">
+                
+                  <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
+                      
+             </li>
+            </ul>
+  
+          </div>
+
+          <h2 class="has-text-danger">Open Buy Orders</h2>
+          <div style="height: 32rem; overflow: scroll">
+
+            <ul>
+              <li v-for="order in open_buy_orders">
+                   <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
+             </li>
+            </ul>
+  
+          </div>
+
+          <h2 class="has-text-danger">Realized Buy Orders</h2>
+          <p>on the exchange website</p>
+
+
         </div>
 
 
         <div class="column">
-          <h2 class="has-text-danger">Shorts</h2>
 
+          <h2 class="has-text-danger">Errors</h2>
+          <div style="height: 32rem; overflow: scroll">
+            <ul>
+              <li v-for="error in errors">
+
+                <pre class="has-background-dark has-text-success">{{ JSON.stringify(error, null, 2) }}</pre>
+                  
+                
+
+              </li>
+            </ul>
+          </div>
+
+
+          <h2 class="has-text-danger">Delivered Sell Orders</h2>
           <div style="height: 32rem; overflow: scroll">
 
 
             <ul>
-              <li v-for="order in short_orders">
+              <li v-for="order in sell_orders">
                 <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
 
              </li>
@@ -141,18 +167,24 @@
           </div>
 
 
-          <h2 class="has-text-danger">Errors</h2>
-            <div style="height: 32rem; overflow: scroll">
-              <ul>
-                <li v-for="error in errors">
+          <h2 class="has-text-danger">Open Sell Orders</h2>
+          <div style="height: 32rem; overflow: scroll">
 
-                  <pre class="has-background-dark has-text-success">{{ JSON.stringify(error, null, 2) }}</pre>
-                    
-                  
 
-                </li>
-              </ul>
-            </div>
+            <ul>
+              <li v-for="order in open_sell_orders">
+                <pre class="has-background-dark has-text-success">{{ JSON.stringify(order, null, 2) }}</pre>
+
+             </li>
+            </ul>
+          </div>
+
+
+
+          <h2 class="has-text-danger">Realized Sell Orders</h2>
+          <p>on the exchange website</p>
+
+
 
         </div>
 
@@ -177,8 +209,10 @@
 
         messages: [],
         errors: [],
-        long_orders: [],
-        short_orders: [],
+        buy_orders: [],
+        sell_orders: [],
+        open_buy_orders: [],
+        open_sell_orders: [],
 
         stats: stats,
         config : config,
@@ -202,13 +236,17 @@
             app.config = stats.config;
             delete stats.config
             
-            app.long_orders = stats.orders.longs;
-            app.short_orders = stats.orders.shorts;
+            app.buy_orders = stats.orders.buy_orders;
+            app.sell_orders = stats.orders.sell_orders;
+            app.open_buy_orders = stats.orders.open_buy_orders;
+            app.open_sell_orders = stats.orders.open_sell_orders;
 
-            stats.orders.longs = stats.orders.longs.length 
-            stats.orders.shorts = stats.orders.shorts.length
+            stats.orders.buy_orders = stats.orders.buy_orders.length 
+            stats.orders.sell_orders = stats.orders.sell_orders.length
+            stats.orders.open_buy_orders = stats.orders.open_buy_orders.length
+            stats.orders.open_sell_orders = stats.orders.open_sell_orders.length
+
           });
-
 
           channel.bind("order", function (data) {
             order = data.message;

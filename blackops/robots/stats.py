@@ -24,8 +24,3 @@ class RobotStats:
 
     def broadcast_stats(self):
         raise NotImplementedError
-
-    async def broadcast_stats_periodical(self):
-        while True:
-            self.broadcast_stats()
-            await asyncio.sleep(0.2)

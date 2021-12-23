@@ -16,8 +16,14 @@ from blackops.robots.base import RobotBase
 from blackops.robots.config import SlidingWindowConfig, StrategyType
 from blackops.robots.stats import RobotStats
 from blackops.util.logger import logger
+from blackops.util.periodic import periodic
 
 getcontext().prec = 6
+
+
+@dataclass
+class OrderRobot(RobotBase):
+    pass
 
 
 @dataclass
@@ -44,23 +50,18 @@ class SlidingWindowTrader(RobotBase):
 
     current_step: Decimal = Decimal("0")
 
-    # orders
-    longs: list = field(
-        default_factory=list
-    )  # track your orders and figure out balance
-    shorts: list = field(
-        default_factory=list
-    )  # track your orders and figure out balance
+    # ORDERS
+    buy_orders: list = field(default_factory=list)
+    sell_orders: list = field(default_factory=list)
 
     long_in_progress: bool = False
     short_in_progress: bool = False
 
+    open_sell_orders: list = field(default_factory=list)
+    open_buy_orders: list = field(default_factory=list)
+
     open_sell_orders_base_amount: Decimal = Decimal("0")
     open_buy_orders_base_amount: Decimal = Decimal("0")
-
-    open_orders: dict = field(default_factory=dict)
-    open_asks: list = field(default_factory=list)
-    open_bids: list = field(default_factory=list)
 
     async def run(self):
         self.channnel = self.config.sha
@@ -72,36 +73,26 @@ class SlidingWindowTrader(RobotBase):
         self.start_base_balance = self.pair.base.balance
         self.start_quote_balance = self.pair.quote.balance
 
-        self.current_step = self.pair.base.balance / self.config.base_step_qty
-
         await self.run_streams()
-
-    async def close(self):
-        await self.cancel_all_open_orders()
-
-    # async def stop(self):
-    #     raise asyncio.CancelledError(f"{self.config.type.name} stopped")
-
-    def get_orders(self):
-        return self.longs + self.shorts
 
     async def run_streams(self):
         logger.info(
             f"Start streams for {self.config.type.name} with config {self.config}"
         )
 
-        consumers: Any = [
+        coroutines: Any = [
             self.watch_leader(),
             self.watch_follower(),
-            self.stats.broadcast_stats_periodical(),
-            self.update_balances_periodically(),
-            self.update_open_orders(),
-            self.cancel_all_open_orders_periodically(),
+            periodic(self.update_balances, 0.72),
+            periodic(self.watch_open_orders, 0.3),
+            periodic(self.cancel_all_open_orders, 0.6),
+            periodic(self.stats.update_pnl, 1),
+            periodic(self.stats.broadcast_stats, 0.5),
         ]  # is this ordering important ?
         if self.config.bridge:
-            consumers.append(self.watch_bridge())
+            coroutines.append(self.watch_bridge())
 
-        await asyncio.gather(*consumers)
+        await asyncio.gather(*coroutines)
 
     async def watch_leader(self):
         async for book in self.leader_book_ticker_stream:
@@ -117,7 +108,6 @@ class SlidingWindowTrader(RobotBase):
                 parsed_book = self.follower_exchange.parse_book(book)
                 self.update_follower_prices(parsed_book)
                 self.stats.btc_books_seen += 1
-
             await asyncio.sleep(0)
 
     async def watch_bridge(self):
@@ -131,51 +121,45 @@ class SlidingWindowTrader(RobotBase):
                 self.stats.bridge_last_updated = datetime.now().time()
             await asyncio.sleep(0)
 
-    def update_open_order_amounts(self):
-        if not self.open_orders:
-            self.open_asks, self.open_bids = [], []
-            return
+    async def watch_open_orders(self):
+        try:
+            open_orders: Optional[dict] = await self.follower_exchange.get_open_orders(
+                self.pair
+            )
+            if not open_orders:
+                open_orders = {}
 
-        (open_asks, open_bids) = self.follower_exchange.parse_open_orders(
-            self.open_orders
-        )
+            (
+                self.open_sell_orders,
+                self.open_buy_orders,
+            ) = self.follower_exchange.parse_open_orders(open_orders)
 
-        if open_asks:
-            self.open_asks = open_asks
+            open_sell_orders_base_amount = sum(
+                Decimal(ask.get("leftAmount", "0")) for ask in self.open_sell_orders
+            )
             self.open_sell_orders_base_amount = Decimal(
-                sum(Decimal(ask.get("leftAmount", "0")) for ask in open_asks)
+                str(open_sell_orders_base_amount)
             )
-        else:
-            self.open_asks = []
-            self.open_sell_orders_base_amount = Decimal("0")
 
-        if open_bids:
-            self.open_bids = open_bids
-            self.open_buy_orders_base_amount = Decimal(
-                sum(Decimal(bid.get("leftAmount", "0")) for bid in open_bids)
+            open_buy_orders_base_amount = sum(
+                Decimal(bid.get("leftAmount", "0")) for bid in self.open_buy_orders
             )
-        else:
-            self.open_bids = []
-            self.open_buy_orders_base_amount = Decimal("0")
+            self.open_buy_orders_base_amount = Decimal(str(open_buy_orders_base_amount))
 
-    async def update_open_orders(self):
-        while True:
-            await asyncio.sleep(0.3)
-            try:
-                open_orders: Optional[
-                    dict
-                ] = await self.follower_exchange.get_open_orders(self.pair)
-                if open_orders:
-                    self.open_orders = open_orders
-                else:
-                    self.open_orders = {}
+        except Exception as e:
+            msg = f"watch_open_orders: {e}"
+            logger.error(msg)
+            pub.publish_error(self.channnel, msg)
 
-                self.update_open_order_amounts()
-
-            except Exception as e:
-                msg = f"update_open_orders: {e}"
-                logger.error(msg)
-                pub.publish_error(self.channnel, msg)
+    async def cancel_all_open_orders(self):
+        try:
+            if self.open_sell_orders or self.open_buy_orders:
+                await self.follower_exchange.cancel_multiple_orders(
+                    self.open_sell_orders + self.open_buy_orders
+                )
+        except Exception as e:
+            msg = f"cancel_all_open_orders: {e}"
+            self.log_and_publish(msg)
 
     async def update_balances(self):
         try:
@@ -194,43 +178,35 @@ class SlidingWindowTrader(RobotBase):
             )
 
         except Exception as e:
-            msg = f"could not read balances: {e}"
-            raise Exception(msg)
-
-    async def update_balances_periodically(self):
-        # raises Exception if cant't read balance
-        while True:
-            try:
-                await self.update_balances()
-                self.current_step = self.pair.base.balance / self.config.base_step_qty
-            except Exception as e:
-                msg = f"update_balances_periodically: {e}"
-                self.log_and_publish(msg)
-                # continue trying to read balances
-            finally:
-                await asyncio.sleep(0.72)  # 90 rate limit
+            msg = f"update_balances: {e}"
+            self.log_and_publish(msg)
 
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
-
         if not book:
             return
 
-        mid = self.leader_exchange.get_mid(book)
+        try:
+            mid = self.leader_exchange.get_mid(book)
 
-        if not mid:
-            return
+            if not mid:
+                return
 
-        mid = mid * self.bridge_quote
+            mid = mid * self.bridge_quote
 
-        step_size = self.config.step_constant_k * self.current_step
+            self.current_step = self.pair.base.balance / self.config.base_step_qty
 
-        mid -= step_size  # go down as you buy, we wish to buy lower as we buy
+            step_size = self.config.step_constant_k * self.current_step
 
-        self.theo_buy = mid - self.config.credit
-        self.theo_sell = mid + self.config.credit
+            mid -= step_size  # go down as you buy, we wish to buy lower as we buy
 
-        self.stats.theo_last_updated = datetime.now()
+            self.theo_buy = mid - self.config.credit
+            self.theo_sell = mid + self.config.credit
+
+            self.stats.theo_last_updated = datetime.now()
+        except Exception as e:
+            msg = f"calculate_window: {e}"
+            self.log_and_publish(msg)
 
     def update_follower_prices(self, book: dict):
         if not book:
@@ -249,10 +225,6 @@ class SlidingWindowTrader(RobotBase):
         except Exception as e:
             msg = f"update_follower_prices: {e}"
             self.log_and_publish(msg)
-
-    def log_and_publish(self, msg):
-        logger.error(msg)
-        pub.publish_error(self.channnel, msg)
 
     async def should_transact(self):
         if self.should_long():
@@ -283,19 +255,19 @@ class SlidingWindowTrader(RobotBase):
 
         return Decimal("0")
 
-    def is_under_max_usable_quote(self) -> bool:
+    def used_quote_amount(self) -> Decimal:
         """Its still an approximation, but it's better than nothing"""
         total_used = Decimal("0")
         used_quote = self.start_quote_balance - self.pair.quote.balance
         total_used += used_quote
         total_used += self.cost_of_open_buy_orders()
         total_used -= self.approximate_gain_from_open_sell_orders()
-        return total_used < self.config.max_usable_quote_amount_y
+        return total_used
 
-    def usable_balance_to_buy(self):
+    def usable_balance_to_buy(self) -> Decimal:
         return self.pair.quote.balance - self.cost_of_open_buy_orders()
 
-    def usable_balance_to_sell(self):
+    def usable_balance_to_sell(self) -> Decimal:
         return self.pair.base.balance - self.open_sell_orders_base_amount
 
     def should_long(self):
@@ -307,12 +279,12 @@ class SlidingWindowTrader(RobotBase):
             and self.theo_buy
             and self.best_seller <= self.theo_buy
             and self.usable_balance_to_buy() >= approximate_buy_cost
-            and self.is_under_max_usable_quote()
+            and self.used_quote_amount() + approximate_buy_cost
+            <= self.config.max_usable_quote_amount_y
         )
 
     def should_short(self):
         #  act only when you are ahead
-        # TODO we can check if we have enough base balance to short
         return (
             self.best_buyer
             and self.theo_sell
@@ -320,25 +292,6 @@ class SlidingWindowTrader(RobotBase):
             and self.pair.base.balance
             and self.usable_balance_to_sell() >= self.config.base_step_qty
         )
-
-    async def cancel_all_open_orders_periodically(self, sleep_seconds=0.6):
-        try:
-            while True:
-                await self.cancel_all_open_orders()
-                await asyncio.sleep(sleep_seconds)
-        except Exception as e:
-            msg = f"cancel_all_open_orders_periodically: {e}"
-            self.log_and_publish(msg)
-
-    async def cancel_all_open_orders(self):
-        try:
-            if self.open_asks or self.open_bids:
-                await self.follower_exchange.cancel_multiple_orders(
-                    self.open_asks + self.open_bids
-                )
-        except Exception as e:
-            msg = f"cancel_all_open_orders: {e}"
-            self.log_and_publish(msg)
 
     async def long(self):
         # we buy and sell at the quantized steps
@@ -358,13 +311,12 @@ class SlidingWindowTrader(RobotBase):
 
             order_log = await self.send_order("buy", price, qty, self.theo_buy)
             if order_log:
-                self.longs.append(order_log)
+                self.buy_orders.append(order_log)
         except Exception as e:
             msg = f"long: {e}"
             self.log_and_publish(msg)
         finally:
             self.long_in_progress = False
-            await self.stats.update_pnl()
 
     async def short(self):
         if not self.best_buyer or not self.config.base_step_qty:
@@ -378,16 +330,14 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             self.short_in_progress = True
-
             order_log = await self.send_order("sell", price, qty, self.theo_sell)
             if order_log:
-                self.shorts.append(order_log)
+                self.sell_orders.append(order_log)
         except Exception as e:
             msg = f"short: {e}"
             self.log_and_publish(msg)
         finally:
             self.short_in_progress = False
-            await self.stats.update_pnl()
 
     async def send_order(self, side, price, qty, theo):
         try:
@@ -404,36 +354,22 @@ class SlidingWindowTrader(RobotBase):
                 msg = f"could not {side} {qty} {self.pair.base.symbol} for {price}, response: {res}"
                 raise Exception(msg)
 
-            data = res.get("data", {})
-
-            order_id = data.get("id")
-
-            ts = data.get("datetime")
-            order_time = datetime.fromtimestamp(ts / 1000.0)
-
-            order_log = {
-                "time": str(order_time),
-                "id": order_id,
-                "type": side,
-                "price": str(price),
-                "qty": str(qty),
-                "theo": str(theo),
-            }
-
-            return order_log
+            res["theo"] = theo
+            return res
 
         except Exception as e:
             msg = f"send_order: {e}"
             self.log_and_publish(msg)
 
+    def get_orders(self):
+        return self.buy_orders + self.sell_orders
 
-@dataclass
-class OrderLog:
-    time: str
-    type: str
-    price: str
-    qty: str
-    theo: str
+    def log_and_publish(self, msg):
+        logger.error(msg)
+        pub.publish_error(self.channnel, msg)
+
+    async def close(self):
+        await self.cancel_all_open_orders()
 
 
 @dataclass
@@ -450,7 +386,7 @@ class SlidingWindowStats(RobotStats):
     def __post_init__(self):
         self.config_dict = self.robot.config.dict()
 
-    def broadcast_stats(self):
+    async def broadcast_stats(self):
         message = self.create_stats_message()
 
         message = json.dumps(message, default=str)
@@ -519,12 +455,10 @@ class SlidingWindowStats(RobotStats):
                 "books seen": self.btc_books_seen,
             },
             "orders": {
-                "longs": self.robot.longs,
-                "shorts": self.robot.shorts,
-                "open": {
-                    "buy": self.robot.open_bids,
-                    "sell": self.robot.open_asks,
-                },
+                "open_buy_orders": self.robot.open_buy_orders,
+                "open_sell_orders": self.robot.open_sell_orders,
+                "buy_orders": self.robot.buy_orders,
+                "sell_orders": self.robot.sell_orders,
             },
             "config": self.config_dict,
         }

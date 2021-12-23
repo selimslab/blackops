@@ -72,7 +72,7 @@ class BtcturkDummy:
                 message=f"Insufficient funds: have {quote_balance} {pair.quote.symbol} but need {cost}",
             )
 
-        self.account.open_orders[pair.symbol].bids[order.id] = order
+        self.account.open_orders[pair.symbol].bids.append(order)
 
         await asyncio.sleep(0.2)  # 300 limit
 
@@ -85,7 +85,7 @@ class BtcturkDummy:
         order.leftAmount = "0"
         res = SubmitOrderResponse(success=True, data=order)
 
-        del self.account.open_orders[pair.symbol].bids[order.id]
+        self.account.open_orders[pair.symbol].bids.pop()
         self.account.all_orders.append(order)
 
         return res
@@ -100,7 +100,7 @@ class BtcturkDummy:
                 message=f"Insufficient funds: have {base_balance} {pair.base.symbol} but need {order.quantity}",
             )
 
-        self.account.open_orders[pair.symbol].asks[order.id] = order
+        self.account.open_orders[pair.symbol].asks.append(order)
         await asyncio.sleep(0.2)  # 300 limit
 
         gain = Decimal(order.quantity) * Decimal(order.price) * self.sell_with_fee
@@ -113,7 +113,7 @@ class BtcturkDummy:
         order.leftAmount = "0"
         res = SubmitOrderResponse(success=True, data=order)
 
-        del self.account.open_orders[pair.symbol].asks[order.id]
+        self.account.open_orders[pair.symbol].asks.pop()
         self.account.all_orders.append(order)
 
         return res
