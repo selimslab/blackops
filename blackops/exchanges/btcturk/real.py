@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -28,6 +29,8 @@ class BtcturkApiClient(BtcturkBase):
 
     name: str = "btcturk_real"
 
+    spam_lock: bool = False
+
     def __post_init__(self):
         self.headers = self._get_headers()
         self.session = aiohttp.ClientSession()
@@ -51,14 +54,33 @@ class BtcturkApiClient(BtcturkBase):
 
         return headers
 
+    async def stop_spamming(self, sleep=2) -> None:
+        logger.info(f"will wait {sleep} before sending new requests")
+        try:
+            self.spam_lock = True
+            await self._close_session()
+            self.session = aiohttp.ClientSession()
+            await asyncio.sleep(sleep)
+        except Exception as e:
+            logger.info(f"stop_spamming: {e}")
+        finally:
+            self.spam_lock = False
+
     async def _http(self, uri: str, method: Callable):
+        if self.spam_lock:
+            return {}
         try:
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
                     return await res.json()
+                if res.status == 429:
+                    msg = f"{str(res.status)} {res.reason} {uri}"
+                    logger.error(msg)
+                    await self.stop_spamming()
+                    return {}
                 else:
                     msg = f"{str(res.status)} {res.reason} {uri}"
-                    logger.error(f"_hhtp: {msg}")
+                    logger.error(f"_http: {msg}")
                     return {}
         except Exception as e:
             logger.error(f"_http: {e}")

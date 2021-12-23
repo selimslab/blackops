@@ -99,5 +99,10 @@ async def test_bt_api():
         # await test_get_account_balance(api_client)
 
 
+async def test_rate_limit():
+    async with create_api_client() as api_client:
+        pass
+
+
 if __name__ == "__main__":
     asyncio.run(test_bt_api())

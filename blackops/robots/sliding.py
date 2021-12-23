@@ -77,13 +77,10 @@ class SlidingWindowTrader(RobotBase):
         await self.run_streams()
 
     async def close(self):
-        # await self.close_open_orders()
-        # await self.close_streams()
-        # self.follower_exchange.close()
         await self.cancel_all_open_orders()
 
-    async def stop(self):
-        raise asyncio.CancelledError(f"{self.config.type.name} stopped")
+    # async def stop(self):
+    #     raise asyncio.CancelledError(f"{self.config.type.name} stopped")
 
     def get_orders(self):
         return self.longs + self.shorts
@@ -155,7 +152,7 @@ class SlidingWindowTrader(RobotBase):
 
     async def update_open_orders(self):
         while True:
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.21)
             try:
                 open_orders: Optional[
                     dict
@@ -315,6 +312,7 @@ class SlidingWindowTrader(RobotBase):
 
             if self.open_bids:
                 await self.follower_exchange.cancel_multiple_orders(self.open_bids)
+                self.open_bids = []
 
             order_log = await self.send_order("buy", price, qty, self.theo_buy)
             if order_log:
@@ -340,6 +338,7 @@ class SlidingWindowTrader(RobotBase):
 
             if self.open_asks:
                 await self.follower_exchange.cancel_multiple_orders(self.open_asks)
+                self.open_asks = []
 
             order_log = await self.send_order("sell", price, qty, self.theo_sell)
             if order_log:
