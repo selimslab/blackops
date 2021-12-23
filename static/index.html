@@ -236,10 +236,10 @@
             app.config = stats.config;
             delete stats.config
             
-            app.buy_orders = stats.orders.buy_orders;
-            app.sell_orders = stats.orders.sell_orders;
-            app.open_buy_orders = stats.orders.open_buy_orders;
-            app.open_sell_orders = stats.orders.open_sell_orders;
+            app.buy_orders = stats.orders.buy_orders.reverse();
+            app.sell_orders = stats.orders.sell_orders.reverse();
+            app.open_buy_orders = stats.orders.open_buy_orders.reverse();
+            app.open_sell_orders = stats.orders.open_sell_orders.reverse();
 
             stats.orders.buy_orders = stats.orders.buy_orders.length 
             stats.orders.sell_orders = stats.orders.sell_orders.length
