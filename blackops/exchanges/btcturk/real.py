@@ -52,13 +52,17 @@ class BtcturkApiClient(BtcturkBase):
         return headers
 
     async def _http(self, uri: str, method: Callable):
-        async with method(uri, headers=self._get_headers()) as res:
-            if res.status == 200:
-                return await res.json()
-            else:
-                msg = f"{str(res.status)} {res.reason} {uri}"
-                logger.error(f"_hhtp: {msg}")
-                return {}
+        try:
+            async with method(uri, headers=self._get_headers()) as res:
+                if res.status == 200:
+                    return await res.json()
+                else:
+                    msg = f"{str(res.status)} {res.reason} {uri}"
+                    logger.error(f"_hhtp: {msg}")
+                    return {}
+        except Exception as e:
+            logger.error(f"_http: {e}")
+            return {}
 
     async def _get_account_balance(self) -> dict:
         """
@@ -100,11 +104,14 @@ class BtcturkApiClient(BtcturkBase):
             "orderType": order_type,
             "pairSymbol": pair.symbol,
         }
-
-        async with self.session.post(
-            self.order_url, headers=self._get_headers(), json=params
-        ) as res:
-            return await res.json(content_type=None)
+        try:
+            async with self.session.post(
+                self.order_url, headers=self._get_headers(), json=params
+            ) as res:
+                return await res.json(content_type=None)
+        except Exception as e:
+            logger.error(f"submit_limit_order: {e}")
+            return {}
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
 
