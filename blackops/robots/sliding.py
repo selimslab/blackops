@@ -96,6 +96,7 @@ class SlidingWindowTrader(RobotBase):
             self.stats.broadcast_stats_periodical(),
             self.update_balances_periodically(),
             self.update_open_orders(),
+            self.cancel_all_open_orders_periodically(),
         ]  # is this ordering important ?
         if self.config.bridge:
             consumers.append(self.watch_bridge())
@@ -152,7 +153,7 @@ class SlidingWindowTrader(RobotBase):
 
     async def update_open_orders(self):
         while True:
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(0.4)
             try:
                 open_orders: Optional[
                     dict
@@ -295,6 +296,15 @@ class SlidingWindowTrader(RobotBase):
             and self.pair.base.balance >= self.config.base_step_qty
         )
 
+    async def cancel_all_open_orders_periodically(self, sleep_seconds=0.8):
+        try:
+            while True:
+                await self.cancel_all_open_orders()
+                await asyncio.sleep(sleep_seconds)
+        except Exception as e:
+            msg = f"cancel_all_open_orders_periodically: {e}"
+            self.log_and_publish(msg)
+
     async def cancel_all_open_orders(self):
         try:
             if self.open_asks or self.open_bids:
@@ -321,10 +331,6 @@ class SlidingWindowTrader(RobotBase):
         try:
             self.long_in_progress = True
 
-            if self.open_bids:
-                await self.follower_exchange.cancel_multiple_orders(self.open_bids)
-                self.open_bids = []
-
             order_log = await self.send_order("buy", price, qty, self.theo_buy)
             if order_log:
                 self.longs.append(order_log)
@@ -347,10 +353,6 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             self.short_in_progress = True
-
-            if self.open_asks:
-                await self.follower_exchange.cancel_multiple_orders(self.open_asks)
-                self.open_asks = []
 
             order_log = await self.send_order("sell", price, qty, self.theo_sell)
             if order_log:
