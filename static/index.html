@@ -189,7 +189,11 @@
           var channel = pusher.subscribe(app.sha);
 
           channel.bind("error", function (data) {
-            app.errors.push(data);
+            app.errors.unshift(data);
+          });
+      
+          channel.bind("message", function (data) {
+            app.messages.unshift(data);
           });
 
           channel.bind("stats", function (data) {
@@ -205,17 +209,14 @@
             stats.orders.shorts = stats.orders.shorts.length
           });
 
-          channel.bind("message", function (data) {
-            app.messages.push(data);
-          });
 
           channel.bind("order", function (data) {
             order = data.message;
             if (order.type == "buy") {
-              app.long_orders.push(order);
+              app.long_orders.unshift(order);
             }
             if (order.type == "sell") {
-              app.short_orders.push(order);
+              app.short_orders.unshift(order);
             }
           });
         },
