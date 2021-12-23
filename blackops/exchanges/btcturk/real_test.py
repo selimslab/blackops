@@ -87,7 +87,7 @@ async def test_bt_api():
 
         # # await test_get_orders_after_an_id(api_client, order_id=5980501563)
 
-        await test_cancel_order(api_client, order_id=6083022567)
+        await test_cancel_order(api_client, order_id=5353)
         await test_get_open_orders(
             api_client, AssetPair(Asset(symbol="XRP"), Asset(symbol="USDT"))
         )

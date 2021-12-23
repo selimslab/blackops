@@ -80,7 +80,7 @@ class SlidingWindowTrader(RobotBase):
         # await self.close_open_orders()
         # await self.close_streams()
         # self.follower_exchange.close()
-        pass
+        await self.cancel_all_open_orders()
 
     async def stop(self):
         raise asyncio.CancelledError(f"{self.config.type.name} stopped")
@@ -291,6 +291,12 @@ class SlidingWindowTrader(RobotBase):
             and self.pair.base.balance >= self.config.base_step_qty
         )
 
+    async def cancel_all_open_orders(self):
+        if self.open_asks or self.open_bids:
+            await self.follower_exchange.cancel_multiple_orders(
+                self.open_asks + self.open_bids
+            )
+
     async def long(self):
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
@@ -307,12 +313,8 @@ class SlidingWindowTrader(RobotBase):
         try:
             self.long_in_progress = True
 
-            try:
-                if self.open_bids:
-                    for order in self.open_bids:
-                        await self.follower_exchange.cancel_order(int(order.get("id")))
-            except Exception as e:
-                logger.error(f"cancel longs: {e}")
+            if self.open_bids:
+                await self.follower_exchange.cancel_multiple_orders(self.open_bids)
 
             order_log = await self.send_order("buy", price, qty, self.theo_buy)
             if order_log:
@@ -335,13 +337,9 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             self.short_in_progress = True
-            # cancel old
-            try:
-                if self.open_asks:
-                    for order in self.open_asks:
-                        await self.follower_exchange.cancel_order(int(order.get("id")))
-            except Exception as e:
-                logger.error(f"cancel shorts: {e}")
+
+            if self.open_asks:
+                await self.follower_exchange.cancel_multiple_orders(self.open_asks)
 
             order_log = await self.send_order("sell", price, qty, self.theo_sell)
             if order_log:

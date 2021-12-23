@@ -40,26 +40,26 @@ class TaskContext:
                 await task
         except TimeoutError:
             self.task_state[sha] = TaskStatus.COMPLETED
-            self._clean_task(sha)
+            await self.clean_task(sha)
             return self.task_state[sha]
         except Exception as e:
             logger.error(f"start_task: {sha} failed: {e}")
             self.task_state[sha] = TaskStatus.FAILED
-            self._clean_task(sha)
+            await self.clean_task(sha)
             logger.info("restarting task")
             # TODO this will break timeout, fix it
             await self.start_task(stg, timeout_seconds)
 
-    def close_trader(self, sha):
+    async def close_trader(self, sha):
         try:
             trader = self.traders.get(sha)
             if trader:
-                trader.close()
+                await trader.close()
         except Exception as e:
             logger.error(f"close_trader: {e}")
 
-    def _clean_task(self, sha):
-        self.close_trader(sha)
+    async def clean_task(self, sha):
+        await self.close_trader(sha)
         del self.tasks[sha]
         del self.traders[sha]
 
@@ -67,7 +67,7 @@ class TaskContext:
         if sha not in self.tasks:
             return
         self.tasks[sha].cancel()
-        self._clean_task(sha)
+        await self.clean_task(sha)
         self.task_state[sha] = TaskStatus.STOPPED
 
     async def cancel_all(self):

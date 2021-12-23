@@ -34,9 +34,6 @@ class ExchangeBase(ABC):
     ) -> Optional[dict]:
         raise NotImplementedError
 
-    async def cancel_order(self, order_id: int) -> Optional[dict]:
-        raise NotImplementedError
-
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
         """
         new in the bottom of the page
@@ -44,4 +41,10 @@ class ExchangeBase(ABC):
         raise NotImplementedError
 
     def parse_open_orders(self, open_orders: dict) -> Tuple[list, list]:
+        raise NotImplementedError
+
+    async def cancel_order(self, order_id: int) -> Optional[dict]:
+        raise NotImplementedError
+
+    async def cancel_multiple_orders(self, orders: list) -> None:
         raise NotImplementedError
