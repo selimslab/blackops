@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import simplejson as json  # type: ignore
 
@@ -103,35 +103,15 @@ class BtcturkBase(ExchangeBase):
             logger.error(f"get_account_balance: {e}")
             raise e
 
-    async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
-        """
-        new in the bottom of the page
-        """
-        raise NotImplementedError
+    def parse_open_orders(self, open_orders: dict) -> Tuple[list, list]:
+        if not open_orders:
+            return ([], [])
 
-    async def get_open_asks_and_bids(self, pair: AssetPair) -> tuple:
-        open_orders: Optional[dict] = await self.get_open_orders(pair)
+        data = open_orders.get("data", {})
+        open_asks = data.get("asks", [])
+        open_bids = data.get("bids", [])
 
-        open_ask_amount: Decimal = Decimal("0")
-        open_bid_amount: Decimal = Decimal("0")
-        open_bids: list = []
-        open_asks: list = []
-
-        if open_orders:
-            data = open_orders.get("data", {})
-            open_bids = data.get("bids", [])
-            open_asks = data.get("asks", [])
-
-            if open_asks:
-                open_ask_amount = Decimal(
-                    sum(Decimal(ask.get("leftAmount", "0")) for ask in open_asks)
-                )
-            if open_bids:
-                open_bid_amount = Decimal(
-                    sum(Decimal(bid.get("leftAmount", "0")) for bid in open_bids)
-                )
-
-        return (open_asks, open_bids, open_ask_amount, open_bid_amount)
+        return (open_asks, open_bids)
 
     # async def cancel_open_orders(self, pair: AssetPair, bids=True, asks=True):
     #     """

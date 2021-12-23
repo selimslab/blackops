@@ -58,6 +58,7 @@ class SlidingWindowTrader(RobotBase):
     open_ask_amount: Decimal = Decimal("0")
     open_bid_amount: Decimal = Decimal("0")
 
+    open_orders: dict = field(default_factory=dict)
     open_asks: list = field(default_factory=list)
     open_bids: list = field(default_factory=list)
 
@@ -82,14 +83,16 @@ class SlidingWindowTrader(RobotBase):
         return self.longs + self.shorts
 
     async def run_streams(self):
-        logger.info(f"Start streams for {self.config.type.name}")
+        logger.info(
+            f"Start streams for {self.config.type.name} with config {self.config}"
+        )
 
         consumers: Any = [
             self.watch_leader(),
             self.watch_follower(),
             self.stats.broadcast_stats_periodical(),
             self.update_balances_periodically(),
-            self.update_open_order_balance(),
+            self.update_open_orders(),
         ]  # is this ordering important ?
         if self.config.bridge:
             consumers.append(self.watch_bridge())
@@ -124,26 +127,37 @@ class SlidingWindowTrader(RobotBase):
                 self.stats.bridge_last_updated = datetime.now().time()
             await asyncio.sleep(0)
 
-    async def update_open_order_balance(self):
-        prev_order_count = -1
+    def update_open_order_amounts(self):
+        (open_asks, open_bids) = self.follower_exchange.parse_open_orders(
+            self.open_orders
+        )
+
+        if open_asks:
+            self.open_asks = open_asks
+            self.open_ask_amount = Decimal(
+                sum(Decimal(ask.get("leftAmount", "0")) for ask in open_asks)
+            )
+        if open_bids:
+            self.open_bids = open_bids
+            self.open_bid_amount = Decimal(
+                sum(Decimal(bid.get("leftAmount", "0")) for bid in open_bids)
+            )
+
+    async def update_open_orders(self):
         while True:
             await asyncio.sleep(0.2)
-            order_count = len(self.longs) + len(self.shorts)
-            if order_count == prev_order_count:
-                continue
-
             try:
-                (
-                    self.open_asks,
-                    self.open_bids,
-                    self.open_ask_amount,
-                    self.open_bid_amount,
-                ) = await self.follower_exchange.get_open_asks_and_bids(  #  type: ignore
-                    self.pair
-                )
+                open_orders: Optional[
+                    dict
+                ] = await self.follower_exchange.get_open_orders(self.pair)
+                if not open_orders:
+                    continue
+
+                self.open_orders = open_orders
+                self.update_open_order_amounts()
+
             except Exception as e:
-                logger.error(f"update_open_order_balance: {e}")
-            prev_order_count = order_count
+                logger.error(f"update_open_orders: {e}")
 
     async def update_balances(self):
         try:

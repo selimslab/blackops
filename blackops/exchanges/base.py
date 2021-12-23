@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from blackops.domain.asset import Asset, AssetPair
 
@@ -35,4 +35,13 @@ class ExchangeBase(ABC):
         raise NotImplementedError
 
     async def cancel_order(self, order_id: str) -> Optional[dict]:
+        raise NotImplementedError
+
+    async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
+        """
+        new in the bottom of the page
+        """
+        raise NotImplementedError
+
+    def parse_open_orders(self, open_orders: dict) -> Tuple[list, list]:
         raise NotImplementedError

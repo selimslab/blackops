@@ -47,7 +47,7 @@ async def test_get_orders_after_an_id(api_client, order_id: int):
     pprint.pprint(res)
 
 
-async def test_cancel_order(api_client, order_id):
+async def test_cancel_order(api_client, order_id: int):
     res = await api_client.cancel_order(order_id)
     pprint.pprint(res)
 
