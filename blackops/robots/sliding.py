@@ -55,8 +55,8 @@ class SlidingWindowTrader(RobotBase):
     long_in_progress: bool = False
     short_in_progress: bool = False
 
-    open_ask_amount: Decimal = Decimal("0")
-    open_bid_amount: Decimal = Decimal("0")
+    open_sell_orders_base_amount: Decimal = Decimal("0")
+    open_buy_orders_base_amount: Decimal = Decimal("0")
 
     open_orders: dict = field(default_factory=dict)
     open_asks: list = field(default_factory=list)
@@ -142,18 +142,25 @@ class SlidingWindowTrader(RobotBase):
 
         if open_asks:
             self.open_asks = open_asks
-            self.open_ask_amount = Decimal(
+            self.open_sell_orders_base_amount = Decimal(
                 sum(Decimal(ask.get("leftAmount", "0")) for ask in open_asks)
             )
+        else:
+            self.open_asks = []
+            self.open_sell_orders_base_amount = Decimal("0")
+
         if open_bids:
             self.open_bids = open_bids
-            self.open_bid_amount = Decimal(
+            self.open_buy_orders_base_amount = Decimal(
                 sum(Decimal(bid.get("leftAmount", "0")) for bid in open_bids)
             )
+        else:
+            self.open_bids = []
+            self.open_buy_orders_base_amount = Decimal("0")
 
     async def update_open_orders(self):
         while True:
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(0.3)
             try:
                 open_orders: Optional[
                     dict
@@ -201,7 +208,7 @@ class SlidingWindowTrader(RobotBase):
                 self.log_and_publish(msg)
                 # continue trying to read balances
             finally:
-                await asyncio.sleep(0.75)  # 90 rate limit
+                await asyncio.sleep(0.72)  # 90 rate limit
 
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
@@ -254,36 +261,54 @@ class SlidingWindowTrader(RobotBase):
         if self.should_short():
             await self.short()
 
-    def have_usable_balance(self) -> bool:
-        """Its still an approximation, but it's better than nothing"""
-        total_used = Decimal("0")
-        used_quote = self.start_quote_balance - self.pair.quote.balance
-        total_used += used_quote
+    def cost_of_open_buy_orders(self):
+
         # we may not be able to buy from the best seller
         safety_margin = Decimal("1.01")
         if self.best_seller:
-            open_bid_cost = (
-                self.open_bid_amount  # 3 ETH
+            return (
+                self.open_buy_orders_base_amount  # 3 ETH
                 * self.best_seller
                 * self.follower_exchange.buy_with_fee  # type: ignore
                 * safety_margin
             )
-            open_ask_gain = (
-                self.open_ask_amount * self.best_buyer * self.follower_exchange.sell_with_fee  # type: ignore
+
+        return Decimal("0")
+
+    def approximate_gain_from_open_sell_orders(self):
+        if self.best_buyer:
+            return (
+                self.open_sell_orders_base_amount * self.best_buyer * self.follower_exchange.sell_with_fee  # type: ignore
             )
-            total_used += open_bid_cost - open_ask_gain
+
+        return Decimal("0")
+
+    def is_under_max_usable_quote(self) -> bool:
+        """Its still an approximation, but it's better than nothing"""
+        total_used = Decimal("0")
+        used_quote = self.start_quote_balance - self.pair.quote.balance
+        total_used += used_quote
+        total_used += self.cost_of_open_buy_orders()
+        total_used -= self.approximate_gain_from_open_sell_orders()
         return total_used < self.config.max_usable_quote_amount_y
+
+    def usable_balance_to_buy(self):
+        return self.pair.quote.balance - self.cost_of_open_buy_orders()
+
+    def usable_balance_to_sell(self):
+        return self.pair.base.balance - self.open_sell_orders_base_amount
 
     def should_long(self):
         # we don't enforce max_usable_quote_amount_y too strict
         # we assume no deposits to quote during the task run
+        approximate_buy_cost = self.best_seller * self.config.base_step_qty * self.follower_exchange.buy_with_fee  # type: ignore
         return (
             self.best_seller
             and self.theo_buy
             and self.best_seller <= self.theo_buy
-            and self.pair.quote.balance > self.best_seller * self.config.base_step_qty
-            and self.have_usable_balance()
-        )  #
+            and self.usable_balance_to_buy() >= approximate_buy_cost
+            and self.is_under_max_usable_quote()
+        )
 
     def should_short(self):
         #  act only when you are ahead
@@ -293,10 +318,10 @@ class SlidingWindowTrader(RobotBase):
             and self.theo_sell
             and self.best_buyer >= self.theo_sell
             and self.pair.base.balance
-            and self.pair.base.balance >= self.config.base_step_qty
+            and self.usable_balance_to_sell() >= self.config.base_step_qty
         )
 
-    async def cancel_all_open_orders_periodically(self, sleep_seconds=0.8):
+    async def cancel_all_open_orders_periodically(self, sleep_seconds=0.6):
         try:
             while True:
                 await self.cancel_all_open_orders()
