@@ -113,6 +113,9 @@ class BtcturkBase(ExchangeBase):
 
         return (open_asks, open_bids)
 
+    async def _close_session(self):
+        pass
+
     # async def cancel_open_orders(self, pair: AssetPair, bids=True, asks=True):
     #     """
     #     we need order ids

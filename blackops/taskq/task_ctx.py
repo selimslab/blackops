@@ -47,7 +47,13 @@ class TaskContext:
             self._clean_task(sha)
             return self.task_state[sha]
 
+    def close_trader(self, sha):
+        trader = self.traders.get(sha)
+        if trader:
+            trader.close()
+
     def _clean_task(self, sha):
+        self.close_trader(sha)
         del self.tasks[sha]
         del self.traders[sha]
 

@@ -76,6 +76,12 @@ class SlidingWindowTrader(RobotBase):
 
         await self.run_streams()
 
+    async def close(self):
+        # await self.close_open_orders()
+        # await self.close_streams()
+        # self.follower_exchange.close()
+        pass
+
     async def stop(self):
         raise asyncio.CancelledError(f"{self.config.type.name} stopped")
 
