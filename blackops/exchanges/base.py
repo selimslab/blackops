@@ -34,7 +34,7 @@ class ExchangeBase(ABC):
     ) -> Optional[dict]:
         raise NotImplementedError
 
-    async def cancel_order(self, order_id: str) -> Optional[dict]:
+    async def cancel_order(self, order_id: int) -> Optional[dict]:
         raise NotImplementedError
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:

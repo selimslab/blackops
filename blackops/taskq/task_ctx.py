@@ -40,17 +40,23 @@ class TaskContext:
                 await task
         except TimeoutError:
             self.task_state[sha] = TaskStatus.COMPLETED
+            self._clean_task(sha)
+            return self.task_state[sha]
         except Exception as e:
             logger.error(f"start_task: {sha} failed: {e}")
             self.task_state[sha] = TaskStatus.FAILED
-        finally:
             self._clean_task(sha)
-            return self.task_state[sha]
+            logger.info("restarting task")
+            # TODO this will break timeout, fix it
+            await self.start_task(stg, timeout_seconds)
 
     def close_trader(self, sha):
-        trader = self.traders.get(sha)
-        if trader:
-            trader.close()
+        try:
+            trader = self.traders.get(sha)
+            if trader:
+                trader.close()
+        except Exception as e:
+            logger.error(f"close_trader: {e}")
 
     def _clean_task(self, sha):
         self.close_trader(sha)

@@ -310,7 +310,7 @@ class SlidingWindowTrader(RobotBase):
             try:
                 if self.open_bids:
                     for order in self.open_bids:
-                        await self.follower_exchange.cancel_order(order.get("id"))
+                        await self.follower_exchange.cancel_order(int(order.get("id")))
             except Exception as e:
                 logger.error(f"cancel longs: {e}")
 
@@ -339,7 +339,7 @@ class SlidingWindowTrader(RobotBase):
             try:
                 if self.open_asks:
                     for order in self.open_asks:
-                        await self.follower_exchange.cancel_order(order.get("id"))
+                        await self.follower_exchange.cancel_order(int(order.get("id")))
             except Exception as e:
                 logger.error(f"cancel shorts: {e}")
 
@@ -433,8 +433,8 @@ class SlidingWindowStats(RobotStats):
 
             return (
                 self.robot.pair.quote.balance
-                + approximate_sales_gain
                 - self.robot.start_quote_balance
+                + approximate_sales_gain
             )
         except Exception as e:
             logger.info(e)
