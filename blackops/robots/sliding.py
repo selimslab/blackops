@@ -128,6 +128,10 @@ class SlidingWindowTrader(RobotBase):
             await asyncio.sleep(0)
 
     def update_open_order_amounts(self):
+        if not self.open_orders:
+            self.open_asks, self.open_bids = [], []
+            return
+
         (open_asks, open_bids) = self.follower_exchange.parse_open_orders(
             self.open_orders
         )
@@ -150,10 +154,11 @@ class SlidingWindowTrader(RobotBase):
                 open_orders: Optional[
                     dict
                 ] = await self.follower_exchange.get_open_orders(self.pair)
-                if not open_orders:
-                    continue
+                if open_orders:
+                    self.open_orders = open_orders
+                else:
+                    self.open_orders = {}
 
-                self.open_orders = open_orders
                 self.update_open_order_amounts()
 
             except Exception as e:
