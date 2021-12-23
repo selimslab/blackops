@@ -3,6 +3,7 @@ from enum import Enum
 
 from async_timeout import timeout
 
+import blackops.pubsub.pub as pub
 from blackops.robots.config import StrategyConfig
 from blackops.robots.factory import create_trader_from_strategy
 from blackops.util.logger import logger
@@ -41,12 +42,16 @@ class TaskContext:
         except TimeoutError:
             self.task_state[sha] = TaskStatus.COMPLETED
             await self.clean_task(sha)
+            msg = f"Stopped tash {sha} due to timeout {timeout_seconds} seconds"
+            pub.publish_message(channel=stg.sha, message=msg)
             return self.task_state[sha]
         except Exception as e:
             logger.error(f"start_task: {sha} failed: {e}")
             self.task_state[sha] = TaskStatus.FAILED
             await self.clean_task(sha)
-            logger.info("restarting task")
+            msg = f"error: {e}, restarting task {sha}"
+            pub.publish_error(channel=stg.sha, message=msg)
+            logger.error(msg)
             # TODO this will break timeout, fix it
             await self.start_task(stg, timeout_seconds)
 

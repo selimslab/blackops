@@ -30,6 +30,7 @@ class BtcturkApiClient(BtcturkBase):
     name: str = "btcturk_real"
 
     spam_lock: bool = False
+    spam_sleep_seconds: int = 5
 
     def __post_init__(self):
         self.headers = self._get_headers()
@@ -54,39 +55,36 @@ class BtcturkApiClient(BtcturkBase):
 
         return headers
 
-    async def stop_spamming(self, sleep=2) -> None:
-        logger.info(f"will wait {sleep} before sending new requests")
+    async def stop_spamming(self) -> None:
         try:
             self.spam_lock = True
             await self._close_session()
             self.session = aiohttp.ClientSession()
-            await asyncio.sleep(sleep)
+            await asyncio.sleep(self.spam_sleep_seconds)
         except Exception as e:
             logger.info(f"stop_spamming: {e}")
         finally:
             self.spam_lock = False
 
     async def _http(self, uri: str, method: Callable):
-        if self.spam_lock:
-            return {}
         try:
+            if self.spam_lock:
+                msg = f"wait {self.spam_sleep_seconds} before sending new requests"
+                raise Exception(msg)
+
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
                     return await res.json()
                 if res.status == 429:
-                    msg = f"{str(res.status)} {res.reason} {uri}"
-                    logger.error(msg)
                     await self.stop_spamming()
-                    return {}
                 else:
-                    msg = f"{str(res.status)} {res.reason} {uri}"
-                    logger.error(f"_http: {msg}")
-                    return {}
+                    msg = f"_http: {str(res.status)} {res.reason} {uri}"
+                    raise Exception(msg)
         except Exception as e:
-            logger.error(f"_http: {e}")
-            return {}
+            msg = f"_http: {e}"
+            raise Exception(msg)
 
-    async def _get_account_balance(self) -> dict:
+    async def _get_account_balance(self) -> Optional[dict]:
         """
         {'asset': 'USDT',
          'assetname': 'Tether',
@@ -97,7 +95,10 @@ class BtcturkApiClient(BtcturkBase):
          'precision': 2,
          'requestFund': '0'},
         """
-        return await self._http(self.balance_url, self.session.get)
+        try:
+            return await self._http(self.balance_url, self.session.get)
+        except Exception as e:
+            raise e
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float

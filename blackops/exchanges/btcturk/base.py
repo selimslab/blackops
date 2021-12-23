@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import List, Optional, Tuple
@@ -66,7 +67,7 @@ class BtcturkBase(ExchangeBase):
                 return min(prices)
         return None
 
-    async def _get_account_balance(self) -> dict:
+    async def _get_account_balance(self) -> Optional[dict]:
         raise NotImplementedError
 
     async def get_account_balance(self, symbols: Optional[List[str]] = None) -> dict:
@@ -118,8 +119,10 @@ class BtcturkBase(ExchangeBase):
             if orders:
                 for order in orders:
                     await self.cancel_order(int(order.get("id")))
+                    await asyncio.sleep(0.05)
         except Exception as e:
             logger.error(f"cancel longs: {e}")
+            raise e
 
     async def _close_session(self):
         pass

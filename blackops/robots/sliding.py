@@ -152,7 +152,7 @@ class SlidingWindowTrader(RobotBase):
 
     async def update_open_orders(self):
         while True:
-            await asyncio.sleep(0.21)
+            await asyncio.sleep(0.25)
             try:
                 open_orders: Optional[
                     dict
@@ -165,7 +165,9 @@ class SlidingWindowTrader(RobotBase):
                 self.update_open_order_amounts()
 
             except Exception as e:
-                logger.error(f"update_open_orders: {e}")
+                msg = f"update_open_orders: {e}"
+                logger.error(msg)
+                pub.publish_error(self.channnel, msg)
 
     async def update_balances(self):
         try:
@@ -185,7 +187,6 @@ class SlidingWindowTrader(RobotBase):
 
         except Exception as e:
             msg = f"could not read balances: {e}"
-            pub.publish_error(self.channnel, msg)
             raise Exception(msg)
 
     async def update_balances_periodically(self):
@@ -195,10 +196,11 @@ class SlidingWindowTrader(RobotBase):
                 await self.update_balances()
                 self.current_step = self.pair.base.balance / self.config.base_step_qty
             except Exception as e:
-                logger.info(f"update_balances_periodically: {e}")
+                msg = f"update_balances_periodically: {e}"
+                self.log_and_publish(msg)
                 # continue trying to read balances
-
-            await asyncio.sleep(0.7)  # 90 rate limit
+            finally:
+                await asyncio.sleep(0.75)  # 90 rate limit
 
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
@@ -237,7 +239,12 @@ class SlidingWindowTrader(RobotBase):
             self.stats.bid_ask_last_updated = datetime.now()
 
         except Exception as e:
-            logger.info(f"update_follower_prices: {e}")
+            msg = f"update_follower_prices: {e}"
+            self.log_and_publish(msg)
+
+    def log_and_publish(self, msg):
+        logger.error(msg)
+        pub.publish_error(self.channnel, msg)
 
     async def should_transact(self):
         if self.should_long():
@@ -289,10 +296,14 @@ class SlidingWindowTrader(RobotBase):
         )
 
     async def cancel_all_open_orders(self):
-        if self.open_asks or self.open_bids:
-            await self.follower_exchange.cancel_multiple_orders(
-                self.open_asks + self.open_bids
-            )
+        try:
+            if self.open_asks or self.open_bids:
+                await self.follower_exchange.cancel_multiple_orders(
+                    self.open_asks + self.open_bids
+                )
+        except Exception as e:
+            msg = f"cancel_all_open_orders: {e}"
+            self.log_and_publish(msg)
 
     async def long(self):
         # we buy and sell at the quantized steps
@@ -318,7 +329,8 @@ class SlidingWindowTrader(RobotBase):
             if order_log:
                 self.longs.append(order_log)
         except Exception as e:
-            logger.info(f"long: {e}")
+            msg = f"long: {e}"
+            self.log_and_publish(msg)
         finally:
             self.long_in_progress = False
             await self.stats.update_pnl()
@@ -344,7 +356,8 @@ class SlidingWindowTrader(RobotBase):
             if order_log:
                 self.shorts.append(order_log)
         except Exception as e:
-            logger.info(f"short: {e}")
+            msg = f"short: {e}"
+            self.log_and_publish(msg)
         finally:
             self.short_in_progress = False
             await self.stats.update_pnl()
@@ -383,8 +396,8 @@ class SlidingWindowTrader(RobotBase):
             return order_log
 
         except Exception as e:
-            logger.info(f"send_order: {e}")
-            pub.publish_message(self.channnel, f"send_order: {str(e)}")
+            msg = f"send_order: {e}"
+            self.log_and_publish(msg)
 
 
 @dataclass
