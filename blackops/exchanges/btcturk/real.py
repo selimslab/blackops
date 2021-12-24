@@ -183,7 +183,7 @@ class BtcturkApiClient(BtcturkBase):
     async def cancel_order(self, order_id: int) -> Optional[dict]:
         try:
             if not order_id:
-                raise Exception("order id is required")
+                return None
 
             uri = update_url_query_params(self.order_url, {"id": order_id})
             return await self._http(uri, self.session.delete)

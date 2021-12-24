@@ -116,14 +116,12 @@ class BtcturkBase(ExchangeBase):
         return (open_asks, open_bids)
 
     async def cancel_multiple_orders(self, orders: list) -> None:
-        try:
-            if orders:
-                for order in orders:
-                    await self.cancel_order(int(order.get("id")))
-                    await asyncio.sleep(0.05)
-        except Exception as e:
-            logger.error(f"cancel longs: {e}")
-            raise e
+        if orders:
+            order_ids = [order.get("id") for order in orders]
+            order_ids = [i for i in order_ids if i]
+            for order_id in order_ids:
+                await self.cancel_order(order_id)
+                await asyncio.sleep(0.1)
 
     @staticmethod
     def parse_submit_order_response(res: dict):

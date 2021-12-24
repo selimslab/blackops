@@ -11,40 +11,40 @@ class ExchangeBase(ABC):
     name: Optional[str] = None
 
     async def get_account_balance(self, symbols: Optional[List[str]] = None):
-        raise NotImplementedError
+        pass
 
     @staticmethod
     def parse_book(book: str) -> dict:
-        raise NotImplementedError
+        pass
 
     @staticmethod
     def get_best_ask(book: dict) -> Optional[Decimal]:
-        raise NotImplementedError
+        pass
 
     @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
-        raise NotImplementedError
+        pass
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
         """Get mid of bid and ask"""
-        raise NotImplementedError
+        pass
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
-        raise NotImplementedError
+        pass
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
         """
         new in the bottom of the page
         """
-        raise NotImplementedError
+        pass
 
     def parse_open_orders(self, open_orders: dict) -> Tuple[list, list]:
-        raise NotImplementedError
+        pass
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
-        raise NotImplementedError
+        pass
 
     async def cancel_multiple_orders(self, orders: list) -> None:
-        raise NotImplementedError
+        pass
