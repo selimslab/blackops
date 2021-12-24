@@ -16,7 +16,7 @@ class BtcturkApiClientTestnet(BtcturkBase):
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> dict:
         try:
-            res = await self.dummy_exchange._submit_limit_order(
+            res = await self.dummy_exchange.mock_submit_limit_order(
                 pair=pair,
                 order_type=order_type,
                 price=price,
@@ -28,9 +28,9 @@ class BtcturkApiClientTestnet(BtcturkBase):
             raise e
 
     async def get_open_orders(self, pair: AssetPair) -> dict:
-        res = await self.dummy_exchange.get_open_orders(pair)
+        res = await self.dummy_exchange.mock_get_open_orders(pair)
         return res.dict()
 
-    async def _get_account_balance(self):
+    async def get_account_balance(self):
         res = await self.dummy_exchange.mock_account_balance()
         return res.dict()

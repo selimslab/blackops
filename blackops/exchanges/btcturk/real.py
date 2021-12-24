@@ -84,7 +84,7 @@ class BtcturkApiClient(BtcturkBase):
             msg = f"_http: {e}"
             raise Exception(msg)
 
-    async def _get_account_balance(self) -> Optional[dict]:
+    async def get_account_balance(self) -> Optional[dict]:
         """
         {'asset': 'USDT',
          'assetname': 'Tether',

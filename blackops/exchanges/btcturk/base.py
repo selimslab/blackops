@@ -68,15 +68,11 @@ class BtcturkBase(ExchangeBase):
                 return min(prices)
         return None
 
-    async def _get_account_balance(self) -> Optional[dict]:
-        raise NotImplementedError
-
-    async def get_account_balance(self, symbols: Optional[List[str]] = None) -> dict:
-        res = await self._get_account_balance()
-        if not res or not isinstance(res, dict):
-            raise Exception("Could not get account balance")
-
+    @staticmethod
+    def parse_account_balance(res: dict, symbols: Optional[List[str]] = None) -> dict:
         balance_list = res.get("data", [])
+        if not balance_list:
+            return {}
 
         # btc calls asset, we call symbol
         try:
@@ -90,6 +86,7 @@ class BtcturkBase(ExchangeBase):
 
         try:
             if symbols:
+                # init unexisting symbols
                 for symbol in symbols:
                     if symbol not in balance_dict:
                         balance_dict[symbol] = Asset(symbol=symbol).dict()
@@ -105,7 +102,8 @@ class BtcturkBase(ExchangeBase):
             logger.error(f"get_account_balance: {e}")
             raise e
 
-    def parse_open_orders(self, open_orders: dict) -> Tuple[list, list]:
+    @staticmethod
+    def parse_open_orders(open_orders: dict) -> Tuple[list, list]:
         if not open_orders:
             return ([], [])
 

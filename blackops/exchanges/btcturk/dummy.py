@@ -53,7 +53,7 @@ class BtcturkDummy:
 
         self.account.assets[asset.symbol].free -= val
 
-    async def get_open_orders(self, pair: AssetPair) -> OpenOrdersResponse:
+    async def mock_get_open_orders(self, pair: AssetPair) -> OpenOrdersResponse:
         self._init_pair_if_not_exists(pair.symbol)
 
         return OpenOrdersResponse(
@@ -118,7 +118,7 @@ class BtcturkDummy:
 
         return res
 
-    async def _submit_limit_order(
+    async def mock_submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> SubmitOrderResponse:
 

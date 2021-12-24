@@ -163,8 +163,12 @@ class SlidingWindowTrader(RobotBase):
 
     async def update_balances(self):
         try:
-            balances: dict = await self.follower_exchange.get_account_balance(
-                symbols=[self.pair.base.symbol, self.pair.quote.symbol]
+            res: Optional[dict] = await self.follower_exchange.get_account_balance()
+            if not res:
+                return
+
+            balances = self.follower_exchange.parse_account_balance(
+                res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
             base_balances: dict = balances[self.pair.base.symbol]

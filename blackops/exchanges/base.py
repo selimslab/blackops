@@ -10,12 +10,20 @@ from blackops.domain.asset import Asset, AssetPair
 class ExchangeBase(ABC):
     name: Optional[str] = None
 
-    async def get_account_balance(self, symbols: Optional[List[str]] = None):
+    async def get_account_balance(self) -> Optional[dict]:
         pass
 
     @staticmethod
+    def parse_account_balance(res: dict, symbols: Optional[List[str]] = None) -> dict:
+        return {}
+
+    @staticmethod
     def parse_book(book: str) -> dict:
-        pass
+        return {}
+
+    @staticmethod
+    def parse_open_orders(open_orders: dict) -> Tuple[list, list]:
+        return ([], [])
 
     @staticmethod
     def get_best_ask(book: dict) -> Optional[Decimal]:
@@ -38,9 +46,6 @@ class ExchangeBase(ABC):
         """
         new in the bottom of the page
         """
-        pass
-
-    def parse_open_orders(self, open_orders: dict) -> Tuple[list, list]:
         pass
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
