@@ -23,3 +23,9 @@ class RobotBase(ABC):
 
     async def short(self):
         ...
+
+    async def close(self):
+        ...
+
+    def get_orders(self):
+        pass

@@ -1,9 +1,12 @@
 import asyncio
+from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, Optional
 
 from async_timeout import timeout
 
 import blackops.pubsub.pub as pub
+from blackops.robots.base import RobotBase
 from blackops.robots.config import StrategyConfig
 from blackops.robots.factory import create_trader_from_strategy
 from blackops.util.logger import logger
@@ -17,62 +20,76 @@ class TaskStatus(Enum):
     STOPPED = "stopped"
 
 
+@dataclass
+class Task:
+    sha: str
+    status: TaskStatus
+    timeout: int = 0
+    robot: Optional[RobotBase] = None
+    aiotask: Optional[asyncio.Task] = None
+
+
 class TaskContext:
     def __init__(self):
-        self.tasks = {}
-        self.traders = {}
-        self.task_state = {}
+        self.tasks: Dict[str, Task] = {}
 
     async def start_task(self, stg: StrategyConfig, timeout_seconds: int = 3600):
         sha = stg.sha
-        if self.task_state.get(sha, "") == TaskStatus.RUNNING:
+        if sha in self.tasks and self.tasks[sha].status == TaskStatus.RUNNING:
             raise Exception(f"{sha} already running")
 
-        self.task_state[sha] = TaskStatus.PENDING
-        trader = create_trader_from_strategy(stg)
-        task = asyncio.create_task(trader.run())
-
+        task = Task(
+            sha=sha,
+            timeout=timeout_seconds,
+            robot=None,
+            status=TaskStatus.PENDING,
+            aiotask=None,
+        )
         self.tasks[sha] = task
-        self.traders[sha] = trader
+
+        trader = create_trader_from_strategy(stg)
+        task.robot = trader
+
+        aio_task = asyncio.create_task(trader.run())
+        task.aiotask = aio_task
 
         try:
             async with timeout(timeout_seconds):
-                self.task_state[sha] = TaskStatus.RUNNING
-                await task
+                task.status = TaskStatus.RUNNING
+                await task.aiotask
         except TimeoutError:
-            self.task_state[sha] = TaskStatus.COMPLETED
+            task.status = TaskStatus.COMPLETED
             await self.clean_task(sha)
             msg = f"Stopped tash {sha} due to timeout {timeout_seconds} seconds"
-            pub.publish_message(channel=stg.sha, message=msg)
-            return self.task_state[sha]
+            pub.publish_message(channel=sha, message=msg)
+
         except Exception as e:
-            self.task_state[sha] = TaskStatus.FAILED
+            task.status = TaskStatus.FAILED
 
             # log
-            msg = f"start_task: {sha} failed: {e}, restarting task {sha}"
+            msg = f"start_task: {sha} failed: {e}, restarting.."
             pub.publish_error(channel=stg.sha, message=msg)
             logger.error(msg)
 
             # restart robot
             await self.clean_task(sha)
+
             # TODO this will break timeout, fix it
             await self.start_task(stg, timeout_seconds)
 
-    async def close_trader(self, sha):
-        try:
-            trader = self.traders.get(sha)
-            if trader:
-                await trader.close()
-        except Exception as e:
-            logger.error(f"close_trader: {e}")
-            raise e
-
     async def clean_task(self, sha):
         try:
-            await self.close_trader(sha)
-            del self.traders[sha]
+            task = self.tasks.get(sha)
+            if not task:
+                logger.error(f"clean_task: {sha} not found")
+                return
 
-            self.tasks[sha].cancel()
+            if task.robot:
+                await task.robot.close()
+
+            if task.aiotask:
+                task.aiotask.cancel()
+
             del self.tasks[sha]
         except Exception as e:
             logger.error(f"clean_task: {e}")
@@ -80,14 +97,15 @@ class TaskContext:
 
     async def cancel_task(self, sha):
         if sha not in self.tasks:
+            logger.error(f"cancel_task: {sha} not found")
             return
         await self.clean_task(sha)
-        self.task_state[sha] = TaskStatus.STOPPED
+        self.tasks[sha].status = TaskStatus.STOPPED
 
     async def cancel_all(self):
         stopped_shas = []
-        for sha in self.task_state:
-            if self.task_state.get(sha) == TaskStatus.RUNNING:
+        for sha, task in self.tasks.items():
+            if task.status == TaskStatus.RUNNING:
                 await self.cancel_task(sha)
                 stopped_shas.append(sha)
 
@@ -95,9 +113,9 @@ class TaskContext:
         return stopped_shas
 
     def get_orders(self, sha):
-        trader = self.traders.get(sha)
-        if trader:
-            return trader.get_orders()
+        task = self.tasks.get(sha)
+        if task and task.robot:
+            return task.robot.get_orders()
 
     def get_tasks(self):
         return list(self.tasks.keys())

@@ -34,8 +34,15 @@ class ExchangeBase(ABC):
         pass
 
     def get_mid(self, book: dict) -> Optional[Decimal]:
-        """Get mid of bid and ask"""
-        pass
+        best_bid = self.get_best_bid(book)
+        best_ask = self.get_best_ask(book)
+
+        if not best_bid or not best_ask:
+            return None
+
+        mid = (best_bid + best_ask) / Decimal("2")
+
+        return mid
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float

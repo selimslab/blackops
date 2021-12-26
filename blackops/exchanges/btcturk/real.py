@@ -81,7 +81,7 @@ class BtcturkApiClient(BtcturkBase):
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"
                     raise Exception(msg)
         except Exception as e:
-            msg = f"_http: {e}"
+            msg = f"http: {method} {uri} {e}"
             raise Exception(msg)
 
     async def get_account_balance(self) -> Optional[dict]:
@@ -134,7 +134,7 @@ class BtcturkApiClient(BtcturkBase):
                 return await res.json(content_type=None)
         except Exception as e:
             logger.error(f"submit_limit_order: {e}")
-            return {}
+            raise e
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
 

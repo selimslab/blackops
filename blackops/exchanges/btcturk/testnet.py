@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.btcturk.base import BtcturkBase
@@ -14,7 +15,7 @@ class BtcturkApiClientTestnet(BtcturkBase):
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float
-    ) -> dict:
+    ) -> Optional[dict]:
         try:
             res = await self.dummy_exchange.mock_submit_limit_order(
                 pair=pair,

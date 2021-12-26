@@ -35,37 +35,38 @@ class BtcturkBase(ExchangeBase):
             return {}
 
     @staticmethod
+    def parse_prices(orders: List[dict]) -> list:
+        if not orders:
+            return []
+
+        str_prices = [
+            order.get("P") for order in orders if order and isinstance(order, dict)
+        ]
+        prices = [Decimal(price) for price in str_prices if price]
+        return prices
+
+    @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
         if not book:
             return None
+
         purchase_orders = book.get("BO", [])
-        if purchase_orders:
-            str_prices = [
-                order.get("P")
-                for order in purchase_orders
-                if order and isinstance(order, dict)
-            ]
-            if str_prices:
-                prices = [Decimal(price) for price in str_prices if price]
-                return max(prices)
+        prices = BtcturkBase.parse_prices(purchase_orders)
+        if prices:
+            return max(prices)
+
         return None
 
     @staticmethod
     def get_best_ask(book: dict) -> Optional[Decimal]:
         if not book:
             return None
+
         sales_orders = book.get("AO", [])
-        if sales_orders:
-            str_prices = [
-                order.get("P")
-                for order in sales_orders
-                if order and isinstance(order, dict)
-            ]
-            if str_prices:
-                prices: List[Decimal] = [
-                    Decimal(price) for price in str_prices if price
-                ]
-                return min(prices)
+        prices = BtcturkBase.parse_prices(sales_orders)
+        if prices:
+            return min(prices)
+
         return None
 
     @staticmethod
@@ -114,12 +115,14 @@ class BtcturkBase(ExchangeBase):
         return (open_asks, open_bids)
 
     async def cancel_multiple_orders(self, orders: list) -> None:
-        if orders:
-            order_ids = [order.get("id") for order in orders]
-            order_ids = [i for i in order_ids if i]
-            for order_id in order_ids:
-                await self.cancel_order(order_id)
-                await asyncio.sleep(0.1)
+        if not orders:
+            return None
+
+        order_ids = [order.get("id") for order in orders]
+        order_ids = [i for i in order_ids if i]
+        for order_id in order_ids:
+            await self.cancel_order(order_id)
+            await asyncio.sleep(0.1)
 
     @staticmethod
     def parse_submit_order_response(res: dict):
