@@ -318,8 +318,9 @@ class SlidingWindowTrader(RobotBase):
         try:
             self.long_in_progress = True
 
-            order_log = await self.send_order("buy", price, qty, self.theo_buy)
+            order_log = await self.send_order("buy", price, qty)
             if order_log:
+                order_log["theo"] = self.theo_buy
                 self.buy_orders.append(order_log)
         except Exception as e:
             msg = f"long: {e}"
@@ -339,8 +340,9 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             self.short_in_progress = True
-            order_log = await self.send_order("sell", price, qty, self.theo_sell)
+            order_log = await self.send_order("sell", price, qty)
             if order_log:
+                order_log["theo"] = self.theo_sell
                 self.sell_orders.append(order_log)
         except Exception as e:
             msg = f"short: {e}"
@@ -348,7 +350,7 @@ class SlidingWindowTrader(RobotBase):
         finally:
             self.short_in_progress = False
 
-    async def send_order(self, side, price, qty, theo):
+    async def send_order(self, side, price, qty):
         try:
             res: Optional[dict] = await self.follower_exchange.submit_limit_order(
                 self.pair, side, price, qty
@@ -360,10 +362,9 @@ class SlidingWindowTrader(RobotBase):
                 and res.get("data", None)
             )
             if not ok:
-                msg = f"could not {side} {qty} {self.pair.base.symbol} for {price}, response: {res}"
+                msg = f"could not send {side} order, {qty} {self.pair.base.symbol} for {price}, response: {res}"
                 raise Exception(msg)
 
-            res["theo"] = theo
             return res
 
         except Exception as e:

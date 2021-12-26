@@ -69,14 +69,15 @@ class BtcturkApiClient(BtcturkBase):
     async def _http(self, uri: str, method: Callable):
         try:
             if self.spam_lock:
-                msg = f"wait {self.spam_sleep_seconds} before sending new requests"
-                raise Exception(msg)
-
+                return
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
                     return await res.json()
                 if res.status == 429:
                     await self.stop_spamming()
+                    msg = f"""got 429 too many requests, 
+                    will wait {self.spam_sleep_seconds} seconds before sending new requests"""
+                    raise Exception(msg)
                 else:
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"
                     raise Exception(msg)
