@@ -31,13 +31,22 @@ def get_trade_message(symbol: str):
     return message
 
 
-MessageType = Enum("MessageType", "ORDERBOOK TRADE OBDIFF")
+def get_ticker_message(symbol: str):
+    message = [
+        402,
+        {"type": 402, "channel": "ticker", "event": symbol, "join": True},
+    ]
+    return message
+
+
+MessageType = Enum("MessageType", "ORDERBOOK TRADE OBDIFF TICKER")
 
 
 message_funcs = {
     MessageType.ORDERBOOK: get_orderbook_message,
     MessageType.TRADE: get_trade_message,
     MessageType.OBDIFF: get_obdiff_message,
+    MessageType.TICKER: get_ticker_message,  # ticker not working
 }
 
 
@@ -65,16 +74,11 @@ def create_book_stream(symbol: str, channel: str = "default"):
     return create_ws_stream(MessageType.ORDERBOOK, symbol, channel)
 
 
-async def test_orderbook_stream():
-    async for book in create_ws_stream(MessageType.ORDERBOOK, "XRPUSDT"):
-        print(book)
-
-
-async def test_obdiff_stream():
-    async for book in create_ws_stream(MessageType.OBDIFF, "USDTTRY"):
+async def test_stream(type: MessageType, symbol: str):
+    async for book in create_ws_stream(type, symbol):
         print(book)
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream())
+    asyncio.run(test_stream(MessageType.ORDERBOOK, "USDTTRY"))
     # asyncio.run(test_obdiff_stream())

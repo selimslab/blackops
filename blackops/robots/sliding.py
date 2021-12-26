@@ -38,7 +38,10 @@ class SlidingWindowTrader(RobotBase):
     # Streams
     leader_book_ticker_stream: AsyncGenerator
     follower_book_stream: AsyncGenerator
-    leader_bridge_quote_stream: Optional[AsyncGenerator] = None
+
+    # Bridge
+    bridge_exchange: Optional[ExchangeBase] = None
+    bridge_stream: Optional[AsyncGenerator] = None
 
     # Realtime
     theo_buy: Optional[Decimal] = None
@@ -111,11 +114,13 @@ class SlidingWindowTrader(RobotBase):
             await asyncio.sleep(0)
 
     async def watch_bridge(self):
-        if not self.leader_bridge_quote_stream:
+        if not self.bridge_stream:
             raise ValueError("No bridge quote stream")
+        if not self.bridge_exchange:
+            raise ValueError("No bridge exchange")
 
-        async for book in self.leader_bridge_quote_stream:
-            new_quote = self.leader_exchange.get_mid(book)
+        async for book in self.bridge_stream:
+            new_quote = self.bridge_exchange.get_mid(book)
             if new_quote:
                 self.bridge_quote = new_quote
                 self.stats.bridge_last_updated = datetime.now().time()

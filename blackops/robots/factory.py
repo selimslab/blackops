@@ -43,6 +43,8 @@ def sliding_window_factory(stg: SlidingWindowConfig):
     pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
 
     bridge_symbol = stg.bridge
+    bridge_exchange = None
+    bridge_stream = None
     if bridge_symbol:
         base_bridge_symbol = stg.base + bridge_symbol
         bridge_quote_symbol = bridge_symbol + stg.quote
@@ -50,14 +52,21 @@ def sliding_window_factory(stg: SlidingWindowConfig):
         leader_book_ticker_stream = bn_streams.create_book_stream(
             base_bridge_symbol, pub_channel
         )
-        leader_bridge_quote_stream = bn_streams.create_book_stream(
-            bridge_quote_symbol, pub_channel
-        )
+        if stg.bridge_exchange is ExchangeType.BINANCE:
+            bridge_stream = bn_streams.create_book_stream(
+                bridge_quote_symbol, pub_channel
+            )
+            bridge_exchange = leader_exchange
+        elif stg.bridge_exchange is ExchangeType.BTCTURK:
+            bridge_stream = btc_streams.create_book_stream(
+                bridge_quote_symbol, pub_channel
+            )
+            bridge_exchange = follower_exchange
+
     else:
         leader_book_ticker_stream = bn_streams.create_book_stream(
             pair.symbol, pub_channel
         )
-        leader_bridge_quote_stream = None
 
     follower_book_stream = btc_streams.create_book_stream(pair.symbol, pub_channel)
 
@@ -67,7 +76,8 @@ def sliding_window_factory(stg: SlidingWindowConfig):
         leader_exchange=leader_exchange,
         follower_exchange=follower_exchange,
         leader_book_ticker_stream=leader_book_ticker_stream,
-        leader_bridge_quote_stream=leader_bridge_quote_stream,
+        bridge_exchange=bridge_exchange,
+        bridge_stream=bridge_stream,
         follower_book_stream=follower_book_stream,
     )
 

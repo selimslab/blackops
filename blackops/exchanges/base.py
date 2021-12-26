@@ -53,7 +53,6 @@ class ExchangeBase(ABC):
         """
         new in the bottom of the page
         """
-        pass
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
         pass
