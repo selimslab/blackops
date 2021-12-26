@@ -12,13 +12,12 @@ from blackops.api.routers.task import router as task_router
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 
-app.include_router(home_router, tags=["Home"])
+app.mount("/panel", StaticFiles(directory="static", html=True), name="panel")
+
 app.include_router(stg_router, prefix="/stg", tags=["Strategy"])
 app.include_router(task_router, prefix="/task", tags=["Task"])
 app.include_router(order_router, prefix="/order", tags=["Order"])
-
-
-app.mount("/logs", StaticFiles(directory="static", html=True), name="logs")
+app.include_router(home_router, tags=["Home"])
 
 
 @app.exception_handler(Exception)
