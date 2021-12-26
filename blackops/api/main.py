@@ -5,12 +5,14 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from blackops.api.routers.home import router as home_router
 from blackops.api.routers.order import router as order_router
 from blackops.api.routers.stg import router as stg_router
 from blackops.api.routers.task import router as task_router
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 
+app.include_router(home_router, tags=["Home"])
 app.include_router(stg_router, prefix="/stg", tags=["Strategy"])
 app.include_router(task_router, prefix="/task", tags=["Task"])
 app.include_router(order_router, prefix="/order", tags=["Order"])
@@ -25,20 +27,6 @@ async def validation_exception_handler(request, exc: Exception):
         status_code=500,
         content={"error": str(exc)},
     )
-
-
-@app.get("/")
-async def root():
-    return FileResponse("static/index.html")
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        # data = await websocket.receive_text()
-        await websocket.send_json({"hello": "world"})
-        await asyncio.sleep(1)
 
 
 if __name__ == "__main__":
