@@ -3,8 +3,6 @@ from enum import Enum
 import blackops.exchanges.binance.factory as binance_factory
 import blackops.exchanges.btcturk.factory as btcturk_factory
 from blackops.exchanges.base import ExchangeBase
-from blackops.exchanges.binance.factory import BinanceBase
-from blackops.exchanges.btcturk.factory import BtcturkApiClient, BtcturkApiClientTestnet
 
 
 class ExchangeType(str, Enum):
@@ -17,7 +15,7 @@ class NetworkType(str, Enum):
     REAL = "real"
 
 
-EXCHANGES = {
+API_CLIENT_FACTORIES = {
     ExchangeType.BINANCE: {
         NetworkType.TESTNET: lambda: binance_factory.create_testnet_client(),
         NetworkType.REAL: lambda: binance_factory.create_real_client(),
@@ -29,8 +27,8 @@ EXCHANGES = {
 }
 
 
-def create_exchange(ex_type: ExchangeType, network: NetworkType) -> ExchangeBase:
-    factory_func = EXCHANGES.get(ex_type, {}).get(network)  # type: ignore
+def create_api_client(ex_type: ExchangeType, network: NetworkType) -> ExchangeBase:
+    factory_func = API_CLIENT_FACTORIES.get(ex_type, {}).get(network)  # type: ignore
 
     if not factory_func:
         raise ValueError(f"unknown exchange: {ex_type}")

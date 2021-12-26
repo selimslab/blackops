@@ -10,6 +10,10 @@ from blackops.domain.asset import Asset, AssetPair
 class ExchangeBase(ABC):
     name: Optional[str] = None
 
+    fee_percent: Decimal = Decimal("0.0018")
+    buy_with_fee = Decimal("1") + fee_percent
+    sell_with_fee = Decimal("1") - fee_percent
+
     async def get_account_balance(self) -> Optional[dict]:
         pass
 
@@ -33,12 +37,12 @@ class ExchangeBase(ABC):
     def get_best_bid(book: dict) -> Optional[Decimal]:
         pass
 
-    def get_mid(self, book: dict) -> Optional[Decimal]:
+    def get_mid(self, book: dict) -> Decimal:
         best_bid = self.get_best_bid(book)
         best_ask = self.get_best_ask(book)
 
         if not best_bid or not best_ask:
-            return None
+            return Decimal("0")
 
         mid = (best_bid + best_ask) / Decimal("2")
 

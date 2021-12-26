@@ -9,12 +9,15 @@ AssetPairSymbol = str
 
 class Asset(BaseModel):
     symbol: AssetSymbol
-    balance: Decimal = Decimal("0")
     free: Decimal = Decimal("0")
     locked: Decimal = Decimal("0")
 
     def __str__(self):
         return f"{self.symbol}"
+
+    @property
+    def total_balance(self):
+        return self.free + self.locked
 
 
 @dataclass

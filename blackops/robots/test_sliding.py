@@ -6,7 +6,6 @@ from pprint import pprint
 import simplejson as json  # type: ignore
 from async_timeout import timeout
 
-from blackops.exchanges.factory import ExchangeType, NetworkType, create_exchange
 from blackops.robots.config import (
     STRATEGY_CLASS,
     SlidingWindowConfig,
@@ -52,13 +51,7 @@ async def test_max_usable():
     ]
 
     robot.follower_book_stream = create_bt_test_generator(bt_test_data)
-    robot.leader_book_ticker_stream = test_bn_generator()
-
-    # try:
-    #     async with timeout(8):
-    #         await robot.run()
-    # except asyncio.TimeoutError as e:
-    #     pass
+    robot.leader_book_stream = test_bn_generator()
 
 
 async def test_run():
@@ -72,9 +65,6 @@ async def test_run():
         use_real_money=False,
         testnet=True,
     )
-    pprint(stg)
-    pprint(stg.dict())
-    pprint(json.dumps(stg.dict()))
 
     stg.is_valid()
 
@@ -88,37 +78,11 @@ async def test_run():
 
     robot = create_trader_from_strategy(deserialized_config)
 
-    # pprint(robot)
-
-    await robot.update_balances()
-
-    pprint(robot.pair)
-
-    assert robot.current_step == 0
-
-    await robot.update_balances()
-
-    assert robot.pair.base.balance == 0
-    assert robot.pair.quote.balance == robot.config.max_usable_quote_amount_y
-
-    assert robot.current_step == 0
-
-    # robot.follower_book_stream = test_bt_generator()
-    # robot.leader_book_ticker_stream = test_bn_generator()
-
     try:
         async with timeout(8):
             await robot.run()
     except asyncio.TimeoutError as e:
         pass
-
-    # assert robot.pair.base.balance == Decimal("0.3")
-    # assert robot.pair.quote.balance == Decimal("8865.40")
-    # assert len(robot.orders) == 3
-
-    have_usable_balance = robot.have_usable_balance()
-
-    pprint(robot)
 
 
 async def test_serialize():
@@ -132,7 +96,10 @@ async def test_serialize():
         use_real_money=False,
         testnet=True,
     )
-    robot = create_trader_from_strategy(stg)
+
+    pprint(stg)
+    pprint(stg.dict())
+    pprint(json.dumps(stg.dict()))
 
     deserialized_config = SlidingWindowConfig(**json.loads(json.dumps(stg.dict())))
 

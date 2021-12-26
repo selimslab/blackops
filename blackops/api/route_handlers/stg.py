@@ -5,7 +5,7 @@ import simplejson as json  # type: ignore
 from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
-from blackops.robots.config import STRATEGY_CLASS, StrategyConfig, StrategyType
+from blackops.robots.config import StrategyConfig
 from blackops.taskq.redis import (
     LOG_CHANNELS,
     RUNNING_TASKS,

@@ -1,5 +1,6 @@
 import asyncio
 from enum import Enum
+from typing import AsyncGenerator
 
 import simplejson as json  # type: ignore
 
@@ -70,7 +71,7 @@ def create_ws_stream(message_type: MessageType, symbol: str, channel: str = "def
     return reconnecting_generator(gen_factory, channel)
 
 
-def create_book_stream(symbol: str, channel: str = "default"):
+def create_book_stream(symbol: str, channel: str = "default") -> AsyncGenerator:
     return create_ws_stream(MessageType.ORDERBOOK, symbol, channel)
 
 
