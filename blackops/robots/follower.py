@@ -29,6 +29,8 @@ class FollowerWatcher:
     start_quote_total: Decimal = Decimal("0")
     start_balances_set: bool = False
 
+    # we don't enforce max_usable_quote_amount_y too strict
+    # we assume no deposits to quote during the task run
     total_used_quote_amount: Decimal = Decimal("0")
 
     pnl: Decimal = Decimal("0")
@@ -40,7 +42,7 @@ class FollowerWatcher:
         )
         self.channnel = self.config.sha
 
-    async def watch_follower(self):
+    async def watch_books(self) -> None:
         async for book in self.book_stream:
             if book:
                 parsed_book = self.exchange.parse_book(book)
@@ -48,7 +50,7 @@ class FollowerWatcher:
                 self.books_seen += 1
             await asyncio.sleep(0)
 
-    def update_follower_prices(self, book: dict):
+    def update_follower_prices(self, book: dict) -> None:
         if not book:
             return
         try:
@@ -67,18 +69,15 @@ class FollowerWatcher:
             logger.error(msg)
             pub.publish_error(self.channnel, msg)
 
-    async def get_account_balance(self):
-        return await self.exchange.get_account_balance()
-
-    def set_start_balances_if_not_set(self):
+    def set_start_balances_if_not_set(self) -> None:
         if not self.start_balances_set:
             self.start_base_total = self.pair.base.total_balance
             self.start_quote_total = self.pair.quote.total_balance
             self.start_balances_set = True
 
-    async def update_balances(self):
+    async def update_balances(self) -> None:
         try:
-            res: Optional[dict] = await self.get_account_balance()
+            res: Optional[dict] = await self.exchange.get_account_balance()
             if not res:
                 return
 
@@ -104,13 +103,16 @@ class FollowerWatcher:
             pub.publish_error(self.channnel, msg)
             raise e
 
-    def can_sell(self):
-        return self.pair.base.free and self.pair.base.free >= self.config.base_step_qty
+    def can_sell(self) -> bool:
+        return (
+            bool(self.pair.base.free)
+            and self.pair.base.free >= self.config.base_step_qty
+        )
 
-    def can_buy(self):
+    def can_buy(self) -> bool:
         approximate_buy_cost = self.approximate_buy_cost()
         enough_free_balance = (
-            self.pair.quote.free and self.pair.quote.free >= approximate_buy_cost
+            bool(self.pair.quote.free) and self.pair.quote.free >= approximate_buy_cost
         )
         will_not_exceed_the_spending_limit = (
             self.total_used_quote_amount + approximate_buy_cost
@@ -118,25 +120,32 @@ class FollowerWatcher:
         )
         return enough_free_balance and will_not_exceed_the_spending_limit
 
-    async def long(self, theo_buy: Decimal):
-        if self.best_seller:
-            ok = self.order_robot.send_long_order(self.best_seller, theo_buy)
-            if ok:
-                self.pair.base.free += self.config.base_step_qty
-                self.pair.quote.free -= self.approximate_buy_cost()
-                self.update_used_quote()
-            return ok
+    async def long(self, theo_buy: Decimal) -> Optional[dict]:
+        if not self.best_seller:
+            return None
 
-    async def short(self, theo_sell: Decimal) -> bool:
+        order_log = await self.order_robot.send_long_order(self.best_seller, theo_buy)
+
+        if order_log:
+            self.pair.base.free += self.config.base_step_qty
+            self.pair.quote.free -= self.approximate_buy_cost()
+            self.update_used_quote()
+            return order_log
+
+        return None
+
+    async def short(self, theo_sell: Decimal) -> Optional[dict]:
         """If we deliver order, we reflect it in balance until we read the current balance"""
-        if self.best_buyer:
-            ok = self.order_robot.send_long_order(self.best_buyer, theo_sell)
-            if ok:
-                self.pair.base.free -= self.config.base_step_qty
-                self.pair.quote.free += self.approximate_sell_gain()
-                self.update_used_quote()
-            return ok
-        return False
+        if not self.best_buyer:
+            return None
+
+        order_log = await self.order_robot.send_long_order(self.best_buyer, theo_sell)
+        if order_log:
+            self.pair.base.free -= self.config.base_step_qty
+            self.pair.quote.free += self.approximate_sell_gain()
+            self.update_used_quote()
+            return order_log
+        return None
 
     def approximate_buy_cost(self) -> Decimal:
         if self.best_seller:
@@ -181,7 +190,7 @@ class FollowerWatcher:
             logger.info(e)
             return None
 
-    async def update_pnl(self):
+    async def update_pnl(self) -> None:
         pnl = await self.calculate_pnl()
         if pnl:
             self.pnl = pnl

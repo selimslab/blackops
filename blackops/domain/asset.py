@@ -12,7 +12,7 @@ class Asset(BaseModel):
     free: Decimal = Decimal("0")
     locked: Decimal = Decimal("0")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.symbol}"
 
     @property

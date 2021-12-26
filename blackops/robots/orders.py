@@ -77,11 +77,13 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
             return False
 
-    async def send_long_order(self, best_seller: Decimal, theo_buy: Decimal) -> bool:
+    async def send_long_order(
+        self, best_seller: Decimal, theo_buy: Decimal
+    ) -> Optional[dict]:
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
         if not self.can_buy(best_seller):
-            return False
+            return None
 
         price = float(best_seller)
         qty = float(self.config.base_step_qty)  #  we buy base
@@ -93,13 +95,14 @@ class OrderRobot:
             if order_log:
                 order_log["theo"] = theo_buy
                 self.buy_orders.append(order_log)
+                return order_log
+            return None
 
-            return True
         except Exception as e:
             msg = f"long: {e}"
             logger.error(msg)
             pub.publish_error(self.channel, msg)
-            return False
+            return None
         finally:
             self.long_in_progress = False
 

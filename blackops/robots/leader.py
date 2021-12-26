@@ -1,11 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncGenerator
-
-from blackops.exchanges.base import ExchangeBase
-from blackops.robots.config import SlidingWindowConfig
-from blackops.util.logger import logger
+from typing import AsyncGenerator, AsyncIterable
 
 
 @dataclass
@@ -14,7 +10,7 @@ class LeaderWatcher:
     theo_last_updated: datetime = datetime.now()
     books_seen: int = 0
 
-    async def book_generator(self):
+    async def book_generator(self) -> AsyncIterable:
         async for book in self.book_stream:
             if book:
                 self.books_seen += 1

@@ -30,10 +30,12 @@ class Task:
 
 
 class TaskContext:
-    def __init__(self):
+    def __init__(self) -> None:
         self.tasks: Dict[str, Task] = {}
 
-    async def start_task(self, stg: StrategyConfig, timeout_seconds: int = 3600):
+    async def start_task(
+        self, stg: StrategyConfig, timeout_seconds: int = 3600
+    ) -> None:
         sha = stg.sha
         if sha in self.tasks and self.tasks[sha].status == TaskStatus.RUNNING:
             raise Exception(f"{sha} already running")
@@ -77,7 +79,7 @@ class TaskContext:
             # TODO this will break timeout, fix it
             await self.start_task(stg, timeout_seconds)
 
-    async def clean_task(self, sha):
+    async def clean_task(self, sha: str) -> None:
         try:
             task = self.tasks.get(sha)
             if not task:
@@ -95,14 +97,14 @@ class TaskContext:
             logger.error(f"clean_task: {e}")
             raise e
 
-    async def cancel_task(self, sha):
+    async def cancel_task(self, sha: str) -> None:
         if sha not in self.tasks:
             logger.error(f"cancel_task: {sha} not found")
             return
         await self.clean_task(sha)
         self.tasks[sha].status = TaskStatus.STOPPED
 
-    async def cancel_all(self):
+    async def cancel_all(self) -> list:
         stopped_shas = []
         for sha, task in self.tasks.items():
             if task.status == TaskStatus.RUNNING:
@@ -112,12 +114,13 @@ class TaskContext:
         self.tasks.clear()
         return stopped_shas
 
-    def get_orders(self, sha):
+    def get_orders(self, sha: str) -> list:
         task = self.tasks.get(sha)
         if task and task.robot:
             return task.robot.get_orders()
+        return []
 
-    def get_tasks(self):
+    def get_tasks(self) -> list:
         return list(self.tasks.keys())
 
 
