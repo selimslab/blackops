@@ -189,6 +189,7 @@ class BtcturkApiClient(BtcturkBase):
             return await self._http(uri, self.session.delete)
         except Exception as e:
             # we could not cancel the order, its normal
+            logger.info(f"cancel_order: {e}")
             return None
 
     # async def get_all_orders(self, params: dict) -> Optional[dict]:

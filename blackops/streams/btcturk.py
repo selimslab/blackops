@@ -51,7 +51,7 @@ message_funcs = {
 }
 
 
-def create_bt_gen(message_type: MessageType, symbol):
+def create_bt_gen(message_type: MessageType, symbol, sleep_seconds):
     uri = "wss://ws-feed-pro.btcturk.com/"
 
     message_func = message_funcs[message_type]
@@ -59,16 +59,16 @@ def create_bt_gen(message_type: MessageType, symbol):
     message = json.dumps(message)
 
     # get sleep from env
-    gen = ws_stream(uri, message, sleep=0.11)  # 0.1 sec = 100 ms
+    gen = ws_stream(uri, message, sleep=sleep_seconds)  # 0.1 sec = 100 ms
 
     return gen
 
 
 def create_reconnecting_ws_stream(
-    message_type: MessageType, symbol: str, channel: str = "default"
+    message_type: MessageType, symbol: str, channel: str, sleep_seconds: float
 ):
     def gen_factory():
-        return create_bt_gen(message_type, symbol)
+        return create_bt_gen(message_type, symbol, sleep_seconds)
 
     return reconnecting_generator(gen_factory, channel)
 
@@ -83,14 +83,13 @@ async def parsing_generator(gen: AsyncGenerator):
                 continue
 
 
-def create_book_stream(symbol: str, channel: str = "default") -> AsyncGenerator:
-    gen = create_reconnecting_ws_stream(MessageType.ORDERBOOK, symbol, channel)
+def create_book_stream(
+    symbol: str, channel: str = "default", sleep_seconds: float = 0.11
+) -> AsyncGenerator:
+    gen = create_reconnecting_ws_stream(
+        MessageType.ORDERBOOK, symbol, channel, sleep_seconds
+    )
     return parsing_generator(gen)
-
-
-async def test_stream(type: MessageType, symbol: str):
-    async for book in create_reconnecting_ws_stream(type, symbol):
-        print(book)
 
 
 async def test_parsing_gen(symbol: str):

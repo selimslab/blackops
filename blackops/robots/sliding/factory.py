@@ -50,7 +50,7 @@ def sliding_window_factory(stg: SlidingWindowConfig):
         if stg.bridge_exchange is ExchangeType.BTCTURK:
             bridge_exchange = follower_exchange
             bridge_stream = btc_streams.create_book_stream(
-                bridge_quote_symbol, pub_channel
+                bridge_quote_symbol, pub_channel, stg.sleep_seconds.btc_websocket_sleep
             )
         else:
             # binance for bridge by default
@@ -62,7 +62,10 @@ def sliding_window_factory(stg: SlidingWindowConfig):
     else:
         leader_book_stream = bn_streams.create_book_stream(pair.symbol, pub_channel)
 
-    follower_book_stream = btc_streams.create_book_stream(pair.symbol, pub_channel)
+    # since btc already have X_TRY pair
+    follower_book_stream = btc_streams.create_book_stream(
+        pair.symbol, pub_channel, stg.sleep_seconds.btc_websocket_sleep
+    )
 
     trader = SlidingWindowTrader(
         config=stg,

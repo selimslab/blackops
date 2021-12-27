@@ -22,13 +22,6 @@ from blackops.util.periodic import periodic
 getcontext().prec = 9
 
 
-class SleepSeconds(BaseModel):
-    update_balances: float = 0.72
-    cancel_all_open_orders: float = 2
-    update_pnl: float = 2
-    broadcast_stats: float = 1
-
-
 @dataclass
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
@@ -52,9 +45,6 @@ class SlidingWindowTrader(RobotBase):
 
     def __post_init__(self) -> None:
         self.config_dict = self.config.dict()
-
-        self.sleep_seconds = SleepSeconds()
-        self.sleep_seconds_dict = self.sleep_seconds.dict()
 
         self.channnel = self.config.sha
 
@@ -83,13 +73,14 @@ class SlidingWindowTrader(RobotBase):
         coroutines: Any = [
             self.watch_leader(),
             self.follower.watch_books(),
-            periodic(self.follower.update_balances, self.sleep_seconds.update_balances),
+            periodic(
+                self.follower.update_balances, self.config.sleep_seconds.update_balances
+            ),
             periodic(
                 self.follower.order_robot.cancel_all_open_orders,
-                self.sleep_seconds.cancel_all_open_orders,
+                self.config.sleep_seconds.cancel_all_open_orders,
             ),
-            periodic(self.follower.update_pnl, self.sleep_seconds.update_pnl),
-            periodic(self.broadcast_stats, self.sleep_seconds.broadcast_stats),
+            periodic(self.broadcast_stats, self.config.sleep_seconds.broadcast_stats),
         ]  # is this ordering important ?
         if self.config.use_bridge:
             coroutines.append(self.bridge_watcher.watch_bridge())
@@ -225,13 +216,15 @@ class SlidingWindowTrader(RobotBase):
                 "quote": self.bridge_watcher.bridge_quote,
                 "last_updated": self.bridge_watcher.bridge_last_updated,
             },
-            "sleep seconds": self.sleep_seconds_dict,
             "config": self.config_dict,
         }
 
         return stats
 
     async def broadcast_stats(self) -> None:
+
+        await self.follower.update_pnl()
+
         message = self.create_stats_message()
 
         message = json.dumps(message, default=str)

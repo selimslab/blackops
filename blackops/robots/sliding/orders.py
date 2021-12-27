@@ -115,7 +115,7 @@ class OrderRobot:
             logger.info(f"send_long_order: {e}")
             return None
         finally:
-            await asyncio.sleep(0.12)
+            await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
             self.long_in_progress = False
 
     async def send_short_order(self, best_buyer: Decimal) -> Optional[dict]:
@@ -143,7 +143,7 @@ class OrderRobot:
             logger.info(f"send_short_order: {e}")
             return None
         finally:
-            await asyncio.sleep(0.12)
+            await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
             self.short_in_progress = False
 
     @staticmethod

@@ -26,6 +26,14 @@ class StrategyConfigBase(BaseModel):
         raise NotImplementedError
 
 
+class SleepSeconds(BaseModel):
+    update_balances: float = 0.72
+    cancel_all_open_orders: float = 2
+    broadcast_stats: float = 1
+    sleep_between_orders: float = 0.12
+    btc_websocket_sleep: float = 0.11
+
+
 class SlidingWindowConfig(StrategyConfigBase):
 
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
@@ -64,6 +72,8 @@ class SlidingWindowConfig(StrategyConfigBase):
         example="0.75",
         description="defines window height, high=mid + credit, low = mid-credit",
     )
+
+    sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
