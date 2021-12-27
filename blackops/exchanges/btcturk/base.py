@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import simplejson as json  # type: ignore
 
@@ -27,7 +27,7 @@ class BtcturkBase(ExchangeBase):
     sell_with_fee = Decimal("1") - fee_percent
 
     @staticmethod
-    def parse_book(book) -> dict:
+    def parse_book(book: str) -> dict:
         try:
             return json.loads(book)[1]
         except Exception as e:

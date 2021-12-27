@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from blackops.domain.asset import Asset, AssetPair
 
@@ -22,7 +22,7 @@ class ExchangeBase(ABC):
         return {}
 
     @staticmethod
-    def parse_book(book: str) -> dict:
+    def parse_book(book) -> dict:
         return {}
 
     @staticmethod
