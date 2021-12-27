@@ -137,7 +137,9 @@ class SlidingWindowTrader(RobotBase):
         if not self.theo_buy:
             return False
 
-        return self.follower.best_seller <= self.theo_buy and self.follower.can_buy()
+        return (
+            bool(self.follower.best_seller <= self.theo_buy) and self.follower.can_buy()
+        )
 
     def should_short(self) -> bool:
         if not self.follower.best_buyer:
@@ -146,7 +148,10 @@ class SlidingWindowTrader(RobotBase):
         if not self.theo_sell:
             return False
 
-        return self.follower.best_buyer >= self.theo_sell and self.follower.can_sell()
+        return (
+            bool(self.follower.best_buyer >= self.theo_sell)
+            and self.follower.can_sell()
+        )
 
     def get_orders(self) -> list:
         return self.follower.order_robot.get_orders()

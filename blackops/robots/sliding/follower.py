@@ -98,19 +98,23 @@ class FollowerWatcher:
             raise e
 
     def can_sell(self) -> bool:
-        return (
-            bool(self.pair.base.free)
-            and self.pair.base.free >= self.config.base_step_qty
+        return bool(self.pair.base.free) and bool(
+            self.pair.base.free >= self.config.base_step_qty
         )
 
     def can_buy(self) -> bool:
         approximate_buy_cost = self.approximate_buy_cost()
-        enough_free_balance = (
-            bool(self.pair.quote.free) and self.pair.quote.free >= approximate_buy_cost
-        )
+        enough_free_balance = bool(self.pair.quote.free)
+        total_spent = self.total_used_quote_amount
+
+        if approximate_buy_cost:
+            enough_free_balance = (
+                enough_free_balance and self.pair.quote.free >= approximate_buy_cost
+            )
+            total_spent += approximate_buy_cost
+
         will_not_exceed_the_spending_limit = (
-            self.total_used_quote_amount + approximate_buy_cost
-            <= self.config.max_usable_quote_amount_y
+            total_spent <= self.config.max_usable_quote_amount_y
         )
         return enough_free_balance and will_not_exceed_the_spending_limit
 
@@ -122,7 +126,9 @@ class FollowerWatcher:
 
         if order_log:
             self.pair.base.free += self.config.base_step_qty
-            self.pair.quote.free -= self.approximate_buy_cost()
+            approximate_buy_cost = self.approximate_buy_cost()
+            if approximate_buy_cost:
+                self.pair.quote.free -= approximate_buy_cost
             self.update_used_quote()
             return order_log
 
@@ -136,28 +142,30 @@ class FollowerWatcher:
         order_log = await self.order_robot.send_long_order(self.best_buyer, theo_sell)
         if order_log:
             self.pair.base.free -= self.config.base_step_qty
-            self.pair.quote.free += self.approximate_sell_gain()
+            approximate_sell_gain = self.approximate_sell_gain()
+            if approximate_sell_gain:
+                self.pair.quote.free += approximate_sell_gain
             self.update_used_quote()
             return order_log
         return None
 
-    def approximate_buy_cost(self) -> Decimal:
+    def approximate_buy_cost(self) -> Optional[Decimal]:
         if self.best_seller:
             return (
                 self.best_seller
                 * self.config.base_step_qty
                 # * self.exchange.buy_with_fee
             )
-        return Decimal("0")
+        return None
 
-    def approximate_sell_gain(self) -> Decimal:
+    def approximate_sell_gain(self) -> Optional[Decimal]:
         if self.best_buyer:
             return (
                 self.config.base_step_qty
                 * self.best_buyer
                 # * self.exchange.sell_with_fee
             )
-        return Decimal("0")
+        return None
 
     def update_used_quote(self) -> None:
         self.total_used_quote_amount = (
