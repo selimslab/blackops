@@ -99,7 +99,6 @@ class OrderRobot:
 
         try:
             self.long_in_progress = True
-
             order_log = await self.send_order("buy", price, qty)
             if order_log:
                 order_log["theo"] = theo_buy
@@ -113,7 +112,7 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
             return None
         finally:
-            await asyncio.sleep(0.07)
+            await asyncio.sleep(0.1)
             self.long_in_progress = False
 
     async def send_short_order(
@@ -139,7 +138,7 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
             return None
         finally:
-            await asyncio.sleep(0.07)
+            await asyncio.sleep(0.1)
             self.short_in_progress = False
 
     async def send_order(self, side, price, qty) -> Optional[dict]:
