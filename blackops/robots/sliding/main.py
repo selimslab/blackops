@@ -5,6 +5,7 @@ from decimal import Decimal, getcontext
 from typing import Any, AsyncGenerator, Optional
 
 import simplejson as json  # type: ignore
+from pydantic.main import BaseModel
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
@@ -19,6 +20,14 @@ from blackops.util.logger import logger
 from blackops.util.periodic import periodic
 
 getcontext().prec = 6
+
+
+class SleepSeconds(BaseModel):
+    update_balances: float = 0.72
+    watch_open_orders: float = 0.3
+    cancel_all_open_orders: float = 0.6
+    update_pnl: float = 2
+    broadcast_stats: float = 0.8
 
 
 @dataclass
@@ -44,6 +53,9 @@ class SlidingWindowTrader(RobotBase):
 
     def __post_init__(self) -> None:
         self.config_dict = self.config.dict()
+
+        self.sleep_seconds = SleepSeconds()
+        self.sleep_seconds_dict = self.sleep_seconds.dict()
 
         self.channnel = self.config.sha
 
@@ -155,6 +167,9 @@ class SlidingWindowTrader(RobotBase):
         stats = {
             "current time": datetime.now().time(),
             "start time": self.task_start_time,
+            "step": self.current_step,
+            "pnl": self.follower.pnl,
+            "max pnl ever seen": self.follower.max_pnl,
             "orders": {
                 "note": "please check the exchange for details",
                 "buy": {
@@ -190,21 +205,12 @@ class SlidingWindowTrader(RobotBase):
                         "free": self.follower.pair.quote.free,
                         "locked": self.follower.pair.quote.locked,
                     },
-                    "step": self.current_step,
                 },
-                "pnl": self.follower.pnl,
-                "max pnl ever seen": self.follower.max_pnl,
             },
             "binance": {
-                "theo": {
-                    "buy": self.theo_buy,
-                    "sell": self.theo_sell,
-                    "last_updated": self.leader.theo_last_updated.time(),
-                },
-                "bridge": {
-                    "bridge_quote": self.bridge_watcher.bridge_quote,
-                    "bridge_last_updated": self.bridge_watcher.bridge_last_updated,
-                },
+                "theo buy": self.theo_buy,
+                "theo sell": self.theo_sell,
+                "last_updated": self.leader.theo_last_updated.time(),
                 "books seen": self.leader.books_seen,
             },
             "btcturk": {
@@ -213,6 +219,12 @@ class SlidingWindowTrader(RobotBase):
                 "last_updated": self.follower.bid_ask_last_updated.time(),
                 "books seen": self.follower.books_seen,
             },
+            "bridge": {
+                "exchange": self.config.bridge_exchange,
+                "quote": self.bridge_watcher.bridge_quote,
+                "last_updated": self.bridge_watcher.bridge_last_updated,
+            },
+            "sleep seconds": self.sleep_seconds_dict,
             "config": self.config_dict,
         }
 

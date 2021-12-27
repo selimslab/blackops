@@ -63,11 +63,6 @@
 
           <pre class="has-background-dark has-text-success">{{ JSON.stringify(stats, null, 2) }}</pre>
           
-  
-          <h1 class="has-text-danger mb-10">Config</h1>
-
-          <pre class="has-background-dark has-text-success">{{ JSON.stringify(config, null, 2) }}</pre>
-
 
         </div>
 
@@ -116,16 +111,9 @@
       el: "#app",
       data: {
         sha: null,
-
         messages: [],
         errors: [],
-        buy_orders: [],
-        sell_orders: [],
-        open_buy_orders: [],
-        open_sell_orders: [],
-
         stats: stats,
-        config : config,
       },
 
       methods: {
@@ -143,9 +131,6 @@
           channel.bind("stats", function (data) {
             let stats = JSON.parse(data.message)
             app.stats = stats;
-            app.config = stats.config;
-            delete stats.config
-            
           });
 
         },
