@@ -107,7 +107,7 @@ class OrderRobot:
                 self.buy_orders_delivered += 1
             return order_log
 
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.12)
         self.long_in_progress = False
 
         return None
@@ -131,7 +131,7 @@ class OrderRobot:
                 self.sell_orders_delivered += 1
             return order_log
 
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.12)
         self.short_in_progress = False
 
         return None
