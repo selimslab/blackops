@@ -8,7 +8,7 @@ import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.base import ExchangeBase
 from blackops.robots.config import SlidingWindowConfig
-from blackops.robots.orders import OrderRobot
+from blackops.robots.sliding.orders import OrderRobot
 from blackops.util.logger import logger
 
 
