@@ -45,8 +45,7 @@ class FollowerWatcher:
     async def watch_books(self) -> None:
         async for book in self.book_stream:
             if book:
-                parsed_book = self.exchange.parse_book(book)
-                self.update_follower_prices(parsed_book)
+                self.update_follower_prices(book)
                 self.books_seen += 1
             await asyncio.sleep(0)
 

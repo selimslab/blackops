@@ -15,10 +15,6 @@ class BinanceBase(ExchangeBase):
     sell_with_fee = Decimal("1") - fee_percent
 
     @staticmethod
-    def parse_book(book) -> dict:
-        return book
-
-    @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
         if not book:
             return None

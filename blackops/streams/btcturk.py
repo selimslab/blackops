@@ -64,22 +64,41 @@ def create_bt_gen(message_type: MessageType, symbol):
     return gen
 
 
-def create_ws_stream(message_type: MessageType, symbol: str, channel: str = "default"):
+def create_reconnecting_ws_stream(
+    message_type: MessageType, symbol: str, channel: str = "default"
+):
     def gen_factory():
         return create_bt_gen(message_type, symbol)
 
     return reconnecting_generator(gen_factory, channel)
 
 
+async def parsing_generator(gen: AsyncGenerator):
+    async for data in gen:
+        if data:
+            try:
+                yield json.loads(data)[1]
+            except Exception as e:
+                logger.error(f"parsing_gen: {e}")
+                continue
+
+
 def create_book_stream(symbol: str, channel: str = "default") -> AsyncGenerator:
-    return create_ws_stream(MessageType.ORDERBOOK, symbol, channel)
+    gen = create_reconnecting_ws_stream(MessageType.ORDERBOOK, symbol, channel)
+    return parsing_generator(gen)
 
 
 async def test_stream(type: MessageType, symbol: str):
-    async for book in create_ws_stream(type, symbol):
+    async for book in create_reconnecting_ws_stream(type, symbol):
+        print(book)
+
+
+async def test_parsing_gen(symbol: str):
+    async for book in create_book_stream(symbol):
         print(book)
 
 
 if __name__ == "__main__":
-    asyncio.run(test_stream(MessageType.ORDERBOOK, "USDTTRY"))
+    # asyncio.run(test_stream(MessageType.ORDERBOOK, "USDTTRY"))
     # asyncio.run(test_obdiff_stream())
+    asyncio.run(test_parsing_gen("USDTTRY"))

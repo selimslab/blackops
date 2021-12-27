@@ -27,14 +27,6 @@ class BtcturkBase(ExchangeBase):
     sell_with_fee = Decimal("1") - fee_percent
 
     @staticmethod
-    def parse_book(book: str) -> dict:
-        try:
-            return json.loads(book)[1]
-        except Exception as e:
-            logger.info(e)
-            return {}
-
-    @staticmethod
     def parse_prices(orders: List[dict]) -> list:
         if not orders:
             return []

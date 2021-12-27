@@ -25,8 +25,7 @@ class BridgeWatcher:
             raise ValueError("No bridge exchange")
 
         async for book in self.bridge_stream:
-            parsed_book = self.bridge_exchange.parse_book(book)
-            new_quote = self.bridge_exchange.get_mid(parsed_book)
+            new_quote = self.bridge_exchange.get_mid(book)
             if new_quote:
                 self.bridge_quote = new_quote
                 self.bridge_last_updated = datetime.now().time()

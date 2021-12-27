@@ -22,10 +22,6 @@ class ExchangeBase(ABC):
         return {}
 
     @staticmethod
-    def parse_book(book) -> dict:
-        return {}
-
-    @staticmethod
     def parse_open_orders(open_orders: dict) -> Tuple[list, list]:
         return ([], [])
 
