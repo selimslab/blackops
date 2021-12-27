@@ -19,7 +19,7 @@ from blackops.robots.sliding.leader import LeaderWatcher
 from blackops.util.logger import logger
 from blackops.util.periodic import periodic
 
-getcontext().prec = 6
+getcontext().prec = 9
 
 
 class SleepSeconds(BaseModel):
