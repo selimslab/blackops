@@ -24,10 +24,9 @@ getcontext().prec = 6
 
 class SleepSeconds(BaseModel):
     update_balances: float = 0.72
-    watch_open_orders: float = 0.3
-    cancel_all_open_orders: float = 0.6
+    cancel_all_open_orders: float = 1
     update_pnl: float = 2
-    broadcast_stats: float = 0.8
+    broadcast_stats: float = 1
 
 
 @dataclass
@@ -84,11 +83,13 @@ class SlidingWindowTrader(RobotBase):
         coroutines: Any = [
             self.watch_leader(),
             self.follower.watch_books(),
-            periodic(self.follower.update_balances, 0.72),
-            periodic(self.follower.order_robot.watch_open_orders, 0.3),
-            periodic(self.follower.order_robot.cancel_all_open_orders, 0.6),
-            periodic(self.follower.update_pnl, 2),
-            periodic(self.broadcast_stats, 0.8),
+            periodic(self.follower.update_balances, self.sleep_seconds.update_balances),
+            periodic(
+                self.follower.order_robot.cancel_all_open_orders,
+                self.sleep_seconds.cancel_all_open_orders,
+            ),
+            periodic(self.follower.update_pnl, self.sleep_seconds.update_pnl),
+            periodic(self.broadcast_stats, self.sleep_seconds.broadcast_stats),
         ]  # is this ordering important ?
         if self.config.use_bridge:
             coroutines.append(self.bridge_watcher.watch_bridge())
@@ -174,13 +175,13 @@ class SlidingWindowTrader(RobotBase):
                 "note": "please check the exchange for details",
                 "buy": {
                     "delivered": self.follower.order_robot.buy_orders_delivered,
-                    "open": len(self.follower.order_robot.open_buy_orders),
+                    # "open": len(self.follower.order_robot.open_buy_orders),
                     # "realized": self.follower.order_robot.buy_orders_delivered
                     # - len(self.follower.order_robot.open_buy_orders),
                 },
                 "sell": {
                     "delivered": self.follower.order_robot.sell_orders_delivered,
-                    "open": len(self.follower.order_robot.open_sell_orders),
+                    # "open": len(self.follower.order_robot.open_sell_orders),
                     # "realized": self.follower.order_robot.sell_orders_delivered
                     # - len(self.follower.order_robot.open_sell_orders),
                 },

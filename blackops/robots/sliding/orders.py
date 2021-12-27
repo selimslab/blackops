@@ -30,7 +30,7 @@ class OrderRobot:
     def __post_init__(self):
         self.channel = self.config.sha
 
-    async def watch_open_orders(self) -> None:
+    async def cancel_all_open_orders(self) -> None:
         try:
             open_orders: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if not open_orders:
@@ -41,23 +41,15 @@ class OrderRobot:
                 self.open_buy_orders,
             ) = self.exchange.parse_open_orders(open_orders)
 
-        except Exception as e:
-            msg = f"watch_open_orders: {e}"
-            logger.error(msg)
-            pub.publish_error(self.channel, msg)
-
-    async def cancel_all_open_orders(self) -> bool:
-        try:
             if self.open_sell_orders or self.open_buy_orders:
                 await self.exchange.cancel_multiple_orders(
                     self.open_sell_orders + self.open_buy_orders
                 )
-            return True
+
         except Exception as e:
-            msg = f"cancel_all_open_orders: {e}"
+            msg = f"watch_open_orders: {e}"
             logger.error(msg)
             pub.publish_error(self.channel, msg)
-            return False
 
     def can_buy(self, best_seller: Decimal) -> bool:
         if best_seller and not self.long_in_progress:

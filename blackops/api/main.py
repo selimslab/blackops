@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+import blackops.api.route_handlers.task as task_handler
 from blackops.api.routers.home import router as home_router
 from blackops.api.routers.order import router as order_router
 from blackops.api.routers.stg import router as stg_router
@@ -26,6 +27,11 @@ async def validation_exception_handler(request, exc: Exception):
         status_code=500,
         content={"error": str(exc)},
     )
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await task_handler.stop_all_tasks()
 
 
 if __name__ == "__main__":
