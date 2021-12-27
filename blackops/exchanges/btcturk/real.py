@@ -185,7 +185,6 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if not order_id:
                 return None
-
             uri = update_url_query_params(self.order_url, {"id": order_id})
             return await self._http(uri, self.session.delete)
         except Exception as e:

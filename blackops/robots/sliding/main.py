@@ -179,7 +179,6 @@ class SlidingWindowTrader(RobotBase):
                         "locked": self.follower.pair.quote.locked,
                     },
                     "step": self.current_step,
-                    "note": "balances are approximate since orders take time ",
                 },
                 "pnl": self.follower.pnl,
                 "max pnl ever seen": self.follower.max_pnl,

@@ -155,8 +155,9 @@ class OrderRobot:
                 and res.get("data", None)
             )
             if not ok:
-                msg = f"could not send {side} order, {qty} {self.pair.base.symbol} for {price}, response: {res}"
-                raise Exception(msg)
+                msg = f"could not send order to {side} {qty} {self.pair.base.symbol} at {price}, response: {res}"
+                logger.info(msg)
+                return None
 
             return res
 
