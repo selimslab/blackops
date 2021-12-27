@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
@@ -112,6 +113,7 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
             return None
         finally:
+            await asyncio.sleep(0.05)
             self.long_in_progress = False
 
     async def send_short_order(
@@ -137,6 +139,7 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
             return None
         finally:
+            await asyncio.sleep(0.05)
             self.short_in_progress = False
 
     async def send_order(self, side, price, qty) -> Optional[dict]:
