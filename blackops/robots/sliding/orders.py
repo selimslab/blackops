@@ -17,10 +17,6 @@ class OrderRobot:
     pair: AssetPair
     exchange: ExchangeBase
 
-    # ORDERS
-    buy_orders: list = field(default_factory=list)
-    sell_orders: list = field(default_factory=list)
-
     long_in_progress: bool = False
     short_in_progress: bool = False
 
@@ -30,11 +26,11 @@ class OrderRobot:
     open_sell_orders_base_amount: Decimal = Decimal("0")
     open_buy_orders_base_amount: Decimal = Decimal("0")
 
+    buy_orders_delivered: int = 0
+    sell_orders_delivered: int = 0
+
     def __post_init__(self):
         self.channel = self.config.sha
-
-    def get_orders(self) -> list:
-        return self.buy_orders + self.sell_orders
 
     async def watch_open_orders(self) -> None:
         try:
@@ -77,6 +73,18 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
             return False
 
+    def can_buy(self, best_seller: Decimal) -> bool:
+        if best_seller and not self.long_in_progress:
+            return True
+
+        return False
+
+    def can_sell(self, best_buyer: Decimal) -> bool:
+        if best_buyer and self.config.base_step_qty and not self.short_in_progress:
+            return True
+
+        return False
+
     async def send_long_order(
         self, best_seller: Decimal, theo_buy: Decimal
     ) -> Optional[dict]:
@@ -94,7 +102,7 @@ class OrderRobot:
             order_log = await self.send_order("buy", price, qty)
             if order_log:
                 order_log["theo"] = theo_buy
-                self.buy_orders.append(order_log)
+                self.buy_orders_delivered += 1
                 return order_log
             return None
 
@@ -105,18 +113,6 @@ class OrderRobot:
             return None
         finally:
             self.long_in_progress = False
-
-    def can_buy(self, best_seller: Decimal) -> bool:
-        if best_seller and not self.long_in_progress:
-            return True
-
-        return False
-
-    def can_sell(self, best_buyer: Decimal) -> bool:
-        if best_buyer and self.config.base_step_qty and not self.short_in_progress:
-            return True
-
-        return False
 
     async def send_short_order(
         self, best_buyer: Decimal, theo_sell: Decimal
@@ -132,7 +128,7 @@ class OrderRobot:
             order_log = await self.send_order("sell", price, qty)
             if order_log:
                 order_log["theo"] = theo_sell
-                self.sell_orders.append(order_log)
+                self.sell_orders_delivered += 1
                 return order_log
             return None
         except Exception as e:

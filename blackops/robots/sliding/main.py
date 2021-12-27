@@ -148,9 +148,6 @@ class SlidingWindowTrader(RobotBase):
             and self.follower.can_sell()
         )
 
-    def get_orders(self) -> list:
-        return self.follower.order_robot.get_orders()
-
     async def close(self) -> None:
         await self.follower.order_robot.cancel_all_open_orders()
 
@@ -202,10 +199,19 @@ class SlidingWindowTrader(RobotBase):
                 "books seen": self.follower.books_seen,
             },
             "orders": {
-                "open_buy_orders": self.follower.order_robot.open_buy_orders,
-                "open_sell_orders": self.follower.order_robot.open_sell_orders,
-                "buy_orders": self.follower.order_robot.buy_orders,
-                "sell_orders": self.follower.order_robot.sell_orders,
+                "note": "please also check the exchange",
+                "buy": {
+                    "delivered": self.follower.order_robot.buy_orders_delivered,
+                    "open": len(self.follower.order_robot.open_buy_orders),
+                    "realized": self.follower.order_robot.buy_orders_delivered
+                    - len(self.follower.order_robot.open_buy_orders),
+                },
+                "sell": {
+                    "delivered": self.follower.order_robot.sell_orders_delivered,
+                    "open": len(self.follower.order_robot.open_sell_orders),
+                    "realized": self.follower.order_robot.sell_orders_delivered
+                    - len(self.follower.order_robot.open_sell_orders),
+                },
             },
             "config": self.config_dict,
         }
