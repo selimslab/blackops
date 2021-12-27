@@ -17,8 +17,9 @@ from blackops.util.logger import logger
 class FollowerWatcher:
     exchange: ExchangeBase
     config: SlidingWindowConfig
-    pair: AssetPair
     book_stream: AsyncGenerator
+
+    #
 
     best_seller: Optional[Decimal] = None
     best_buyer: Optional[Decimal] = None
@@ -39,7 +40,14 @@ class FollowerWatcher:
             config=self.config, pair=self.pair, exchange=self.exchange
         )
         self.channnel = self.config.sha
-        self.start_pair = copy.deepcopy(self.pair)
+
+        self.pair = AssetPair(
+            Asset(symbol=self.config.base), Asset(symbol=self.config.quote)
+        )
+
+        self.start_pair = AssetPair(
+            Asset(symbol=self.config.base), Asset(symbol=self.config.quote)
+        )
 
     async def watch_books(self) -> None:
         async for book in self.book_stream:
@@ -122,6 +130,9 @@ class FollowerWatcher:
         if not self.best_seller:
             return None
 
+        if not self.can_buy():
+            return None
+
         order_log = await self.order_robot.send_long_order(self.best_seller, theo_buy)
 
         if order_log:
@@ -137,6 +148,9 @@ class FollowerWatcher:
     async def short(self, theo_sell: Decimal) -> Optional[dict]:
         """If we deliver order, we reflect it in balance until we read the current balance"""
         if not self.best_buyer:
+            return None
+
+        if not self.can_sell():
             return None
 
         order_log = await self.order_robot.send_long_order(self.best_buyer, theo_sell)

@@ -43,10 +43,6 @@ class SlidingWindowTrader(RobotBase):
     current_step: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
-        pair = AssetPair(
-            Asset(symbol=self.config.base), Asset(symbol=self.config.quote)
-        )
-
         self.config_dict = self.config.dict()
 
         self.channnel = self.config.sha
@@ -55,7 +51,6 @@ class SlidingWindowTrader(RobotBase):
 
         self.follower = FollowerWatcher(
             config=self.config,
-            pair=pair,
             exchange=self.follower_exchange,
             book_stream=self.follower_book_stream,
         )
