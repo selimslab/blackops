@@ -11,8 +11,8 @@ class ExchangeBase(ABC):
     name: Optional[str] = None
 
     fee_percent: Decimal = Decimal("0.0018")
-    buy_with_fee = Decimal("1") + fee_percent
-    sell_with_fee = Decimal("1") - fee_percent
+    buy_with_fee: Decimal = Decimal("1") + fee_percent
+    sell_with_fee: Decimal = Decimal("1") - fee_percent
 
     async def get_account_balance(self) -> Optional[dict]:
         pass

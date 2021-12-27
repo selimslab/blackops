@@ -146,7 +146,7 @@ class FollowerWatcher:
             return (
                 self.best_seller
                 * self.config.base_step_qty
-                * self.exchange.buy_with_fee
+                # * self.exchange.buy_with_fee
             )
         return Decimal("0")
 
@@ -155,7 +155,7 @@ class FollowerWatcher:
             return (
                 self.config.base_step_qty
                 * self.best_buyer
-                * self.exchange.sell_with_fee
+                # * self.exchange.sell_with_fee
             )
         return Decimal("0")
 
@@ -166,7 +166,7 @@ class FollowerWatcher:
 
     def convert_base_to_quote(self, base_amount: Decimal) -> Decimal:
         if self.best_buyer:
-            return base_amount * self.best_buyer * self.exchange.sell_with_fee
+            return base_amount * self.best_buyer  # * self.exchange.sell_with_fee
         return Decimal("0")
 
     async def calculate_pnl(self) -> Optional[Decimal]:

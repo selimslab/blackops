@@ -23,8 +23,8 @@ from blackops.util.logger import logger
 class BtcturkBase(ExchangeBase):
 
     fee_percent: Decimal = Decimal("0.0018")
-    buy_with_fee = Decimal("1") + fee_percent
-    sell_with_fee = Decimal("1") - fee_percent
+    buy_with_fee: Decimal = Decimal("1") + fee_percent
+    sell_with_fee: Decimal = Decimal("1") - fee_percent
 
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:
