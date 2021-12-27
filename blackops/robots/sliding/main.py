@@ -75,8 +75,8 @@ class SlidingWindowTrader(RobotBase):
             periodic(self.follower.update_balances, 0.72),
             periodic(self.follower.order_robot.watch_open_orders, 0.3),
             periodic(self.follower.order_robot.cancel_all_open_orders, 0.6),
-            periodic(self.follower.update_pnl, 1),
-            periodic(self.broadcast_stats, 0.5),
+            periodic(self.follower.update_pnl, 2),
+            periodic(self.broadcast_stats, 0.8),
         ]  # is this ordering important ?
         if self.config.use_bridge:
             coroutines.append(self.bridge_watcher.watch_bridge())
