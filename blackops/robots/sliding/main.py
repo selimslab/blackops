@@ -156,7 +156,7 @@ class SlidingWindowTrader(RobotBase):
             "current time": datetime.now().time(),
             "start time": self.task_start_time,
             "orders": {
-                "note": "please also check the exchange",
+                "note": "please check the exchange for details",
                 "buy": {
                     "delivered": self.follower.order_robot.buy_orders_delivered,
                     "open": len(self.follower.order_robot.open_buy_orders),
