@@ -155,6 +155,21 @@ class SlidingWindowTrader(RobotBase):
         stats = {
             "current time": datetime.now().time(),
             "start time": self.task_start_time,
+            "orders": {
+                "note": "please also check the exchange",
+                "buy": {
+                    "delivered": self.follower.order_robot.buy_orders_delivered,
+                    "open": len(self.follower.order_robot.open_buy_orders),
+                    "realized": self.follower.order_robot.buy_orders_delivered
+                    - len(self.follower.order_robot.open_buy_orders),
+                },
+                "sell": {
+                    "delivered": self.follower.order_robot.sell_orders_delivered,
+                    "open": len(self.follower.order_robot.open_sell_orders),
+                    "realized": self.follower.order_robot.sell_orders_delivered
+                    - len(self.follower.order_robot.open_sell_orders),
+                },
+            },
             "balances": {
                 "start": {
                     "base": {
@@ -197,21 +212,6 @@ class SlidingWindowTrader(RobotBase):
                 "ask": self.follower.best_seller,
                 "last_updated": self.follower.bid_ask_last_updated.time(),
                 "books seen": self.follower.books_seen,
-            },
-            "orders": {
-                "note": "please also check the exchange",
-                "buy": {
-                    "delivered": self.follower.order_robot.buy_orders_delivered,
-                    "open": len(self.follower.order_robot.open_buy_orders),
-                    "realized": self.follower.order_robot.buy_orders_delivered
-                    - len(self.follower.order_robot.open_buy_orders),
-                },
-                "sell": {
-                    "delivered": self.follower.order_robot.sell_orders_delivered,
-                    "open": len(self.follower.order_robot.open_sell_orders),
-                    "realized": self.follower.order_robot.sell_orders_delivered
-                    - len(self.follower.order_robot.open_sell_orders),
-                },
             },
             "config": self.config_dict,
         }
