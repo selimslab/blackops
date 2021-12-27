@@ -24,9 +24,6 @@ class OrderRobot:
     open_sell_orders: list = field(default_factory=list)
     open_buy_orders: list = field(default_factory=list)
 
-    open_sell_orders_base_amount: Decimal = Decimal("0")
-    open_buy_orders_base_amount: Decimal = Decimal("0")
-
     buy_orders_delivered: int = 0
     sell_orders_delivered: int = 0
 
@@ -43,18 +40,6 @@ class OrderRobot:
                 self.open_sell_orders,
                 self.open_buy_orders,
             ) = self.exchange.parse_open_orders(open_orders)
-
-            open_sell_orders_base_amount = sum(
-                Decimal(ask.get("leftAmount", "0")) for ask in self.open_sell_orders
-            )
-            self.open_sell_orders_base_amount = Decimal(
-                str(open_sell_orders_base_amount)
-            )
-
-            open_buy_orders_base_amount = sum(
-                Decimal(bid.get("leftAmount", "0")) for bid in self.open_buy_orders
-            )
-            self.open_buy_orders_base_amount = Decimal(str(open_buy_orders_base_amount))
 
         except Exception as e:
             msg = f"watch_open_orders: {e}"
@@ -164,38 +149,3 @@ class OrderRobot:
             logger.error(msg)
             pub.publish_error(self.channel, msg)
             return None
-
-    # def approximate_cost_of_open_buy_orders(self, best_seller: Optional[Decimal]):
-
-    #     # we may not be able to buy from the best seller
-    #     safety_margin = Decimal("1.01")
-    #     if best_seller:
-    #         return (
-    #             self.open_buy_orders_base_amount
-    #             * best_seller
-    #             * self.exchange.buy_with_fee
-    #             * safety_margin
-    #         )
-
-    #     return Decimal("0")
-
-    # def approximate_gain_from_open_sell_orders(self, best_buyer: Optional[Decimal]):
-    #     if best_buyer:
-    #         return (
-    #             self.open_sell_orders_base_amount
-    #             * best_buyer
-    #             * self.exchange.sell_with_fee
-    #         )
-
-    #     return Decimal("0")
-
-    # def approximate_free_quote_balance(self) -> Decimal:
-    #     if self.best_seller:
-    #         return self.pair.quote.free - self.order_robot.approximate_cost_of_open_buy_orders(
-    #             self.best_seller
-    #         )
-    #     else:
-    #         return self.pair.quote.free
-
-    # def usable_balance_to_sell(self) -> Decimal:
-    #     return self.pair.base.free - self.order_robot.open_sell_orders_base_amount

@@ -175,14 +175,14 @@ class SlidingWindowTrader(RobotBase):
                 "buy": {
                     "delivered": self.follower.order_robot.buy_orders_delivered,
                     "open": len(self.follower.order_robot.open_buy_orders),
-                    "realized": self.follower.order_robot.buy_orders_delivered
-                    - len(self.follower.order_robot.open_buy_orders),
+                    # "realized": self.follower.order_robot.buy_orders_delivered
+                    # - len(self.follower.order_robot.open_buy_orders),
                 },
                 "sell": {
                     "delivered": self.follower.order_robot.sell_orders_delivered,
                     "open": len(self.follower.order_robot.open_sell_orders),
-                    "realized": self.follower.order_robot.sell_orders_delivered
-                    - len(self.follower.order_robot.open_sell_orders),
+                    # "realized": self.follower.order_robot.sell_orders_delivered
+                    # - len(self.follower.order_robot.open_sell_orders),
                 },
             },
             "balances": {

@@ -19,8 +19,6 @@ class FollowerWatcher:
     config: SlidingWindowConfig
     book_stream: AsyncGenerator
 
-    #
-
     best_seller: Optional[Decimal] = None
     best_buyer: Optional[Decimal] = None
 
@@ -138,6 +136,7 @@ class FollowerWatcher:
         order_log = await self.order_robot.send_long_order(self.best_seller, theo_buy)
 
         if order_log:
+            logger.info(order_log)
             self.pair.base.free += self.config.base_step_qty
             approximate_buy_cost = self.approximate_buy_cost()
             if approximate_buy_cost:
@@ -157,6 +156,7 @@ class FollowerWatcher:
 
         order_log = await self.order_robot.send_short_order(self.best_buyer, theo_sell)
         if order_log:
+            logger.info(order_log)
             self.pair.base.free -= self.config.base_step_qty
             approximate_sell_gain = self.approximate_sell_gain()
             if approximate_sell_gain:
