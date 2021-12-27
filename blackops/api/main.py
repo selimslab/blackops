@@ -1,8 +1,8 @@
 import asyncio
 
 import uvicorn
-from fastapi import FastAPI, WebSocket
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from blackops.api.routers.home import router as home_router

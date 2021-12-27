@@ -47,14 +47,15 @@ def sliding_window_factory(stg: SlidingWindowConfig):
             base_bridge_symbol, pub_channel
         )
 
-        if stg.bridge_exchange is ExchangeType.BINANCE:
-            bridge_exchange = leader_exchange
-            bridge_stream = bn_streams.create_book_stream(
-                bridge_quote_symbol, pub_channel
-            )
-        elif stg.bridge_exchange is ExchangeType.BTCTURK:
+        if stg.bridge_exchange is ExchangeType.BTCTURK:
             bridge_exchange = follower_exchange
             bridge_stream = btc_streams.create_book_stream(
+                bridge_quote_symbol, pub_channel
+            )
+        else:
+            # binance for bridge by default
+            bridge_exchange = leader_exchange
+            bridge_stream = bn_streams.create_book_stream(
                 bridge_quote_symbol, pub_channel
             )
 
@@ -67,9 +68,9 @@ def sliding_window_factory(stg: SlidingWindowConfig):
         config=stg,
         leader_exchange=leader_exchange,
         follower_exchange=follower_exchange,
-        bridge_exchange=bridge_exchange,
         leader_book_stream=leader_book_stream,
         follower_book_stream=follower_book_stream,
+        bridge_exchange=bridge_exchange,
         bridge_stream=bridge_stream,
     )
 

@@ -37,12 +37,12 @@ class ExchangeBase(ABC):
     def get_best_bid(book: dict) -> Optional[Decimal]:
         pass
 
-    def get_mid(self, book: dict) -> Decimal:
+    def get_mid(self, book: dict) -> Optional[Decimal]:
         best_bid = self.get_best_bid(book)
         best_ask = self.get_best_ask(book)
 
         if not best_bid or not best_ask:
-            return Decimal("0")
+            return None
 
         mid = (best_bid + best_ask) / Decimal("2")
 
