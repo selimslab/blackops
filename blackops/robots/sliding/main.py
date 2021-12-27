@@ -24,7 +24,7 @@ getcontext().prec = 9
 
 class SleepSeconds(BaseModel):
     update_balances: float = 0.72
-    cancel_all_open_orders: float = 1
+    cancel_all_open_orders: float = 2
     update_pnl: float = 2
     broadcast_stats: float = 1
 
@@ -168,9 +168,6 @@ class SlidingWindowTrader(RobotBase):
         stats = {
             "current time": datetime.now().time(),
             "start time": self.task_start_time,
-            "step": self.current_step,
-            "pnl": self.follower.pnl,
-            "max pnl ever seen": self.follower.max_pnl,
             "orders": {
                 "note": "please check the exchange for details",
                 "buy": {
@@ -187,6 +184,9 @@ class SlidingWindowTrader(RobotBase):
                 },
             },
             "balances": {
+                "step": self.current_step,
+                "pnl": self.follower.pnl,
+                "max pnl ever seen": self.follower.max_pnl,
                 "start": {
                     "base": {
                         "free": self.follower.start_pair.base.free,

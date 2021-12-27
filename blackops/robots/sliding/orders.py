@@ -22,6 +22,9 @@ class OrderRobot:
     long_in_progress: bool = False
     short_in_progress: bool = False
 
+    prev_long_id: Optional[int] = None
+    prev_short_id: Optional[int] = None
+
     open_sell_orders: list = field(default_factory=list)
     open_buy_orders: list = field(default_factory=list)
 
@@ -54,9 +57,12 @@ class OrderRobot:
             logger.error(msg)
             pub.publish_error(self.channel, msg)
 
-    def cancel_timed_out_orders(self) -> None:
+    async def cancel_order_on_timeout(
+        self, order_id: int, timeout_seconds: float
+    ) -> None:
         """if an order is not realized, cancel it"""
-        pass
+        await asyncio.sleep(timeout_seconds)
+        await self.exchange.cancel_order(order_id)
 
     def can_buy(self, best_seller: Decimal) -> bool:
         if best_seller and not self.long_in_progress:
@@ -70,6 +76,16 @@ class OrderRobot:
 
         return False
 
+    async def cancel_prev_long_order(self) -> None:
+        if self.prev_long_id:
+            await self.exchange.cancel_order(self.prev_long_id)
+            self.prev_long_id = None
+
+    async def cancel_prev_short_order(self) -> None:
+        if self.prev_short_id:
+            await self.exchange.cancel_order(self.prev_short_id)
+            self.prev_short_id = None
+
     async def send_long_order(self, best_seller: Decimal) -> Optional[dict]:
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
@@ -79,22 +95,22 @@ class OrderRobot:
         price = float(best_seller)
         qty = float(self.config.base_step_qty)  #  we buy base
 
-        try:
-            self.long_in_progress = True
-            order_log = await self.send_order("buy", price, qty)
-            if order_log:
-                self.buy_orders_delivered += 1
-                return order_log
-            return None
+        self.long_in_progress = True
 
-        except Exception as e:
-            msg = f"long: {e}"
-            logger.error(msg)
-            pub.publish_error(self.channel, msg)
-            return None
-        finally:
-            await asyncio.sleep(0.1)
-            self.long_in_progress = False
+        await self.cancel_prev_long_order()
+
+        order_log = await self.submit_order("buy", price, qty)
+        if order_log:
+            order_id = self.parse_order_id(order_log)
+            if order_id:
+                self.prev_long_id = order_id
+                self.buy_orders_delivered += 1
+            return order_log
+
+        await asyncio.sleep(0.1)
+        self.long_in_progress = False
+
+        return None
 
     async def send_short_order(self, best_buyer: Decimal) -> Optional[dict]:
         if not self.can_sell(best_buyer):
@@ -103,21 +119,22 @@ class OrderRobot:
         price = float(best_buyer)
         qty = float(self.config.base_step_qty)  # we sell base
 
-        try:
-            self.short_in_progress = True
-            order_log = await self.send_order("sell", price, qty)
-            if order_log:
+        self.short_in_progress = True
+
+        await self.cancel_prev_short_order()
+
+        order_log = await self.submit_order("sell", price, qty)
+        if order_log:
+            order_id = self.parse_order_id(order_log)
+            if order_id:
+                self.prev_short_id = order_id
                 self.sell_orders_delivered += 1
-                return order_log
-            return None
-        except Exception as e:
-            msg = f"short: {e}"
-            logger.error(msg)
-            pub.publish_error(self.channel, msg)
-            return None
-        finally:
-            await asyncio.sleep(0.1)
-            self.short_in_progress = False
+            return order_log
+
+        await asyncio.sleep(0.1)
+        self.short_in_progress = False
+
+        return None
 
     @staticmethod
     def parse_order_id(order_log: dict):
@@ -125,7 +142,7 @@ class OrderRobot:
         order_id = data.get("id")
         return order_id
 
-    async def send_order(self, side, price, qty) -> Optional[dict]:
+    async def submit_order(self, side, price, qty) -> Optional[dict]:
         try:
             res: Optional[dict] = await self.exchange.submit_limit_order(
                 self.pair, side, price, qty
@@ -142,9 +159,6 @@ class OrderRobot:
                 return None
 
             if res:
-                # order_id = self.parse_order_id(res)
-                # if order_id:
-                #     self.orderq.append(order_id)
                 return res
 
             return None
