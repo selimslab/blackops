@@ -36,16 +36,18 @@ class FollowerWatcher:
     max_pnl: Decimal = Decimal("0")
 
     def __post_init__(self):
+
         self.order_robot = OrderRobot(
-            config=self.config, pair=self.pair, exchange=self.exchange
+            config=self.config, pair=self.create_pair(), exchange=self.exchange
         )
         self.channnel = self.config.sha
 
-        self.pair = AssetPair(
-            Asset(symbol=self.config.base), Asset(symbol=self.config.quote)
-        )
+        self.pair = self.create_pair()
 
-        self.start_pair = AssetPair(
+        self.start_pair = self.create_pair()
+
+    def create_pair(self):
+        return AssetPair(
             Asset(symbol=self.config.base), Asset(symbol=self.config.quote)
         )
 
