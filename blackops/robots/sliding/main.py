@@ -65,8 +65,6 @@ class SlidingWindowTrader(RobotBase):
                 bridge_exchange=self.bridge_exchange, bridge_stream=self.bridge_stream
             )
 
-        logger.info(f"Initialized {self}")
-
     async def run(self) -> None:
         self.task_start_time = datetime.now()
         await self.run_streams()
