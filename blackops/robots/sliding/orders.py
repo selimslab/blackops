@@ -97,20 +97,26 @@ class OrderRobot:
 
         self.long_in_progress = True
 
-        await self.cancel_prev_long_order()
+        try:
+            await self.cancel_prev_long_order()
 
-        order_log = await self.submit_order("buy", price, qty)
-        if order_log:
+            order_log = await self.submit_order("buy", price, qty)
+            if not order_log:
+                return None
+
             order_id = self.parse_order_id(order_log)
             if order_id:
                 self.prev_long_id = order_id
                 self.buy_orders_delivered += 1
-            return order_log
+                return order_log
 
-        await asyncio.sleep(0.12)
-        self.long_in_progress = False
-
-        return None
+            return None
+        except Exception as e:
+            logger.info(f"send_long_order: {e}")
+            return None
+        finally:
+            await asyncio.sleep(0.12)
+            self.long_in_progress = False
 
     async def send_short_order(self, best_buyer: Decimal) -> Optional[dict]:
         if not self.can_sell(best_buyer):
@@ -121,20 +127,24 @@ class OrderRobot:
 
         self.short_in_progress = True
 
-        await self.cancel_prev_short_order()
+        try:
+            await self.cancel_prev_short_order()
 
-        order_log = await self.submit_order("sell", price, qty)
-        if order_log:
+            order_log = await self.submit_order("sell", price, qty)
+            if not order_log:
+                return None
             order_id = self.parse_order_id(order_log)
             if order_id:
                 self.prev_short_id = order_id
                 self.sell_orders_delivered += 1
-            return order_log
-
-        await asyncio.sleep(0.12)
-        self.short_in_progress = False
-
-        return None
+                return order_log
+            return None
+        except Exception as e:
+            logger.info(f"send_short_order: {e}")
+            return None
+        finally:
+            await asyncio.sleep(0.12)
+            self.short_in_progress = False
 
     @staticmethod
     def parse_order_id(order_log: dict):
