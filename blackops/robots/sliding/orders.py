@@ -57,13 +57,6 @@ class OrderRobot:
             logger.error(msg)
             pub.publish_error(self.channel, msg)
 
-    async def cancel_order_on_timeout(
-        self, order_id: int, timeout_seconds: float
-    ) -> None:
-        """if an order is not realized, cancel it"""
-        await asyncio.sleep(timeout_seconds)
-        await self.exchange.cancel_order(order_id)
-
     def can_buy(self, best_seller: Decimal) -> bool:
         if best_seller and not self.long_in_progress:
             return True
@@ -76,15 +69,22 @@ class OrderRobot:
 
         return False
 
-    async def cancel_prev_long_order(self) -> None:
-        if self.prev_long_id:
-            await self.exchange.cancel_order(self.prev_long_id)
-            self.prev_long_id = None
+    # async def cancel_order_on_timeout(
+    #     self, order_id: int, timeout_seconds: float
+    # ) -> None:
+    #     """if an order is not realized, cancel it"""
+    #     await asyncio.sleep(timeout_seconds)
+    #     await self.exchange.cancel_order(order_id)
 
-    async def cancel_prev_short_order(self) -> None:
-        if self.prev_short_id:
-            await self.exchange.cancel_order(self.prev_short_id)
-            self.prev_short_id = None
+    # async def cancel_prev_long_order(self) -> None:
+    #     if self.prev_long_id:
+    #         await self.exchange.cancel_order(self.prev_long_id)
+    #         self.prev_long_id = None
+
+    # async def cancel_prev_short_order(self) -> None:
+    #     if self.prev_short_id:
+    #         await self.exchange.cancel_order(self.prev_short_id)
+    #         self.prev_short_id = None
 
     async def send_long_order(self, best_seller: Decimal) -> Optional[dict]:
         # we buy and sell at the quantized steps
@@ -98,8 +98,6 @@ class OrderRobot:
         self.long_in_progress = True
 
         try:
-            await self.cancel_prev_long_order()
-
             order_log = await self.submit_order("buy", price, qty)
             if not order_log:
                 return None
@@ -109,8 +107,8 @@ class OrderRobot:
                 self.prev_long_id = order_id
                 self.buy_orders_delivered += 1
                 return order_log
-
             return None
+
         except Exception as e:
             logger.info(f"send_long_order: {e}")
             return None
@@ -128,8 +126,6 @@ class OrderRobot:
         self.short_in_progress = True
 
         try:
-            await self.cancel_prev_short_order()
-
             order_log = await self.submit_order("sell", price, qty)
             if not order_log:
                 return None
