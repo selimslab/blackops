@@ -160,8 +160,14 @@ class SlidingWindowTrader(RobotBase):
             "start time": self.task_start_time,
             "balances": {
                 "start": {
-                    "base": self.follower.start_base_total,
-                    "quote": self.follower.start_quote_total,
+                    "base": {
+                        "free": self.follower.start_pair.base.free,
+                        "locked": self.follower.start_pair.base.locked,
+                    },
+                    "quote": {
+                        "free": self.follower.start_pair.quote.free,
+                        "locked": self.follower.start_pair.quote.locked,
+                    },
                 },
                 "current": {
                     "base": {

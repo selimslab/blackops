@@ -96,6 +96,8 @@
   
         </div>
 
+
+
         <div class="column">
 
           <h2 class="has-text-danger">Messages</h2>
@@ -144,11 +146,7 @@
           <div style="height: 32rem; overflow: scroll">
             <ul>
               <li v-for="error in errors">
-
-                <pre class="has-background-dark has-text-success">{{ JSON.stringify(error, null, 2) }}</pre>
-                  
-                
-
+               {{error}}
               </li>
             </ul>
           </div>

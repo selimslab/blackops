@@ -1,4 +1,5 @@
 import asyncio
+import copy
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -25,13 +26,10 @@ class FollowerWatcher:
     bid_ask_last_updated: datetime = datetime.now()
     books_seen: int = 0
 
-    start_base_total: Decimal = Decimal("0")
-    start_quote_total: Decimal = Decimal("0")
-    start_balances_set: bool = False
-
     # we don't enforce max_usable_quote_amount_y too strict
     # we assume no deposits to quote during the task run
     total_used_quote_amount: Decimal = Decimal("0")
+    start_balances_saved: bool = False
 
     pnl: Decimal = Decimal("0")
     max_pnl: Decimal = Decimal("0")
@@ -41,6 +39,7 @@ class FollowerWatcher:
             config=self.config, pair=self.pair, exchange=self.exchange
         )
         self.channnel = self.config.sha
+        self.start_pair = copy.deepcopy(self.pair)
 
     async def watch_books(self) -> None:
         async for book in self.book_stream:
@@ -68,12 +67,6 @@ class FollowerWatcher:
             logger.error(msg)
             pub.publish_error(self.channnel, msg)
 
-    def set_start_balances_if_not_set(self) -> None:
-        if not self.start_balances_set:
-            self.start_base_total = self.pair.base.total_balance
-            self.start_quote_total = self.pair.quote.total_balance
-            self.start_balances_set = True
-
     async def update_balances(self) -> None:
         try:
             res: Optional[dict] = await self.exchange.get_account_balance()
@@ -92,7 +85,9 @@ class FollowerWatcher:
             self.pair.quote.free = Decimal(quote_balances["free"])
             self.pair.quote.locked = Decimal(quote_balances["locked"])
 
-            self.set_start_balances_if_not_set()
+            if not self.start_balances_saved:
+                self.start_pair = copy.deepcopy(self.pair)
+                self.start_balances_saved = True
 
             self.update_used_quote()
 
@@ -166,24 +161,23 @@ class FollowerWatcher:
 
     def update_used_quote(self) -> None:
         self.total_used_quote_amount = (
-            self.start_quote_total - self.pair.quote.total_balance
+            self.start_pair.quote.total_balance - self.pair.quote.total_balance
         )
 
-    def convert_base_to_quote(self) -> Decimal:
+    def convert_base_to_quote(self, base_amount: Decimal) -> Decimal:
         if self.best_buyer:
-            return (
-                self.pair.base.total_balance
-                * self.best_buyer
-                * self.exchange.sell_with_fee
-            )
+            return base_amount * self.best_buyer * self.exchange.sell_with_fee
         return Decimal("0")
 
     async def calculate_pnl(self) -> Optional[Decimal]:
         try:
+            approximate_quote_for_base = self.convert_base_to_quote(
+                self.pair.base.total_balance - self.start_pair.base.total_balance
+            )
             return (
                 self.pair.quote.total_balance
-                - self.start_quote_total
-                + self.convert_base_to_quote()
+                - self.start_pair.quote.total_balance
+                + approximate_quote_for_base
             )
         except Exception as e:
             logger.info(e)
