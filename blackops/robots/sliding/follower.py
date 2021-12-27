@@ -155,7 +155,7 @@ class FollowerWatcher:
         if not self.can_sell():
             return None
 
-        order_log = await self.order_robot.send_long_order(self.best_buyer, theo_sell)
+        order_log = await self.order_robot.send_short_order(self.best_buyer, theo_sell)
         if order_log:
             self.pair.base.free -= self.config.base_step_qty
             approximate_sell_gain = self.approximate_sell_gain()
