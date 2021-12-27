@@ -5,9 +5,8 @@ from decimal import Decimal
 from typing import AsyncGenerator, Optional
 
 import blackops.pubsub.pub as pub
-from blackops.domain.asset import Asset, AssetPair
 from blackops.exchanges.base import ExchangeBase
-from blackops.robots.config import SlidingWindowConfig
+from blackops.exchanges.factory import ExchangeType
 from blackops.util.logger import logger
 
 
@@ -26,7 +25,8 @@ class BridgeWatcher:
             raise ValueError("No bridge exchange")
 
         async for book in self.bridge_stream:
-            new_quote = self.bridge_exchange.get_mid(book)
+            parsed_book = self.bridge_exchange.parse_book(book)
+            new_quote = self.bridge_exchange.get_mid(parsed_book)
             if new_quote:
                 self.bridge_quote = new_quote
                 self.bridge_last_updated = datetime.now().time()

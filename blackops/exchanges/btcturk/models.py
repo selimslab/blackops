@@ -5,16 +5,12 @@ from pydantic import BaseModel, Field
 
 from blackops.domain.asset import Asset, AssetPair, AssetPairSymbol, AssetSymbol
 
-# BALANCE
-
 
 class AccountBalanceResponse(BaseModel):
     success: bool
     data: Optional[List[Asset]] = None
     message: Optional[str] = None
 
-
-# ORDER
 
 OrderId = int
 
@@ -50,9 +46,6 @@ class OpenOrdersResponse(BaseModel):
     success: bool
     data: OpenOrdersData
     message: Optional[str] = None
-
-
-# ACCOUNT
 
 
 class Account(BaseModel):

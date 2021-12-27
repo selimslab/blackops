@@ -11,8 +11,8 @@ from blackops.domain.asset import Asset, AssetPair
 from blackops.environment import debug
 from blackops.exchanges.base import ExchangeBase
 from blackops.robots.base import RobotBase
-from blackops.robots.bridge import BridgeWatcher
 from blackops.robots.config import SlidingWindowConfig
+from blackops.robots.sliding.bridge import BridgeWatcher
 from blackops.robots.sliding.follower import FollowerWatcher
 from blackops.robots.sliding.leader import LeaderWatcher
 from blackops.util.logger import logger
