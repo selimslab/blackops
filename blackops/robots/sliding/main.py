@@ -157,7 +157,7 @@ class SlidingWindowTrader(RobotBase):
 
     def create_stats_message(self) -> dict:
         stats = {
-            "current time": datetime.now().time(),
+            "current time": datetime.now(),
             "start time": self.task_start_time,
             "orders": {
                 "note": "please check the exchange for details",
@@ -176,8 +176,6 @@ class SlidingWindowTrader(RobotBase):
             },
             "balances": {
                 "step": self.current_step,
-                "pnl": self.follower.pnl,
-                "max pnl ever seen": self.follower.max_pnl,
                 "start": {
                     "base": {
                         "free": self.follower.start_pair.base.free,
@@ -211,13 +209,15 @@ class SlidingWindowTrader(RobotBase):
                 "last_updated": self.follower.bid_ask_last_updated.time(),
                 "books seen": self.follower.books_seen,
             },
-            "bridge": {
+            "config": self.config_dict,
+        }
+
+        if self.config.use_bridge:
+            stats["bridge"] = {
                 "exchange": self.config.bridge_exchange,
                 "quote": self.bridge_watcher.bridge_quote,
                 "last_updated": self.bridge_watcher.bridge_last_updated,
-            },
-            "config": self.config_dict,
-        }
+            }
 
         return stats
 

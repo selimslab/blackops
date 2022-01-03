@@ -19,18 +19,7 @@ from blackops.util.logger import logger
 
 async def list_stgs() -> List[dict]:
     stgs = await async_redis_client.hvals(STG_MAP)
-    stgs = [json.loads(s) for s in stgs]
-    # if stgs:
-    #     sorted_by_date = sorted(
-    #         stgs,
-    #         key=lambda stg: datetime.strptime(
-    #             stg.get("created_at", ""), "%Y-%m-%dT%H:%M:%S.%f"
-    #         ),
-    #         reverse=True,
-    #     )
-    #     return sorted_by_date
-    # else:
-    return stgs
+    return [json.loads(s) for s in stgs]
 
 
 async def get_stg(sha: str) -> dict:

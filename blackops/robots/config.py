@@ -30,7 +30,7 @@ class SleepSeconds(BaseModel):
     update_balances: float = 0.72
     cancel_all_open_orders: float = 2
     broadcast_stats: float = 1
-    sleep_between_orders: float = 0.12
+    sleep_between_orders: float = 0.1
     btc_websocket_sleep: float = 0.11
 
 
