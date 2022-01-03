@@ -22,16 +22,16 @@ def sliding_window_factory(stg: SlidingWindowConfig):
 
     follower_exchange: ExchangeBase = create_api_client(
         ExchangeType(stg.follower_exchange), network
-    )  # type:ignore
+    )
 
     if network == NetworkType.TESTNET and follower_exchange:
         follower_exchange.dummy_exchange.add_balance(  # type:ignore
-            Asset(symbol=stg.quote), stg.max_usable_quote_amount_y * 3
+            Asset(symbol=stg.quote), stg.max_usable_quote_amount_y * 2
         )
 
     leader_exchange: ExchangeBase = create_api_client(
         ExchangeType(stg.leader_exchange), network
-    )  # type:ignore
+    )
 
     pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
 

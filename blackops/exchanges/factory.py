@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Dict
 
 import blackops.exchanges.binance.factory as binance_factory
 import blackops.exchanges.btcturk.factory as btcturk_factory
@@ -26,11 +27,20 @@ API_CLIENT_FACTORIES = {
     },
 }
 
+API_CLIENTS: Dict[tuple, ExchangeBase] = {}
+
 
 def create_api_client(ex_type: ExchangeType, network: NetworkType) -> ExchangeBase:
+    key = (ex_type, network)
+    if key in API_CLIENTS:
+        return API_CLIENTS[key]
+
     factory_func = API_CLIENT_FACTORIES.get(ex_type, {}).get(network)  # type: ignore
 
     if not factory_func:
         raise ValueError(f"unknown exchange: {ex_type}")
 
-    return factory_func()
+    client = factory_func()
+    API_CLIENTS[key] = client
+
+    return client

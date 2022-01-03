@@ -30,14 +30,22 @@ class OrderRobot:
 
     buy_orders_delivered: int = 0
     sell_orders_delivered: int = 0
+    prev_order_count: int = 0
 
     orderq: collections.deque = field(default_factory=collections.deque)
+
+    @property
+    def total_orders_delivered(self):
+        return self.buy_orders_delivered + self.sell_orders_delivered
 
     def __post_init__(self):
         self.channel = self.config.sha
 
     async def cancel_all_open_orders(self) -> None:
         try:
+            if self.prev_order_count in (0, self.total_orders_delivered):
+                return
+
             open_orders: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if not open_orders:
                 open_orders = {}
@@ -51,6 +59,8 @@ class OrderRobot:
                 await self.exchange.cancel_multiple_orders(
                     self.open_sell_orders + self.open_buy_orders
                 )
+
+            self.prev_order_count = self.total_orders_delivered
 
         except Exception as e:
             msg = f"watch_open_orders: {e}"

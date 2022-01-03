@@ -100,4 +100,4 @@ async def test_parsing_gen(symbol: str):
 if __name__ == "__main__":
     # asyncio.run(test_stream(MessageType.ORDERBOOK, "USDTTRY"))
     # asyncio.run(test_obdiff_stream())
-    asyncio.run(test_parsing_gen("USDTTRY"))
+    asyncio.run(test_parsing_gen("ETHUSDT"))
