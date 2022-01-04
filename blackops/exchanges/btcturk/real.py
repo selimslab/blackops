@@ -32,8 +32,8 @@ class BtcturkApiClient(BtcturkBase):
 
     name: str = "btcturk_real"
 
-    spam_lock: bool = False
-    spam_sleep_seconds: int = 5
+    rate_limit_lock = asyncio.Lock()
+    rate_limit_seconds: int = 5
 
     order_lock = asyncio.Lock()
 
@@ -66,16 +66,11 @@ class BtcturkApiClient(BtcturkBase):
 
         return headers
 
-    async def stop_spamming(self) -> None:
-        try:
-            self.spam_lock = True
+    async def activate_rate_limit(self) -> None:
+        with self.rate_limit_lock:
             await self._close_session()
             self.session = aiohttp.ClientSession()
-            await asyncio.sleep(self.spam_sleep_seconds)
-        except Exception as e:
-            logger.info(f"stop_spamming: {e}")
-        finally:
-            self.spam_lock = False
+            await asyncio.sleep(self.rate_limit_seconds)
 
     async def _get(self, uri: str):
         try:
@@ -87,15 +82,15 @@ class BtcturkApiClient(BtcturkBase):
 
     async def _http(self, uri: str, method: Callable):
         try:
-            if self.spam_lock:
+            if self.rate_limit_lock.locked():
                 return
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
                     return await res.json()
                 if res.status == 429:
-                    await self.stop_spamming()
+                    await self.activate_rate_limit()
                     msg = f"""got 429 too many requests, 
-                    will wait {self.spam_sleep_seconds} seconds before sending new requests"""
+                    will wait {self.rate_limit_seconds} seconds before sending new requests"""
                     raise Exception(msg)
                 else:
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"
@@ -219,19 +214,19 @@ class BtcturkApiClient(BtcturkBase):
     #     uri = update_url_query_params(self.all_orders_url, params)
     #     return await self._http(uri, self.session.get)
 
-    async def get_ticker(self, pair: AssetPair):
+    async def get_ticker(self, pair: AssetPair) -> Optional[Decimal]:
         params = {"pairSymbol": pair.symbol}
         uri = update_url_query_params(self.ticker_url, params)
         res = await self._get(uri)
-        if res:
-            print(res)
-            try:
-                data = res["data"][0]
-                bid, ask = data["bid"], data["ask"]
-                return (Decimal(str(bid)) + Decimal(str(ask))) / Decimal("2")
-            except Exception as e:
-                logger.error(f"get_ticker {e}")
-                return None
+        if not res:
+            return None
+        try:
+            data = res["data"][0]
+            bid, ask = data["bid"], data["ask"]
+            return (Decimal(str(bid)) + Decimal(str(ask))) / Decimal("2")
+        except Exception as e:
+            logger.error(f"get_ticker {e}")
+            return None
 
     # def get_orderbook(pair:str):
     #     orderbook_path = "api/v2/orderbook"
@@ -243,4 +238,4 @@ class BtcturkApiClient(BtcturkBase):
         await self.session.close()
 
 
-# btc_real_api_client = BtcturkApiClient()
+btc_real_api_client_public = BtcturkApiClient()

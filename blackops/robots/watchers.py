@@ -49,19 +49,6 @@ class BalanceWatcher:
 
 
 @dataclass
-class LeaderBookWatcher(BookWatcher):
-    book: Optional[dict] = None
-
-    async def book_generator(self) -> None:
-        async for book in self.stream:
-            if book:
-                self.book = book
-                self.last_updated = datetime.now()
-                self.books_seen += 1
-            await asyncio.sleep(0)
-
-
-@dataclass
 class WatcherFactory:
 
     BOOK_WATCHERS: Dict[str, BookWatcher] = field(default_factory=dict)

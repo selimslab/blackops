@@ -7,6 +7,7 @@ from typing import Optional
 import pydantic
 from pydantic import BaseModel, Field
 
+from blackops.domain.asset import PIP
 from blackops.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 from blackops.exchanges.factory import ExchangeType, NetworkType
 
@@ -52,28 +53,22 @@ class SlidingWindowConfig(StrategyConfigBase):
     leader_exchange: ExchangeType = ExchangeType.BINANCE
     follower_exchange: ExchangeType = ExchangeType.BTCTURK
 
-    max_usable_quote_amount_y: Decimal = Field(
-        description="eg. use max 5000 TRY for this strategy, if you have less balance, you will get an error when you run the stg",
-        example="24000",
-    )
+    max_usable_quote_amount_y: Decimal = Decimal(1000)
 
-    base_step_qty: Decimal = Field(
-        description="eg. buy 100 MANA per step", example="100"
-    )
+    quote_step_amount: Decimal = Decimal(1500)
 
-    step_constant_k: Decimal = Field(
-        ...,
-        example="0.2",
-        description="slide down by this amount after every buy, slide up by this amount after every sell",
-    )
+    base_step_qty: Decimal = Decimal(0)
 
-    credit: Decimal = Field(
-        ...,
-        example="0.75",
-        description="defines window height, high=mid + credit, low = mid-credit",
-    )
+    step_constant_k: Decimal = Decimal(0)
+
+    credit: Decimal = Decimal(0)
 
     sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
+
+    def set_params_from_ticker(self, ticker: Decimal):
+        self.base_step_qty = self.quote_step_amount / ticker
+        self.step_constant_k = Decimal("2.5") * PIP * ticker
+        self.credit = Decimal(5) * self.step_constant_k
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
@@ -103,16 +98,28 @@ class SlidingWindowConfig(StrategyConfigBase):
             return Exception("test or real money?")
 
     def is_valid_params(self):
+        if not self.max_usable_quote_amount_y:
+            raise Exception("max_usable_quote_amount_y is required")
+
         if self.max_usable_quote_amount_y > MAX_SPEND_ALLOWED:
             raise Exception(
                 f"you will spend more than {MAX_SPEND_ALLOWED}, are you sure?"
             )
 
+        if not self.credit:
+            raise Exception("credit is required")
+
         if self.credit < 0:
             raise Exception(f"credit must be positive")
 
+        if not self.step_constant_k:
+            raise Exception("step_constant_k is required")
+
         if self.step_constant_k < 0:
             raise Exception(f"step_constant_k must be positive")
+
+        if not self.base_step_qty:
+            raise Exception("base_step_qty is required")
 
         if self.base_step_qty < 0:
             raise Exception(f"base_step_qty must be positive")
