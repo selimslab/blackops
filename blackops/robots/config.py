@@ -57,6 +57,10 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     quote_step_amount: Decimal = Decimal(1500)
 
+    credit_k: Decimal = Decimal(5)
+
+    step_constant_pip: Decimal = Decimal("2.5")
+
     base_step_qty: Decimal = Decimal(0)
 
     step_constant_k: Decimal = Decimal(0)
@@ -67,8 +71,8 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     def set_params_from_ticker(self, ticker: Decimal):
         self.base_step_qty = self.quote_step_amount / ticker
-        self.step_constant_k = Decimal("2.5") * PIP * ticker
-        self.credit = Decimal(5) * self.step_constant_k
+        self.step_constant_k = self.step_constant_pip * PIP * ticker
+        self.credit = self.credit_k * self.step_constant_k
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
