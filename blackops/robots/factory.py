@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Tuple
 
 from blackops.robots.config import StrategyConfig, StrategyType
 from blackops.robots.sliding.factory import sliding_window_factory

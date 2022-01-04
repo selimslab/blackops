@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from blackops.domain.asset import Asset, AssetPair
 

@@ -6,9 +6,7 @@ from fastapi import HTTPException
 
 import blackops.pubsub.pub as pub
 from blackops.robots.config import StrategyConfig
-from blackops.taskq.redis import (
-    async_redis_client,
-)
+from blackops.taskq.redis import async_redis_client
 from blackops.taskq.task_ctx import task_context
 from blackops.util.hash import dict_to_hash
 from blackops.util.logger import logger
