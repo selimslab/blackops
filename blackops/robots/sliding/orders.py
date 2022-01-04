@@ -22,17 +22,12 @@ class OrderRobot:
     long_in_progress: bool = False
     short_in_progress: bool = False
 
-    prev_long_id: Optional[int] = None
-    prev_short_id: Optional[int] = None
-
     open_sell_orders: list = field(default_factory=list)
     open_buy_orders: list = field(default_factory=list)
 
     buy_orders_delivered: int = 0
     sell_orders_delivered: int = 0
     prev_order_count: int = 0
-
-    orderq: collections.deque = field(default_factory=collections.deque)
 
     @property
     def total_orders_delivered(self):
@@ -43,7 +38,7 @@ class OrderRobot:
 
     async def cancel_all_open_orders(self) -> None:
         try:
-            if self.prev_order_count in (0, self.total_orders_delivered):
+            if self.total_orders_delivered in (0, self.prev_order_count):
                 return
 
             open_orders: Optional[dict] = await self.exchange.get_open_orders(self.pair)
@@ -79,23 +74,6 @@ class OrderRobot:
 
         return False
 
-    # async def cancel_order_on_timeout(
-    #     self, order_id: int, timeout_seconds: float
-    # ) -> None:
-    #     """if an order is not realized, cancel it"""
-    #     await asyncio.sleep(timeout_seconds)
-    #     await self.exchange.cancel_order(order_id)
-
-    # async def cancel_prev_long_order(self) -> None:
-    #     if self.prev_long_id:
-    #         await self.exchange.cancel_order(self.prev_long_id)
-    #         self.prev_long_id = None
-
-    # async def cancel_prev_short_order(self) -> None:
-    #     if self.prev_short_id:
-    #         await self.exchange.cancel_order(self.prev_short_id)
-    #         self.prev_short_id = None
-
     async def send_long_order(self, best_seller: Decimal) -> Optional[dict]:
         # we buy and sell at the quantized steps
         # so we buy or sell a quantum
@@ -114,7 +92,6 @@ class OrderRobot:
 
             order_id = self.parse_order_id(order_log)
             if order_id:
-                self.prev_long_id = order_id
                 self.buy_orders_delivered += 1
                 return order_log
             return None
@@ -141,7 +118,6 @@ class OrderRobot:
                 return None
             order_id = self.parse_order_id(order_log)
             if order_id:
-                self.prev_short_id = order_id
                 self.sell_orders_delivered += 1
                 return order_log
             return None
