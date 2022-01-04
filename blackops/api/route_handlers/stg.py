@@ -7,14 +7,13 @@ from fastapi import HTTPException
 import blackops.pubsub.pub as pub
 from blackops.robots.config import StrategyConfig
 from blackops.taskq.redis import (
-    LOG_CHANNELS,
-    RUNNING_TASKS,
-    STG_MAP,
     async_redis_client,
 )
 from blackops.taskq.task_ctx import task_context
 from blackops.util.hash import dict_to_hash
 from blackops.util.logger import logger
+
+STG_MAP = "STG_MAP"
 
 
 async def list_stgs() -> List[dict]:

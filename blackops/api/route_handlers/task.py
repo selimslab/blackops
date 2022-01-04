@@ -1,23 +1,13 @@
 import asyncio
 
-from fastapi import HTTPException
-
 import blackops.pubsub.pub as pub
 from blackops.robots.config import STRATEGY_CLASS, StrategyConfig, StrategyType
-from blackops.taskq.redis import (
-    LOG_CHANNELS,
-    RUNNING_TASKS,
-    STG_MAP,
-    async_redis_client,
-)
+
 from blackops.taskq.task_ctx import task_context
 from blackops.util.logger import logger
 
 from .stg import get_stg
 
-
-async def get_task_id(sha):
-    return await async_redis_client.hget(RUNNING_TASKS, sha)
 
 
 async def deserialize_stg_config(sha: str) -> StrategyConfig:
