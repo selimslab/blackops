@@ -1,80 +1,115 @@
-from typing import Callable
+from typing import Callable, Coroutine, List, Optional, Tuple
 
-import blackops.streams.bn as bn_streams
-import blackops.streams.btcturk as btc_streams
+from pydantic import networks
+
 from blackops.domain.asset import Asset, AssetPair
-from blackops.exchanges.base import ExchangeBase
-from blackops.exchanges.factory import ExchangeType, NetworkType, create_api_client
+from blackops.exchanges.base import ExchangeAPIClientBase
+from blackops.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from blackops.robots.config import SlidingWindowConfig
 from blackops.robots.sliding.main import SlidingWindowTrader
+from blackops.robots.watchers import BalanceWatcher, BookWatcher, watcher_factory
+from blackops.streams.factory import stream_factory
 from blackops.util.logger import logger
 
 
-def sliding_window_factory(stg: SlidingWindowConfig):
+def create_clients(stg: SlidingWindowConfig):
+
+    network = NetworkType.TESTNET if stg.testnet else NetworkType.REAL
+
+    follower_api_client: ExchangeAPIClientBase = (
+        api_client_factory.create_api_client_if_not_exists(
+            ExchangeType(stg.follower_exchange), network
+        )
+    )
+
+    if network == NetworkType.TESTNET and follower_api_client:
+        follower_api_client.dummy_exchange.add_balance(  # type:ignore
+            Asset(symbol=stg.quote), stg.max_usable_quote_amount_y * 2
+        )
+
+    leader_api_client: ExchangeAPIClientBase = (
+        api_client_factory.create_api_client_if_not_exists(
+            ExchangeType(stg.leader_exchange), network
+        )
+    )
+
+    return leader_api_client, follower_api_client
+
+
+def create_balance_watcher_from_strategy(stg: SlidingWindowConfig) -> Tuple:
+    network = NetworkType.TESTNET if stg.testnet else NetworkType.REAL
+    (
+        balance_pubsub_key,
+        balance_watcher,
+    ) = watcher_factory.create_balance_watcher_if_not_exists(
+        ex_type=ExchangeType(stg.follower_exchange), network=network
+    )
+    return balance_pubsub_key, balance_watcher
+
+
+def create_bridge_watcher_from_strategy(stg: SlidingWindowConfig) -> Tuple:
+    bridge_pubsub_key = None
+    bridge_watcher = None
+
+    if stg.bridge:
+        network = NetworkType.TESTNET if stg.testnet else NetworkType.REAL
+        (
+            bridge_pubsub_key,
+            bridge_watcher,
+        ) = watcher_factory.create_book_watcher_if_not_exists(
+            ex_type=ExchangeType(stg.bridge_exchange),
+            network=network,
+            symbol=stg.bridge + stg.quote,
+            pub_channel=stg.sha,
+        )
+    return bridge_pubsub_key, bridge_watcher
+
+
+def validate(stg: SlidingWindowConfig):
     if not isinstance(stg, SlidingWindowConfig):
         raise ValueError(f"wrong strategy type: {stg.type}")
 
     if not stg.sha:
         raise ValueError(f"sha is not set: {stg}")
+
+    stg.is_valid()
+
+
+def sliding_window_factory(stg: SlidingWindowConfig):
+
+    validate(stg)
+
     pub_channel = stg.sha
 
-    network = NetworkType.TESTNET if stg.testnet else NetworkType.REAL
+    leader_api_client, follower_api_client = create_clients(stg)
 
-    follower_exchange: ExchangeBase = create_api_client(
-        ExchangeType(stg.follower_exchange), network
-    )
-
-    if network == NetworkType.TESTNET and follower_exchange:
-        follower_exchange.dummy_exchange.add_balance(  # type:ignore
-            Asset(symbol=stg.quote), stg.max_usable_quote_amount_y * 2
-        )
-
-    leader_exchange: ExchangeBase = create_api_client(
-        ExchangeType(stg.leader_exchange), network
-    )
+    balance_pubsub_key, balance_watcher = create_balance_watcher_from_strategy(stg)
+    bridge_pubsub_key, bridge_watcher = create_bridge_watcher_from_strategy(stg)
 
     pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
 
-    bridge_symbol = stg.bridge
-    bridge_exchange = None
-    bridge_stream = None
-
-    if bridge_symbol:
-        base_bridge_symbol = stg.base + bridge_symbol
-        bridge_quote_symbol = bridge_symbol + stg.quote
-
-        leader_book_stream = bn_streams.create_book_stream(
-            base_bridge_symbol, pub_channel
+    if stg.bridge:
+        leader_book_stream = stream_factory.create_stream_if_not_exists(
+            ExchangeType(stg.leader_exchange), stg.base + stg.bridge, pub_channel
+        )
+    else:
+        leader_book_stream = stream_factory.create_stream_if_not_exists(
+            ExchangeType(stg.leader_exchange), pair.symbol, pub_channel
         )
 
-        if stg.bridge_exchange is ExchangeType.BTCTURK:
-            bridge_exchange = follower_exchange
-            bridge_stream = btc_streams.create_book_stream(
-                bridge_quote_symbol, pub_channel, stg.sleep_seconds.btc_websocket_sleep
-            )
-        else:
-            # binance for bridge by default
-            bridge_exchange = leader_exchange
-            bridge_stream = bn_streams.create_book_stream(
-                bridge_quote_symbol, pub_channel
-            )
-
-    else:
-        leader_book_stream = bn_streams.create_book_stream(pair.symbol, pub_channel)
-
-    # since btc already have X_TRY pair
-    follower_book_stream = btc_streams.create_book_stream(
-        pair.symbol, pub_channel, stg.sleep_seconds.btc_websocket_sleep
+    follower_book_stream = stream_factory.create_stream_if_not_exists(
+        ExchangeType(stg.follower_exchange), pair.symbol, pub_channel
     )
 
     trader = SlidingWindowTrader(
         config=stg,
-        leader_exchange=leader_exchange,
-        follower_exchange=follower_exchange,
+        leader_api_client=leader_api_client,
+        follower_api_client=follower_api_client,
         leader_book_stream=leader_book_stream,
         follower_book_stream=follower_book_stream,
-        bridge_exchange=bridge_exchange,
-        bridge_stream=bridge_stream,
+        bridge_watcher=bridge_watcher,
+        balance_watcher=balance_watcher,
+        balance_pubsub_key=balance_pubsub_key,
+        bridge_pubsub_key=bridge_pubsub_key,
     )
-
-    return trader
+    return trader, balance_watcher, bridge_watcher

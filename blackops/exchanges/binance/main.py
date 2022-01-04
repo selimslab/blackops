@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional
 
-from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.base import ExchangeAPIClientBase
 from blackops.util.logger import logger
 
 
 @dataclass
-class BinanceBase(ExchangeBase):
+class BinanceBase(ExchangeAPIClientBase):
     name: str = "Binance"
 
     fee_percent: Decimal = Decimal("0.009")

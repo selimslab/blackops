@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, Union
 import simplejson as json  # type: ignore
 
 from blackops.domain.asset import Asset, AssetPair
-from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.base import ExchangeAPIClientBase
 from blackops.exchanges.btcturk.models import (
     AccountBalanceResponse,
     OpenOrdersData,
@@ -20,9 +20,9 @@ from blackops.util.logger import logger
 
 
 @dataclass
-class BtcturkBase(ExchangeBase):
+class BtcturkBase(ExchangeAPIClientBase):
 
-    fee_percent: Decimal = Decimal("0.0018")
+    fee_percent: Decimal = Decimal("0.0016")
     buy_with_fee: Decimal = Decimal("1") + fee_percent
     sell_with_fee: Decimal = Decimal("1") - fee_percent
 

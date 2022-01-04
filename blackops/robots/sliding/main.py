@@ -10,12 +10,12 @@ from pydantic.main import BaseModel
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
 from blackops.environment import debug
-from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.base import ExchangeAPIClientBase
 from blackops.robots.base import RobotBase
 from blackops.robots.config import SlidingWindowConfig
-from blackops.robots.sliding.bridge import BridgeWatcher
 from blackops.robots.sliding.follower import FollowerWatcher
 from blackops.robots.sliding.leader import LeaderWatcher
+from blackops.robots.watchers import BalanceWatcher, BookWatcher
 from blackops.util.logger import logger
 from blackops.util.periodic import periodic
 
@@ -27,16 +27,17 @@ class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
 
     # Exchanges
-    leader_exchange: ExchangeBase
-    follower_exchange: ExchangeBase
+    leader_api_client: ExchangeAPIClientBase
+    follower_api_client: ExchangeAPIClientBase
+    balance_watcher: BalanceWatcher
+    balance_pubsub_key: str
 
     # Streams
     leader_book_stream: AsyncGenerator
     follower_book_stream: AsyncGenerator
 
-    # Bridge
-    bridge_exchange: Optional[ExchangeBase] = None
-    bridge_stream: Optional[AsyncGenerator] = None
+    bridge_watcher: Optional[BookWatcher] = None
+    bridge_pubsub_key: Optional[str] = None
 
     # Realtime
     theo_buy: Optional[Decimal] = None
@@ -52,14 +53,10 @@ class SlidingWindowTrader(RobotBase):
 
         self.follower = FollowerWatcher(
             config=self.config,
-            exchange=self.follower_exchange,
+            exchange=self.follower_api_client,
             book_stream=self.follower_book_stream,
+            balance_watcher=self.balance_watcher,
         )
-
-        if self.config.use_bridge:
-            self.bridge_watcher = BridgeWatcher(
-                exchange=self.bridge_exchange, stream=self.bridge_stream
-            )
 
     async def run(self) -> None:
         self.task_start_time = datetime.now()
@@ -74,16 +71,15 @@ class SlidingWindowTrader(RobotBase):
             self.watch_leader(),
             self.follower.watch_books(),
             periodic(
-                self.follower.update_balances, self.config.sleep_seconds.update_balances
+                self.follower.update_balances,
+                self.config.sleep_seconds.update_balances / 4,
             ),
             periodic(
                 self.follower.order_robot.cancel_all_open_orders,
                 self.config.sleep_seconds.cancel_all_open_orders,
             ),
             periodic(self.broadcast_stats, self.config.sleep_seconds.broadcast_stats),
-        ]  # is this ordering important ?
-        if self.config.use_bridge:
-            coroutines.append(self.bridge_watcher.watch_bridge())
+        ]
 
         await asyncio.gather(*coroutines)
 
@@ -98,12 +94,12 @@ class SlidingWindowTrader(RobotBase):
             return
 
         try:
-            mid = self.leader_exchange.get_mid(book)
+            mid = self.leader_api_client.get_mid(book)
 
             if not mid:
                 return
 
-            if self.config.use_bridge:
+            if self.bridge_watcher and self.bridge_watcher.quote:
                 mid *= self.bridge_watcher.quote
 
             self.current_step = self.follower.pair.base.free / self.config.base_step_qty
@@ -170,21 +166,21 @@ class SlidingWindowTrader(RobotBase):
             "balances": {
                 "step": self.current_step,
                 "start": {
-                    "base": {
+                    self.follower.pair.base.symbol: {
                         "free": self.follower.start_pair.base.free,
                         "locked": self.follower.start_pair.base.locked,
                     },
-                    "quote": {
+                    self.follower.pair.quote.symbol: {
                         "free": self.follower.start_pair.quote.free,
                         "locked": self.follower.start_pair.quote.locked,
                     },
                 },
                 "current": {
-                    "base": {
+                    self.follower.pair.base.symbol: {
                         "free": self.follower.pair.base.free,
                         "locked": self.follower.pair.base.locked,
                     },
-                    "quote": {
+                    self.follower.pair.quote.symbol: {
                         "free": self.follower.pair.quote.free,
                         "locked": self.follower.pair.quote.locked,
                     },
@@ -193,24 +189,25 @@ class SlidingWindowTrader(RobotBase):
             "binance": {
                 "theo buy": self.theo_buy,
                 "theo sell": self.theo_sell,
-                "last_updated": self.leader.theo_last_updated.time(),
+                "last update": self.leader.theo_last_updated.time(),
                 "books seen": self.leader.books_seen,
             },
             "btcturk": {
                 "bid": self.follower.best_buyer,
                 "ask": self.follower.best_seller,
-                "last_updated": self.follower.bid_ask_last_updated.time(),
+                "last update": self.follower.bid_ask_last_updated.time(),
                 "books seen": self.follower.books_seen,
             },
-            "config": self.config_dict,
         }
 
-        if self.config.use_bridge:
+        if self.bridge_watcher:
             stats["bridge"] = {
                 "exchange": self.config.bridge_exchange,
                 "quote": self.bridge_watcher.quote,
-                "last_updated": self.bridge_watcher.last_updated,
+                "last update": self.bridge_watcher.last_updated,
             }
+
+        stats["config"] = self.config_dict
 
         return stats
 

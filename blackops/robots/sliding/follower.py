@@ -7,17 +7,19 @@ from typing import AsyncGenerator, Optional
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
-from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.base import ExchangeAPIClientBase
 from blackops.robots.config import SlidingWindowConfig
 from blackops.robots.sliding.orders import OrderRobot
+from blackops.robots.watchers import BalanceWatcher
 from blackops.util.logger import logger
 
 
 @dataclass
 class FollowerWatcher:
-    exchange: ExchangeBase
+    exchange: ExchangeAPIClientBase
     config: SlidingWindowConfig
     book_stream: AsyncGenerator
+    balance_watcher: BalanceWatcher
 
     best_seller: Optional[Decimal] = None
     best_buyer: Optional[Decimal] = None
@@ -74,7 +76,7 @@ class FollowerWatcher:
 
     async def update_balances(self) -> None:
         try:
-            res: Optional[dict] = await self.exchange.get_account_balance()
+            res: Optional[dict] = self.balance_watcher.balances
             if not res:
                 return
 

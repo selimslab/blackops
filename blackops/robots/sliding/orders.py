@@ -8,7 +8,7 @@ import simplejson as json  # type: ignore
 
 import blackops.pubsub.pub as pub
 from blackops.domain.asset import Asset, AssetPair
-from blackops.exchanges.base import ExchangeBase
+from blackops.exchanges.base import ExchangeAPIClientBase
 from blackops.robots.config import SlidingWindowConfig
 from blackops.util.logger import logger
 
@@ -17,7 +17,7 @@ from blackops.util.logger import logger
 class OrderRobot:
     config: SlidingWindowConfig
     pair: AssetPair
-    exchange: ExchangeBase
+    exchange: ExchangeAPIClientBase
 
     long_in_progress: bool = False
     short_in_progress: bool = False
@@ -100,7 +100,8 @@ class OrderRobot:
             logger.info(f"send_long_order: {e}")
             return None
         finally:
-            await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
+            # await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
+            await asyncio.sleep(0.02)
             self.long_in_progress = False
 
     async def send_short_order(self, best_buyer: Decimal) -> Optional[dict]:
@@ -125,7 +126,8 @@ class OrderRobot:
             logger.info(f"send_short_order: {e}")
             return None
         finally:
-            await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
+            # await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
+            await asyncio.sleep(0.02)
             self.short_in_progress = False
 
     @staticmethod

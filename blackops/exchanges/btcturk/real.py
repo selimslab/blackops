@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import time
 import urllib.parse
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -31,6 +32,19 @@ class BtcturkApiClient(BtcturkBase):
 
     spam_lock: bool = False
     spam_sleep_seconds: int = 5
+
+    order_in_progress: bool = False
+
+    @asynccontextmanager
+    async def order_lock(self):
+        try:
+            if self.order_in_progress:
+                return
+            self.order_in_progress = True
+            yield
+            await asyncio.sleep(0.1)
+        finally:
+            self.order_in_progress = False
 
     def __post_init__(self):
         self.headers = self._get_headers()
@@ -129,10 +143,11 @@ class BtcturkApiClient(BtcturkBase):
             "pairSymbol": pair.symbol,
         }
         try:
-            async with self.session.post(
-                self.order_url, headers=self._get_headers(), json=params
-            ) as res:
-                return await res.json(content_type=None)
+            async with self.order_lock():
+                async with self.session.post(
+                    self.order_url, headers=self._get_headers(), json=params
+                ) as res:
+                    return await res.json(content_type=None)
         except Exception as e:
             logger.error(f"submit_limit_order: {e}")
             raise e

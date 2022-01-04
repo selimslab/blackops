@@ -2,12 +2,10 @@ import asyncio
 
 import blackops.pubsub.pub as pub
 from blackops.robots.config import STRATEGY_CLASS, StrategyConfig, StrategyType
-
 from blackops.taskq.task_ctx import task_context
 from blackops.util.logger import logger
 
 from .stg import get_stg
-
 
 
 async def deserialize_stg_config(sha: str) -> StrategyConfig:
@@ -22,9 +20,9 @@ async def deserialize_stg_config(sha: str) -> StrategyConfig:
     return stg
 
 
-def run_task(stg: StrategyConfig, timeout_seconds: int):
+def run_task(stg: StrategyConfig):
     # run as long as the task is not cancelled
-    asyncio.run(task_context.start_task(stg, timeout_seconds))
+    asyncio.run(task_context.start_task(stg))
 
 
 async def stop_task(sha: str):

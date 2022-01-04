@@ -7,7 +7,7 @@ from blackops.domain.asset import Asset, AssetPair
 
 
 @dataclass
-class ExchangeBase(ABC):
+class ExchangeAPIClientBase(ABC):
     name: Optional[str] = None
 
     fee_percent: Decimal = Decimal("0.0018")
