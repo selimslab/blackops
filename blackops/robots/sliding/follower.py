@@ -30,9 +30,6 @@ class FollowerWatcher:
     total_used_quote_amount: Decimal = Decimal("0")
     start_balances_saved: bool = False
 
-    pnl: Decimal = Decimal("0")
-    max_pnl: Decimal = Decimal("0")
-
     def __post_init__(self):
 
         self.order_robot = OrderRobot(
@@ -194,23 +191,3 @@ class FollowerWatcher:
         if self.best_buyer:
             return base_amount * self.best_buyer  # * self.exchange.sell_with_fee
         return Decimal("0")
-
-    async def calculate_pnl(self) -> Optional[Decimal]:
-        try:
-            approximate_quote_for_base = self.convert_base_to_quote(
-                self.pair.base.total_balance - self.start_pair.base.total_balance
-            )
-            return (
-                self.pair.quote.total_balance
-                - self.start_pair.quote.total_balance
-                + approximate_quote_for_base
-            )
-        except Exception as e:
-            logger.info(e)
-            return None
-
-    async def update_pnl(self) -> None:
-        pnl = await self.calculate_pnl()
-        if pnl:
-            self.pnl = pnl
-            self.max_pnl = max(self.max_pnl, pnl)

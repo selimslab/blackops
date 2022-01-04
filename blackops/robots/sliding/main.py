@@ -160,18 +160,11 @@ class SlidingWindowTrader(RobotBase):
             "current time": datetime.now(),
             "start time": self.task_start_time,
             "orders": {
-                "note": "please check the exchange for details",
                 "buy": {
                     "delivered": self.follower.order_robot.buy_orders_delivered,
-                    # "open": len(self.follower.order_robot.open_buy_orders),
-                    # "realized": self.follower.order_robot.buy_orders_delivered
-                    # - len(self.follower.order_robot.open_buy_orders),
                 },
                 "sell": {
                     "delivered": self.follower.order_robot.sell_orders_delivered,
-                    # "open": len(self.follower.order_robot.open_sell_orders),
-                    # "realized": self.follower.order_robot.sell_orders_delivered
-                    # - len(self.follower.order_robot.open_sell_orders),
                 },
             },
             "balances": {
@@ -222,8 +215,6 @@ class SlidingWindowTrader(RobotBase):
         return stats
 
     async def broadcast_stats(self) -> None:
-
-        await self.follower.update_pnl()
 
         message = self.create_stats_message()
 
