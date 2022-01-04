@@ -104,11 +104,6 @@ class FollowerWatcher:
             pub.publish_error(self.channnel, msg)
             raise e
 
-    def can_sell(self) -> bool:
-        return bool(self.pair.base.free) and bool(
-            self.pair.base.free >= self.config.base_step_qty
-        )
-
     def can_buy(self) -> bool:
         approximate_buy_cost = self.approximate_buy_cost()
         enough_free_balance = bool(self.pair.quote.free)
@@ -146,6 +141,9 @@ class FollowerWatcher:
 
         return None
 
+    def can_sell(self) -> bool:
+        return bool(self.pair.base.free)
+
     async def short(self, theo_sell: Decimal) -> Optional[dict]:
         """If we deliver order, we reflect it in balance until we read the current balance"""
         if not self.best_buyer:
@@ -154,7 +152,11 @@ class FollowerWatcher:
         if not self.can_sell():
             return None
 
-        order_log = await self.order_robot.send_short_order(self.best_buyer)
+        qty = float(self.config.base_step_qty)
+        if self.pair.base.free < qty:
+            qty = float(self.pair.base.free) * 0.98
+
+        order_log = await self.order_robot.send_short_order(self.best_buyer, qty)
         if order_log:
             order_log["theo"] = theo_sell
             logger.info(order_log)

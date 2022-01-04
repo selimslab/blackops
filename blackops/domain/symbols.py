@@ -1,3 +1,8 @@
+SUPPORTED_BRIDDGES = set(["USDT"])
+
+BINANCE_TRY_BASES = set(["ETH", "DOGE"])
+
+
 BTCTURK_TRY_BASES = set(
     [
         "ADA",
@@ -40,6 +45,15 @@ BTCTURK_TRY_BASES = set(
         "XTZ",
         "GALA",
         "MATIC",
+        "AAVE",
+        "AMP",
+        "SAND",
+        "NU",
+        "AUDIO",
+        "POLY",
+        "FET",
+        "SPELL",
+        "STORJ",
     ]
 )
 
@@ -47,6 +61,5 @@ BTCTURK_TRY_BASES = set(
 ALL_SYMBOLS = BTCTURK_TRY_BASES.union(set(["TRY"]))
 
 
-SUPPORTED_BRIDDGES = set(["USDT"])
-
-BINANCE_TRY_BASES = set(["ETH", "DOGE"])
+# f = [line.split("/")[0] for line in s.split() if "/" in line]
+# print(set(f).difference(BTCTURK_TRY_BASES))

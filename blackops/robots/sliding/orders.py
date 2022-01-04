@@ -18,8 +18,8 @@ class OrderRobot:
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 
-    long_in_progress: bool = False
-    short_in_progress: bool = False
+    buy_lock: asyncio.Lock = asyncio.Lock()
+    sell_lock: asyncio.Lock = asyncio.Lock()
 
     open_sell_orders: list = field(default_factory=list)
     open_buy_orders: list = field(default_factory=list)
@@ -62,13 +62,13 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
 
     def can_buy(self, best_seller: Decimal) -> bool:
-        if best_seller and not self.long_in_progress:
+        if best_seller and not self.buy_lock.locked():
             return True
 
         return False
 
     def can_sell(self, best_buyer: Decimal) -> bool:
-        if best_buyer and self.config.base_step_qty and not self.short_in_progress:
+        if best_buyer and self.config.base_step_qty and not self.sell_lock.locked():
             return True
 
         return False
@@ -82,52 +82,40 @@ class OrderRobot:
         price = float(best_seller)
         qty = float(self.config.base_step_qty)  #  we buy base
 
-        self.long_in_progress = True
+        with self.buy_lock:
+            try:
+                order_log = await self.submit_order("buy", price, qty)
+                if not order_log:
+                    return None
 
-        try:
-            order_log = await self.submit_order("buy", price, qty)
-            if not order_log:
+                order_id = self.parse_order_id(order_log)
+                if order_id:
+                    self.buy_orders_delivered += 1
+                    return order_log
+                return None
+            except Exception as e:
+                logger.info(f"send_long_order: {e}")
                 return None
 
-            order_id = self.parse_order_id(order_log)
-            if order_id:
-                self.buy_orders_delivered += 1
-                return order_log
-            return None
-
-        except Exception as e:
-            logger.info(f"send_long_order: {e}")
-            return None
-        finally:
-            # await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
-            await asyncio.sleep(0.02)
-            self.long_in_progress = False
-
-    async def send_short_order(self, best_buyer: Decimal) -> Optional[dict]:
+    async def send_short_order(self, best_buyer: Decimal, qty: float) -> Optional[dict]:
         if not self.can_sell(best_buyer):
             return None
 
         price = float(best_buyer)
-        qty = float(self.config.base_step_qty)  # we sell base
 
-        self.short_in_progress = True
-
-        try:
-            order_log = await self.submit_order("sell", price, qty)
-            if not order_log:
+        with self.sell_lock:
+            try:
+                order_log = await self.submit_order("sell", price, qty)
+                if not order_log:
+                    return None
+                order_id = self.parse_order_id(order_log)
+                if order_id:
+                    self.sell_orders_delivered += 1
+                    return order_log
                 return None
-            order_id = self.parse_order_id(order_log)
-            if order_id:
-                self.sell_orders_delivered += 1
-                return order_log
-            return None
-        except Exception as e:
-            logger.info(f"send_short_order: {e}")
-            return None
-        finally:
-            # await asyncio.sleep(self.config.sleep_seconds.sleep_between_orders)
-            await asyncio.sleep(0.02)
-            self.short_in_progress = False
+            except Exception as e:
+                logger.info(f"send_short_order: {e}")
+                return None
 
     @staticmethod
     def parse_order_id(order_log: dict):

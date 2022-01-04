@@ -5,11 +5,8 @@ from decimal import Decimal, getcontext
 from typing import Any, AsyncGenerator, Optional
 
 import simplejson as json  # type: ignore
-from pydantic.main import BaseModel
 
 import blackops.pubsub.pub as pub
-from blackops.domain.asset import Asset, AssetPair
-from blackops.environment import debug
 from blackops.exchanges.base import ExchangeAPIClientBase
 from blackops.robots.base import RobotBase
 from blackops.robots.config import SlidingWindowConfig

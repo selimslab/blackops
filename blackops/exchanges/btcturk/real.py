@@ -6,6 +6,7 @@ import time
 import urllib.parse
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Callable, Optional
 
 import aiohttp
@@ -27,28 +28,24 @@ class BtcturkApiClient(BtcturkBase):
     balance_url = urllib.parse.urljoin(api_base, "/api/v1/users/balances")
     all_orders_url = urllib.parse.urljoin(api_base, "/api/v1/allOrders")
     open_orders_url = urllib.parse.urljoin(api_base, "/api/v1/openOrders")
+    ticker_url = urllib.parse.urljoin(api_base, "/api/v2/ticker")
 
     name: str = "btcturk_real"
 
     spam_lock: bool = False
     spam_sleep_seconds: int = 5
 
-    order_in_progress: bool = False
-
-    @asynccontextmanager
-    async def order_lock(self):
-        try:
-            if self.order_in_progress:
-                return
-            self.order_in_progress = True
-            yield
-            await asyncio.sleep(0.1)
-        finally:
-            self.order_in_progress = False
+    order_lock = asyncio.Lock()
 
     def __post_init__(self):
         self.headers = self._get_headers()
         self.session = aiohttp.ClientSession()
+
+    @asynccontextmanager
+    async def timed_order_context(self):
+        async with self.order_lock:
+            yield
+            await asyncio.sleep(0.1)
 
     def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
@@ -79,6 +76,14 @@ class BtcturkApiClient(BtcturkBase):
             logger.info(f"stop_spamming: {e}")
         finally:
             self.spam_lock = False
+
+    async def _get(self, uri: str):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(uri) as res:
+                    return await res.json()
+        except Exception as e:
+            logger.error(f"_get {e}")
 
     async def _http(self, uri: str, method: Callable):
         try:
@@ -143,7 +148,10 @@ class BtcturkApiClient(BtcturkBase):
             "pairSymbol": pair.symbol,
         }
         try:
-            async with self.order_lock():
+            if self.order_lock.locked():
+                logger.info("another order in progress")
+                return None
+            async with self.timed_order_context():
                 async with self.session.post(
                     self.order_url, headers=self._get_headers(), json=params
                 ) as res:
@@ -211,11 +219,19 @@ class BtcturkApiClient(BtcturkBase):
     #     uri = update_url_query_params(self.all_orders_url, params)
     #     return await self._http(uri, self.session.get)
 
-    # def get_ticker(pair:str):
-    #     ticker_path = "/api/v2/ticker"
-    #     ticker_url = urllib.parse.urljoin(api_base, ticker_path)
-    #     ticker_url = f"{ticker_url}?pairSymbol={pair}"
-    #     get_data(ticker_url)
+    async def get_ticker(self, pair: AssetPair):
+        params = {"pairSymbol": pair.symbol}
+        uri = update_url_query_params(self.ticker_url, params)
+        res = await self._get(uri)
+        if res:
+            print(res)
+            try:
+                data = res["data"][0]
+                bid, ask = data["bid"], data["ask"]
+                return (Decimal(str(bid)) + Decimal(str(ask))) / Decimal("2")
+            except Exception as e:
+                logger.error(f"get_ticker {e}")
+                return None
 
     # def get_orderbook(pair:str):
     #     orderbook_path = "api/v2/orderbook"
@@ -225,3 +241,6 @@ class BtcturkApiClient(BtcturkBase):
 
     async def _close_session(self):
         await self.session.close()
+
+
+# btc_real_api_client = BtcturkApiClient()
