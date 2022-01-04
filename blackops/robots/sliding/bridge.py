@@ -13,20 +13,20 @@ from blackops.util.logger import logger
 @dataclass
 class BridgeWatcher:
 
-    bridge_exchange: Optional[ExchangeBase] = None
-    bridge_stream: Optional[AsyncGenerator] = None
-    bridge_last_updated = datetime.now().time()
-    bridge_quote: Decimal = Decimal("1")
+    exchange: Optional[ExchangeBase] = None
+    stream: Optional[AsyncGenerator] = None
+    last_updated = datetime.now().time()
+    quote: Decimal = Decimal("1")
 
     async def watch_bridge(self):
-        if not self.bridge_stream:
+        if not self.stream:
             raise ValueError("No bridge quote stream")
-        if not self.bridge_exchange:
+        if not self.exchange:
             raise ValueError("No bridge exchange")
 
-        async for book in self.bridge_stream:
-            new_quote = self.bridge_exchange.get_mid(book)
+        async for book in self.stream:
+            new_quote = self.exchange.get_mid(book)
             if new_quote:
-                self.bridge_quote = new_quote
-                self.bridge_last_updated = datetime.now().time()
+                self.quote = new_quote
+                self.last_updated = datetime.now().time()
             await asyncio.sleep(0)

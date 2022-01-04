@@ -58,7 +58,7 @@ class SlidingWindowTrader(RobotBase):
 
         if self.config.use_bridge:
             self.bridge_watcher = BridgeWatcher(
-                bridge_exchange=self.bridge_exchange, bridge_stream=self.bridge_stream
+                exchange=self.bridge_exchange, stream=self.bridge_stream
             )
 
     async def run(self) -> None:
@@ -104,7 +104,7 @@ class SlidingWindowTrader(RobotBase):
                 return
 
             if self.config.use_bridge:
-                mid *= self.bridge_watcher.bridge_quote
+                mid *= self.bridge_watcher.quote
 
             self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
@@ -208,8 +208,8 @@ class SlidingWindowTrader(RobotBase):
         if self.config.use_bridge:
             stats["bridge"] = {
                 "exchange": self.config.bridge_exchange,
-                "quote": self.bridge_watcher.bridge_quote,
-                "last_updated": self.bridge_watcher.bridge_last_updated,
+                "quote": self.bridge_watcher.quote,
+                "last_updated": self.bridge_watcher.last_updated,
             }
 
         return stats
