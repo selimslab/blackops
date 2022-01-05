@@ -28,7 +28,7 @@ class StrategyConfigBase(BaseModel):
 
 
 class SleepSeconds(BaseModel):
-    update_balances: Decimal = Field(const=True, default=0.72)
+    update_balances: float = 0.72
     cancel_all_open_orders: float = 2
     broadcast_stats: float = 2
 
@@ -53,11 +53,13 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     max_usable_quote_amount_y: Decimal = Decimal(1000)
 
-    quote_step_amount: Decimal = Decimal(1500)
+    quote_step_qty: Decimal = Decimal(1500)
+
+    step_pip: Decimal = Decimal("2.5")
 
     credit_k: Decimal = Decimal(5)
 
-    step_constant_pip: Decimal = Decimal("2.5")
+    reference_price_for_parameters: Optional[Decimal] = None
 
     base_step_qty: Decimal = Decimal(0)
 
@@ -67,9 +69,12 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
 
-    def set_params_from_ticker(self, ticker: Decimal):
-        self.base_step_qty = self.quote_step_amount / ticker
-        self.step_constant_k = self.step_constant_pip * PIP * ticker
+    def set_params_auto(self):
+        if not self.reference_price_for_parameters:
+            raise Exception("reference_price_for_parameters is required")
+        num = self.quote_step_qty / self.reference_price_for_parameters
+        self.base_step_qty = num.normalize()
+        self.step_constant_k = self.step_pip * PIP * self.reference_price_for_parameters
         self.credit = self.credit_k * self.step_constant_k
 
     def is_valid_symbols(self):

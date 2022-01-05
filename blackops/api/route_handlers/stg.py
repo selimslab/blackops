@@ -42,17 +42,11 @@ async def delete_stg(sha: str):
 async def create_stg(stg: StrategyConfig) -> StrategyConfig:
 
     pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
-    params = [stg.base_step_qty, stg.step_constant_k, stg.credit]
-    if not any(params):
-        ticker = await btc_real_api_client_public.get_ticker(pair)
-        print("ticker", ticker)
-        if not ticker:
-            raise Exception("couldn't read price, please try again")
-        stg.set_params_from_ticker(ticker)
-
-    params = [stg.base_step_qty, stg.step_constant_k, stg.credit]
-    if not all(params):
-        raise Exception("are all params set?")
+    ticker = await btc_real_api_client_public.get_ticker(pair)
+    if not ticker:
+        raise Exception("couldn't read price, please try again")
+    stg.reference_price_for_parameters = ticker
+    stg.set_params_auto()
 
     stg.is_valid()
 

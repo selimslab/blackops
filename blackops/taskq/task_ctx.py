@@ -56,11 +56,6 @@ class Radio:
             logger.error(msg)
             await self.start_station(station)
 
-    def stop_station_if_no_listeners(self, station: Station):
-        if station.listeners == 0 and station.aiotask:
-            station.aiotask.cancel()
-            del self.stations[station.pubsub_channel]
-
     def add_listener(self, pubsub_channel: str):
         if pubsub_channel in self.stations:
             self.stations[pubsub_channel].listeners += 1
@@ -70,6 +65,10 @@ class Radio:
         if station:
             self.stations[station.pubsub_channel].listeners -= 1
             self.stop_station_if_no_listeners(station)
+
+    def stop_station_if_no_listeners(self, station: Station):
+        if station.listeners == 0 and station.aiotask:
+            station.aiotask.cancel()
 
 
 @dataclass
@@ -203,6 +202,8 @@ class RobotContext:
             logger.error(f"cancel_task: {sha} not found")
             return
         await self.clean_task(sha)
+        print("robots", self.robots.keys())
+        print("stations", self.radio.stations.keys())
 
     async def cancel_all(self) -> list:
         stopped_shas = []
