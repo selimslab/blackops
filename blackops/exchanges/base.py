@@ -10,7 +10,7 @@ from blackops.domain.asset import Asset, AssetPair
 class ExchangeAPIClientBase(ABC):
     name: Optional[str] = None
 
-    fee_percent: Decimal = Decimal("0.0018")
+    fee_percent: Decimal = Decimal("0.0012")
     buy_with_fee: Decimal = Decimal("1") + fee_percent
     sell_with_fee: Decimal = Decimal("1") - fee_percent
 

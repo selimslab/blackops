@@ -1,4 +1,6 @@
 import asyncio
+import collections
+import random
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -33,11 +35,13 @@ class Test:
             return i
 
 
-async def robot(name, t):
+async def robot(name, t, sleep):
+    await asyncio.sleep(sleep)
+    name = f"r-{name}"
     for i in range(10):
         res = await t.order(f"{name} {i}")
         print(res)
-        await asyncio.sleep(0.03)
+        await asyncio.sleep(0.2)
 
 
 async def test_order_lock():
@@ -48,8 +52,8 @@ async def test_order_lock():
     #         await t.order()
     #         # await asyncio.sleep(0.05)
 
-    aws = asyncio.gather(robot("x", t), robot("y", t))
-    await aws
+    aws = [robot(i, t, random.randint(0, 1)) for i in range(10)]
+    await asyncio.gather(*aws)
 
 
 if __name__ == "__main__":

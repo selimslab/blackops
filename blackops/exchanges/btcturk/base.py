@@ -22,7 +22,7 @@ from blackops.util.logger import logger
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
-    fee_percent: Decimal = Decimal("0.0016")
+    fee_percent: Decimal = Decimal("0.0012")
     buy_with_fee: Decimal = Decimal("1") + fee_percent
     sell_with_fee: Decimal = Decimal("1") - fee_percent
 

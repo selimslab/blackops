@@ -33,4 +33,4 @@ docker build . -t blackops
 ---
 
 
- uvicorn blackops.api.main:app 
+uvicorn blackops.api.main:app 

@@ -1,3 +1,4 @@
+import decimal
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -73,7 +74,8 @@ class SlidingWindowConfig(StrategyConfigBase):
         if not self.reference_price_for_parameters:
             raise Exception("reference_price_for_parameters is required")
         num = self.quote_step_qty / self.reference_price_for_parameters
-        self.base_step_qty = num.normalize()
+        context = decimal.Context(prec=5, rounding=decimal.ROUND_HALF_UP)
+        self.base_step_qty = num.normalize(context)
         self.step_constant_k = self.step_pip * PIP * self.reference_price_for_parameters
         self.credit = self.credit_k * self.step_constant_k
 

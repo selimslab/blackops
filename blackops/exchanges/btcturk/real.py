@@ -33,7 +33,7 @@ class BtcturkApiClient(BtcturkBase):
     name: str = "btcturk_real"
 
     rate_limit_lock = asyncio.Lock()
-    rate_limit_seconds: int = 5
+    rate_limit_seconds: int = 4
 
     order_lock = asyncio.Lock()
 
