@@ -169,9 +169,9 @@ class RobotContext:
 
     def drop_listeners(self,robotrun: RobotRun) -> None:
         if robotrun.robot:
-            radio.drop_listener(robotrun.robot.balance_pubsub_key)
+            self.radio.drop_listener(robotrun.robot.balance_pubsub_key)
             if robotrun.robot.bridge_pubsub_key:
-                radio.drop_listener(robotrun.robot.bridge_pubsub_key)
+                self.radio.drop_listener(robotrun.robot.bridge_pubsub_key)
 
 
     async def cancel_task(self, sha: str) -> None:
