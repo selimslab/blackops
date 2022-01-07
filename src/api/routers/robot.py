@@ -1,7 +1,8 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 
-import src.api.route_handlers.task as task_handler
+from src.stgs import strategy_api
+from src.robots import robot_api
 from src.api.auth import auth
 
 router = APIRouter(dependencies=[Depends(auth)])
@@ -9,7 +10,7 @@ router = APIRouter(dependencies=[Depends(auth)])
 
 @router.get("/")
 async def get_all_tasks():
-    return task_handler.get_tasks()
+    return robot_api.get_tasks()
 
 
 @router.put("/{sha}")
@@ -21,18 +22,18 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
 
     5. View logs on the home page
     """
-    stg = await task_handler.deserialize_stg_config(sha)
-    background_tasks.add_task(task_handler.run_task, stg)
+    stg = await strategy_api.get_stg(sha)
+    background_tasks.add_task(robot_api.run_task, stg)
     return JSONResponse(content={"message": f"started strategy {sha}"})
 
 
 @router.delete("/")
 async def stop_all_tasks():
-    stopped_shas = await task_handler.stop_all_tasks()
+    stopped_shas = await robot_api.stop_all_tasks()
     return JSONResponse(content={"message": f"stopped {stopped_shas}"})
 
 
 @router.delete("/{sha}")
 async def stop_task(sha: str):
-    await task_handler.stop_task(sha)
+    await robot_api.stop_task(sha)
     return JSONResponse(content={"message": f"stopped {sha}"})

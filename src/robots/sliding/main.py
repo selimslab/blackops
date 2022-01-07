@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal, getcontext
 from typing import Any, AsyncGenerator, Optional
@@ -9,12 +9,13 @@ import simplejson as json  # type: ignore
 import src.pubsub.pub as pub
 from src.exchanges.base import ExchangeAPIClientBase
 from src.robots.base import RobotBase
-from src.robots.config import SlidingWindowConfig
+from src.stgs.sliding.config import SlidingWindowConfig
 from src.robots.sliding.follower import FollowerWatcher
 from src.robots.sliding.leader import LeaderWatcher
 from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
 from src.periodic import periodic
+from src.domain.asset import BPS
 
 getcontext().prec = 9
 
@@ -42,7 +43,7 @@ class SlidingWindowTrader(RobotBase):
     current_step: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
-        self.config_dict = self.config.dict()
+        self.config_dict = asdict(self.config)
 
         self.channnel = self.config.sha
 
@@ -85,6 +86,9 @@ class SlidingWindowTrader(RobotBase):
             self.calculate_window(book)
             await self.should_transact()
 
+    def update_step(self):
+        self.current_step = self.follower.pair.base.free / self.config.base_step_qty
+
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
         if not book:
@@ -99,14 +103,16 @@ class SlidingWindowTrader(RobotBase):
             if self.bridge_watcher and self.bridge_watcher.quote:
                 mid *= self.bridge_watcher.quote
 
-            self.current_step = self.follower.pair.base.free / self.config.base_step_qty
+            self.update_step()
 
-            step_size = self.config.step_constant_k * self.current_step
-
+            step_size = self.config.input.step_bps * BPS * self.current_step * mid 
+            
             mid -= step_size
 
-            self.theo_buy = mid - self.config.credit
-            self.theo_sell = mid + self.config.credit
+            credit = self.config.credit_bps * BPS * mid
+
+            self.theo_buy = mid - credit
+            self.theo_sell = mid + credit
 
         except Exception as e:
             msg = f"calculate_window: {e}"
@@ -114,13 +120,11 @@ class SlidingWindowTrader(RobotBase):
             pub.publish_error(self.channnel, msg)
 
     async def should_transact(self) -> None:
-        if self.should_long():
-            if self.theo_buy:
-                await self.follower.long(self.theo_buy)
+        if self.should_long() and self.theo_buy:
+            await self.follower.long(self.theo_buy)
 
-        if self.should_short():
-            if self.theo_sell:
-                await self.follower.short(self.theo_sell)
+        if self.should_short() and self.theo_sell:
+            await self.follower.short(self.theo_sell)
 
     def should_long(self) -> bool:
         if not self.follower.best_seller:
@@ -129,8 +133,11 @@ class SlidingWindowTrader(RobotBase):
         if not self.theo_buy:
             return False
 
+        self.update_step()
+
         return (
-            bool(self.follower.best_seller <= self.theo_buy) and self.follower.can_buy()
+            bool(self.follower.best_seller <= self.theo_buy) 
+            and self.current_step <= self.config.input.max_step
         )
 
     def should_short(self) -> bool:
@@ -140,9 +147,11 @@ class SlidingWindowTrader(RobotBase):
         if not self.theo_sell:
             return False
 
+        self.update_step()
+
         return (
-            bool(self.follower.best_buyer >= self.theo_sell)
-            and self.follower.can_sell()
+            bool(self.follower.best_buyer >= self.theo_sell) 
+            and self.current_step <= self.config.input.max_step
         )
 
     async def close(self) -> None:
@@ -199,7 +208,7 @@ class SlidingWindowTrader(RobotBase):
 
         if self.bridge_watcher:
             stats["bridge"] = {
-                "exchange": self.config.bridge_exchange,
+                "exchange": self.config.input.bridge_exchange,
                 "quote": self.bridge_watcher.quote,
                 "last update": self.bridge_watcher.last_updated,
             }

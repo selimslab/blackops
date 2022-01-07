@@ -6,8 +6,7 @@ from pydantic.main import BaseModel
 AssetSymbol = str
 AssetPairSymbol = str
 
-PIP = Decimal("1") / Decimal("10000")
-
+BPS = Decimal("1") / Decimal("10000")
 
 class Asset(BaseModel):
     symbol: AssetSymbol

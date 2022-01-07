@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from src.robots.config import StrategyConfig, StrategyType
+from src.stgs import StrategyConfig, StrategyType
 from src.robots.sliding.factory import sliding_window_factory
 from src.robots.sliding.main import SlidingWindowTrader
 from src.robots.watchers import BalanceWatcher, BookWatcher

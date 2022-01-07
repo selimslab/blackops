@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-import src.api.route_handlers.stg as stg_handler
 from src.api.auth import auth
-from src.robots.config import StrategyConfig
+from src.stgs import strategy_api, StrategyConfig, StrategyInput
 
 router = APIRouter(dependencies=[Depends(auth)])
 
@@ -10,7 +9,7 @@ router = APIRouter(dependencies=[Depends(auth)])
 @router.get("/", response_model=list)
 async def read_all():
     """View all strategies"""
-    stgs = await stg_handler.list_stgs()
+    stgs = await strategy_api.list_stgs()
     if stgs:
         return stgs
     raise HTTPException(status_code=404, detail="no stg yet")
@@ -19,13 +18,13 @@ async def read_all():
 @router.get("/{sha}")
 async def read(sha: str):
     """View the stg with this id"""
-    return await stg_handler.get_stg(sha)
+    return await strategy_api.get_stg(sha)
 
 
 @router.delete("/", response_model=dict)
 async def delete_all():
     """Delete a strategy"""
-    return await stg_handler.delete_all_stg()
+    return await strategy_api.delete_all_stg()
 
 
 @router.delete("/{sha}", response_model=dict)
@@ -33,14 +32,14 @@ async def delete(
     sha: str,
 ):
     """Delete a strategy"""
-    return await stg_handler.delete_stg(sha)
+    return await strategy_api.delete_stg(sha)
 
 
 @router.put(
     "/",
     response_model=StrategyConfig,
 )
-async def create(stg: StrategyConfig):
+async def create(stg: StrategyInput):
     """
     This will run the strategy with your parameters
 
@@ -54,4 +53,4 @@ async def create(stg: StrategyConfig):
 
     """
 
-    return await stg_handler.create_stg(stg)
+    return await strategy_api.create_stg(stg)

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import src.domain.symbols as symbols
 from src.robots.factory import create_trader_from_strategy
-from src.robots.config import SlidingWindowConfig
+from src.stgs.sliding.config import SlidingWindowConfig
 
 
 async def test_sliding():

@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Optional
 import src.pubsub.pub as pub
 from src.domain.asset import Asset, AssetPair
 from src.exchanges.base import ExchangeAPIClientBase
-from src.robots.config import SlidingWindowConfig
+from src.stgs.sliding.config import SlidingWindowConfig
 from src.robots.sliding.orders import OrderRobot
 from src.robots.watchers import BalanceWatcher
 from src.monitoring import logger
@@ -16,8 +16,10 @@ from src.monitoring import logger
 
 @dataclass
 class FollowerWatcher:
-    exchange: ExchangeAPIClientBase
     config: SlidingWindowConfig
+
+    exchange: ExchangeAPIClientBase
+
     book_stream: AsyncGenerator
     balance_watcher: BalanceWatcher
 
@@ -27,9 +29,6 @@ class FollowerWatcher:
     bid_ask_last_updated: datetime = datetime.now()
     books_seen: int = 0
 
-    # we don't enforce max_usable_quote_amount_y too strict
-    # we assume no deposits to quote during the task run
-    total_used_quote_amount: Decimal = Decimal("0")
     start_balances_saved: bool = False
 
     def __post_init__(self):
@@ -45,7 +44,7 @@ class FollowerWatcher:
 
     def create_pair(self):
         return AssetPair(
-            Asset(symbol=self.config.base), Asset(symbol=self.config.quote)
+            Asset(symbol=self.config.input.base), Asset(symbol=self.config.input.quote)
         )
 
     async def watch_books(self) -> None:
@@ -96,102 +95,40 @@ class FollowerWatcher:
                 self.start_pair = copy.deepcopy(self.pair)
                 self.start_balances_saved = True
 
-            self.update_used_quote()
-
         except Exception as e:
             msg = f"update_balances: {e}"
             logger.error(msg)
             pub.publish_error(self.channnel, msg)
             raise e
 
-    def can_buy(self) -> bool:
-        approximate_buy_cost = self.approximate_buy_cost()
-        enough_free_balance = bool(self.pair.quote.free)
-        total_spent = self.total_used_quote_amount
-
-        if approximate_buy_cost:
-            enough_free_balance = (
-                enough_free_balance and self.pair.quote.free >= approximate_buy_cost
-            )
-            total_spent += approximate_buy_cost
-
-        will_not_exceed_the_spending_limit = (
-            total_spent <= self.config.max_usable_quote_amount_y
+    def can_buy(self, theo_buy) -> bool:
+        return (
+            bool(self.pair.quote.free) 
+            and self.pair.quote.free >= theo_buy * self.config.base_step_qty
         )
-        return enough_free_balance and will_not_exceed_the_spending_limit
 
     async def long(self, theo_buy: Decimal) -> Optional[dict]:
-        if not self.best_seller:
+        if not self.can_buy(theo_buy):
             return None
 
-        if not self.can_buy():
-            return None
-
-        order_log = await self.order_robot.send_long_order(self.best_seller)
+        order_log = await self.order_robot.send_long_order(theo_buy)
 
         if order_log:
-            order_log["theo"] = theo_buy
             logger.info(order_log)
             self.pair.base.free += self.config.base_step_qty
-            approximate_buy_cost = self.approximate_buy_cost()
-            if approximate_buy_cost:
-                self.pair.quote.free -= approximate_buy_cost
-            self.update_used_quote()
             return order_log
 
         return None
 
-    def can_sell(self) -> bool:
-        return bool(self.pair.base.free)
-
     async def short(self, theo_sell: Decimal) -> Optional[dict]:
-        """If we deliver order, we reflect it in balance until we read the current balance"""
-        if not self.best_buyer:
-            return None
-
-        if not self.can_sell():
-            return None
-
         qty = float(self.config.base_step_qty)
         if self.pair.base.free < qty:
             qty = float(self.pair.base.free) * 0.98
 
-        order_log = await self.order_robot.send_short_order(self.best_buyer, qty)
+        order_log = await self.order_robot.send_short_order(theo_sell, qty)
         if order_log:
-            order_log["theo"] = theo_sell
             logger.info(order_log)
+            # If we deliver order, we reflect it in balance until we read the current balance
             self.pair.base.free -= self.config.base_step_qty
-            approximate_sell_gain = self.approximate_sell_gain()
-            if approximate_sell_gain:
-                self.pair.quote.free += approximate_sell_gain
-            self.update_used_quote()
             return order_log
         return None
-
-    def approximate_buy_cost(self) -> Optional[Decimal]:
-        if self.best_seller:
-            return (
-                self.best_seller
-                * self.config.base_step_qty
-                # * self.exchange.buy_with_fee
-            )
-        return None
-
-    def approximate_sell_gain(self) -> Optional[Decimal]:
-        if self.best_buyer:
-            return (
-                self.config.base_step_qty
-                * self.best_buyer
-                # * self.exchange.sell_with_fee
-            )
-        return None
-
-    def update_used_quote(self) -> None:
-        self.total_used_quote_amount = (
-            self.start_pair.quote.total_balance - self.pair.quote.total_balance
-        )
-
-    def convert_base_to_quote(self, base_amount: Decimal) -> Decimal:
-        if self.best_buyer:
-            return base_amount * self.best_buyer  # * self.exchange.sell_with_fee
-        return Decimal("0")

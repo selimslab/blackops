@@ -5,7 +5,7 @@ from typing import Coroutine, Dict, Optional
 
 import src.pubsub.pub as pub
 from src.robots.base import RobotBase
-from src.robots.config import StrategyConfig
+from src.stgs import StrategyConfig
 from src.robots.factory import create_trader_from_strategy
 from src.robots.sliding.main import SlidingWindowTrader
 from src.robots.watchers import BalanceWatcher, BookWatcher
@@ -70,7 +70,7 @@ class RobotContext:
         return self.start_robot(robotrun)
 
     def get_balance_task(
-        self, stg: StrategyConfig, balance_watcher: BalanceWatcher
+        self, config: StrategyConfig, balance_watcher: BalanceWatcher
     ) -> Optional[Coroutine]:
         if balance_watcher.pubsub_key in self.radio.stations:
             self.radio.add_listener(balance_watcher.pubsub_key)
@@ -78,11 +78,11 @@ class RobotContext:
         else:
             station = Station(
                 pubsub_channel=balance_watcher.pubsub_key,
-                log_channel=stg.sha,
+                log_channel=config.sha,
                 listeners=1,
             )
             balance_task = periodic(
-                balance_watcher.watch_balance, stg.sleep_seconds.update_balances
+                balance_watcher.watch_balance, config.sleep_seconds.update_balances
             )
             station.aiotask = asyncio.create_task(balance_task)
             self.radio.stations[station.pubsub_channel] = station

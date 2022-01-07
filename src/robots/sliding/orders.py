@@ -8,7 +8,7 @@ import simplejson as json  # type: ignore
 import src.pubsub.pub as pub
 from src.domain.asset import Asset, AssetPair
 from src.exchanges.base import ExchangeAPIClientBase
-from src.robots.config import SlidingWindowConfig
+from src.stgs.sliding.config import SlidingWindowConfig
 from src.monitoring import logger
 
 
@@ -50,6 +50,7 @@ class OrderRobot:
             ) = self.exchange.parse_open_orders(open_orders)
 
             if self.open_sell_orders or self.open_buy_orders:
+                await asyncio.sleep(0.1) # allow the last order to fill
                 await self.exchange.cancel_multiple_orders(
                     self.open_sell_orders + self.open_buy_orders
                 )
