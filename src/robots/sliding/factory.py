@@ -83,8 +83,7 @@ def sliding_window_factory(config: SlidingWindowConfig):
 
     stg = config.input
 
-    if not config.pair:
-        raise Exception("pair is required")
+    pair = config.create_pair()
 
     if stg.bridge:
         leader_book_stream = stream_factory.create_stream_if_not_exists(
@@ -92,11 +91,11 @@ def sliding_window_factory(config: SlidingWindowConfig):
         )
     else:
         leader_book_stream = stream_factory.create_stream_if_not_exists(
-            ExchangeType(stg.leader_exchange), config.pair.symbol, pub_channel
+            ExchangeType(stg.leader_exchange), pair.symbol, pub_channel
         )
 
     follower_book_stream = stream_factory.create_stream_if_not_exists(
-        ExchangeType(stg.follower_exchange), config.pair.symbol, pub_channel
+        ExchangeType(stg.follower_exchange), pair.symbol, pub_channel
     )
 
     trader = SlidingWindowTrader(

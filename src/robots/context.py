@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Coroutine, Dict, Optional
+from typing import Coroutine, Dict, Optional, List
 
 import src.pubsub.pub as pub
 from src.robots.base import RobotBase
@@ -32,42 +32,9 @@ class RobotRun:
 
 
 @dataclass
-class RobotContext:
-    robots: Dict[str, RobotRun] = field(default_factory=dict)
+class BalancePublisher:
     radio: Radio = radio
 
-    async def start_robot(self, robotrun: RobotRun):
-        if not robotrun.aiotask:
-            raise Exception(f"no aiotask for robotrun")
-        try:
-            robotrun.status = RobotRunStatus.RUNNING
-            await robotrun.aiotask
-        except asyncio.CancelledError as e:
-            msg = f"{robotrun.sha} cancelled: {e}"
-            pub.publish_error(channel=robotrun.log_channel, message=msg)
-            await self.clean_task(robotrun.sha)
-        except Exception as e:
-            robotrun.status = RobotRunStatus.FAILED
-            # log
-            msg = f"start_task: {robotrun.sha} failed: {e}, restarting.."
-            pub.publish_error(channel=robotrun.log_channel, message=msg)
-            logger.error(msg)
-
-            # restart robot
-            await self.clean_task(robotrun.sha)
-            await self.start_robot(robotrun)
-
-    def get_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
-        robotrun = RobotRun(
-            sha=sha,
-            log_channel=sha,
-            robot=robot,
-            status=RobotRunStatus.PENDING,
-            aiotask=None,
-        )
-        robotrun.aiotask = asyncio.create_task(robot.run())
-        self.robots[sha] = robotrun
-        return self.start_robot(robotrun)
 
     def get_balance_task(
         self, config: StrategyConfig, balance_watcher: BalanceWatcher
@@ -88,6 +55,11 @@ class RobotContext:
             self.radio.stations[station.pubsub_channel] = station
             return self.radio.start_station(station)
 
+
+@dataclass
+class BridgePublisher:
+    radio: Radio = radio
+
     def get_bridge_task(
         self, stg: StrategyConfig, bridge_watcher: BookWatcher
     ) -> Optional[Coroutine]:
@@ -105,7 +77,52 @@ class RobotContext:
             self.radio.stations[station.pubsub_channel] = station
             return self.radio.start_station(station)
 
-    async def start_task(self, stg: StrategyConfig) -> None:
+bridge_publisher = BridgePublisher()
+balance_publisher = BalancePublisher()
+
+
+@dataclass
+class RobotContext:
+    robots: Dict[str, RobotRun] = field(default_factory=dict)
+    balance_publisher = balance_publisher
+    bridge_publisher = bridge_publisher
+    
+
+    async def start_robot(self, robotrun: RobotRun):
+        if not robotrun.aiotask:
+            raise Exception(f"no aiotask for robotrun")
+        try:
+            self.robots[robotrun.sha] = robotrun
+            robotrun.status = RobotRunStatus.RUNNING
+            await robotrun.aiotask
+        except asyncio.CancelledError as e:
+            msg = f"{robotrun.sha} cancelled: {e}"
+            pub.publish_error(channel=robotrun.log_channel, message=msg)
+            await self.clean_task(robotrun.sha)
+        except Exception as e:
+            robotrun.status = RobotRunStatus.FAILED
+            # log
+            msg = f"start_robot: {robotrun.sha} failed: {e}, restarting.."
+            pub.publish_error(channel=robotrun.log_channel, message=msg)
+            logger.error(msg)
+
+            # restart robot
+            await self.clean_task(robotrun.sha)
+            await self.start_robot(robotrun)
+
+    def get_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
+        robotrun = RobotRun(
+            sha=sha,
+            log_channel=sha,
+            robot=robot,
+            status=RobotRunStatus.PENDING,
+            aiotask=None,
+        )
+        robotrun.aiotask = asyncio.create_task(robot.run())
+        return self.start_robot(robotrun)
+
+
+    async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
         sha = stg.sha
         if sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING:
             raise Exception(f"{sha} already running")
@@ -122,19 +139,20 @@ class RobotContext:
         robot_task = self.get_robot_task(stg.sha, robot)
         coros.append(robot_task)
 
-        balance_task = self.get_balance_task(stg, balance_watcher)
+        balance_task = self.balance_publisher.get_balance_task(stg, balance_watcher)
         if balance_task:
             coros.append(balance_task)
 
         if bridge_watcher:
-            bridge_task = self.get_bridge_task(stg, bridge_watcher)
+            bridge_task = self.bridge_publisher.get_bridge_task(stg, bridge_watcher)
             if bridge_task:
                 coros.append(bridge_task)
 
         print("robots", self.robots.keys())
-        print("stations", self.radio.stations.keys())
+        print("stations", radio.stations.keys())
 
-        await asyncio.gather(*coros)
+        return coros 
+
 
     async def clean_task(self, sha: str) -> None:
         try:
@@ -143,19 +161,24 @@ class RobotContext:
                 logger.error(f"clean_task: {sha} not found")
                 return
 
-            if robotrun.robot:
-                await robotrun.robot.close()
-                self.radio.drop_listener(robotrun.robot.balance_pubsub_key)
-                if robotrun.robot.bridge_pubsub_key:
-                    self.radio.drop_listener(robotrun.robot.bridge_pubsub_key)
-
             if robotrun.aiotask:
                 robotrun.aiotask.cancel()
 
+            if robotrun.robot:
+                await robotrun.robot.close()
+                self.drop_listeners(robotrun)
+  
             del self.robots[sha]
         except Exception as e:
             logger.error(f"clean_task: {e}")
             raise e
+
+    def drop_listeners(self,robotrun: RobotRun) -> None:
+        if robotrun.robot:
+            radio.drop_listener(robotrun.robot.balance_pubsub_key)
+            if robotrun.robot.bridge_pubsub_key:
+                radio.drop_listener(robotrun.robot.bridge_pubsub_key)
+
 
     async def cancel_task(self, sha: str) -> None:
         if sha not in self.robots:
@@ -163,7 +186,7 @@ class RobotContext:
             return
         await self.clean_task(sha)
         print("robots", self.robots.keys())
-        print("stations", self.radio.stations.keys())
+        print("stations", radio.stations.keys())
 
     async def cancel_all(self) -> list:
         stopped_shas = []
@@ -174,12 +197,6 @@ class RobotContext:
 
         self.robots.clear()
         return stopped_shas
-
-    def get_orders(self, sha: str) -> list:
-        task = self.robots.get(sha)
-        if task and task.robot:
-            return task.robot.get_orders()
-        return []
 
     def get_tasks(self) -> list:
         return list(self.robots.keys())

@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import AsyncGenerator, Optional
 
 import src.pubsub.pub as pub
-from src.domain.asset import Asset, AssetPair
 from src.exchanges.base import ExchangeAPIClientBase
 from src.stgs.sliding.config import SlidingWindowConfig
 from src.robots.sliding.orders import OrderRobot
@@ -34,18 +33,14 @@ class FollowerWatcher:
     def __post_init__(self):
 
         self.order_robot = OrderRobot(
-            config=self.config, pair=self.create_pair(), exchange=self.exchange
+            config=self.config, pair=self.config.create_pair(), exchange=self.exchange
         )
         self.channnel = self.config.sha
 
-        self.pair = self.create_pair()
+        self.pair = self.config.create_pair()
 
-        self.start_pair = self.create_pair()
+        self.start_pair = self.config.create_pair()
 
-    def create_pair(self):
-        return AssetPair(
-            Asset(symbol=self.config.input.base), Asset(symbol=self.config.input.quote)
-        )
 
     async def watch_books(self) -> None:
         async for book in self.book_stream:

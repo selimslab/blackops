@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List
 
 import simplejson as json  # type: ignore
@@ -9,6 +10,8 @@ from .base import StrategyType
 from .sliding import SlidingWindowInput, SlidingWindowConfig
 from src.storage.redis import async_redis_client
 from dataclasses import dataclass
+from src.domain.asset import Asset, AssetPair
+from src.exchanges.btcturk import btc_real_api_client_public
 
 
 StrategyInput = SlidingWindowInput
@@ -29,10 +32,11 @@ class StrategyAPI:
 
 
     async def get_stg(self, sha: str) -> StrategyConfig:
-        stg_dict = await async_redis_client.hget(self.STG_MAP, sha)
-        if not stg_dict:
+        stg_str = await async_redis_client.hget(self.STG_MAP, sha)
+        if not stg_str:
             raise HTTPException(status_code=404, detail="Strategy not found")
-
+        
+        stg_dict = json.loads(stg_str)
         stg_type = StrategyType(stg_dict.get("type"))
 
         STG_CLASS = STRATEGY_CLASS[stg_type]
@@ -51,12 +55,23 @@ class StrategyAPI:
         else:
             raise ValueError("stg not found")
 
+    async def get_ticker(self, stg: StrategyInput) -> Decimal:
+        pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
+        
+        ticker = await btc_real_api_client_public.get_ticker(pair)
+        if not ticker:
+            raise Exception("couldn't read price, please try again")
+
+        return ticker
 
     async def create_stg(self, stg: StrategyInput) -> StrategyConfig:
-        stg_config = StrategyConfig(input=stg)
+
+        ticker = await self.get_ticker(stg)
+
+        stg_config = StrategyConfig(input=stg, reference_price=ticker)
 
         if not await async_redis_client.hexists(self.STG_MAP, stg_config.sha):
-            await async_redis_client.hset(self.STG_MAP, stg_config.sha, json.dumps(stg_config, default=pydantic_encoder))
+            await async_redis_client.hset(self.STG_MAP, stg_config.sha, json.dumps(stg_config.dict()))
 
         return stg_config
 

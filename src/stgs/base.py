@@ -16,9 +16,9 @@ class StrategyInputBase(BaseModel):
         raise NotImplementedError
 
 
-@pydantic.dataclasses.dataclass
-class StrategyConfigBase:
+class StrategyConfigBase(BaseModel):
+    input: StrategyInputBase
     type: StrategyType = StrategyType.SLIDING_WINDOW
     sha: str = ""
     created_at: str = Field(default_factory=lambda: str(datetime.now().isoformat()))
-    input: StrategyInputBase
+

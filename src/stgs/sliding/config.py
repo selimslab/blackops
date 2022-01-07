@@ -3,13 +3,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from src.domain.asset import Asset, AssetPair
+
 from src.numbers import round_decimal
 from src.idgen import dict_to_hash
-from src.exchanges.btcturk import btc_real_api_client_public
 from .inputs import SlidingWindowInput
 
 from src.stgs.base import StrategyType, StrategyConfigBase
+from src.domain.asset import Asset, AssetPair
 
 
 
@@ -19,11 +19,11 @@ class SleepSeconds(BaseModel):
     broadcast_stats: float = 2
 
 class SlidingWindowConfig(StrategyConfigBase):
+    input:SlidingWindowInput
+
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
-    pair: Optional[AssetPair] = None
-
-    reference_price: Optional[Decimal] = None
+    reference_price:Decimal
 
     base_step_qty: Decimal = Decimal(0)
 
@@ -31,23 +31,15 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
 
-    input:SlidingWindowInput
-
-
-    async def __post_init__(self):
+    def __init__(self, **data):
+        super().__init__(**data)
 
         self.is_valid()
 
         sha = dict_to_hash(self.input.dict())[:7]
         self.sha = sha
 
-        self.pair = AssetPair(Asset(symbol=self.input.base), Asset(symbol=self.input.quote))
-        
-        ticker = await btc_real_api_client_public.get_ticker(self.pair)
-        if not ticker:
-            raise Exception("couldn't read price, please try again")
-
-        self.set_params(ticker)
+        self.set_params(self.reference_price)
 
     def set_params(self, ticker):
         self.credit_bps = 2 * self.input.fee_bps + self.input.margin_bps
@@ -56,3 +48,8 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     def is_valid(self):
         return self.input.is_valid()
+
+    def create_pair(self)->AssetPair:
+        return AssetPair(
+            Asset(symbol=self.input.base), Asset(symbol=self.input.quote)
+        )

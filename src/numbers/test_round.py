@@ -1,6 +1,3 @@
-
-import pytest
-import decimal
 from decimal import Decimal
 from .main import round_decimal
 

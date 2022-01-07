@@ -43,7 +43,7 @@ class SlidingWindowTrader(RobotBase):
     current_step: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
-        self.config_dict = asdict(self.config)
+        self.config_dict = self.config.dict()
 
         self.channnel = self.config.sha
 
@@ -219,8 +219,8 @@ class SlidingWindowTrader(RobotBase):
 
     async def broadcast_stats(self) -> None:
 
-        message = self.create_stats_message()
+        message_dict = self.create_stats_message()
 
-        message = json.dumps(message, default=str)
+        message = json.dumps(message_dict, default=str)
 
         pub.publish_stats(self.channnel, message)

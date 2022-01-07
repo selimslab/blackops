@@ -8,10 +8,17 @@ from src.stgs import StrategyConfig
 @dataclass
 class RobotApi:
 
-    def run_task(self, stg: StrategyConfig):
-        # run as long as the task is not cancelled
-        asyncio.run(robot_context.start_task(stg))
+    async def run_task(self, stg: StrategyConfig):
 
+        coros = robot_context.create_coros(stg)
+
+        try:
+            await asyncio.gather(*coros)
+        except asyncio.CancelledError as e:
+            logger.info(f"{stg.sha} cancelled: {e}")
+        except Exception as e:
+            logger.error(f"{stg.sha} failed: {e}")
+    
 
     async def stop_task(self, sha: str):
         await robot_context.cancel_task(sha)
