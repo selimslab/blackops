@@ -6,7 +6,7 @@ from typing import Optional
 import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 from src.exchanges.base import ExchangeAPIClientBase
 from src.stgs.sliding.config import SlidingWindowConfig
 from src.monitoring import logger

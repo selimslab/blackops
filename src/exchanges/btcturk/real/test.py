@@ -3,7 +3,7 @@ import datetime as dt
 import pprint
 from contextlib import asynccontextmanager
 
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 from src.environment import apiKey, apiSecret
 from src.exchanges.btcturk.real.main import BtcturkApiClient
 

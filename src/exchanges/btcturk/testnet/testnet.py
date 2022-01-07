@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 from src.exchanges.btcturk.base import BtcturkBase
 from src.exchanges.btcturk.testnet.dummy import BtcturkDummy
 from src.monitoring import logger

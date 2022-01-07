@@ -16,11 +16,17 @@ from src.robots.sliding.leader import LeaderWatcher
 from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
 from src.periodic import periodic
-from src.domain.asset import BPS
+from src.stgs import BPS
 
 getcontext().prec = 9
 
+@dataclass
+class TargetPrices:
+    taker_buy: Optional[Decimal] = None
+    taker_sell: Optional[Decimal] = None
 
+    maker_buy: Optional[Decimal] = None
+    maker_sell: Optional[Decimal] = None
 @dataclass
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
@@ -37,11 +43,10 @@ class SlidingWindowTrader(RobotBase):
 
     bridge_watcher: Optional[BookWatcher] = None
     bridge_pubsub_key: Optional[str] = None
-
-    # Realtime
-    theo_buy: Optional[Decimal] = None
-    theo_sell: Optional[Decimal] = None  # sell higher than theo_sell
+  
     current_step: Decimal = Decimal("0")
+
+    targets: TargetPrices = TargetPrices()
 
     def __post_init__(self) -> None:
         self.config_dict = self.config.dict()
@@ -117,10 +122,14 @@ class SlidingWindowTrader(RobotBase):
             
             mid -= step_size
 
-            credit = self.config.credit_bps * BPS * mid
+            maker_credit = self.config.maker_credit_bps * BPS * mid
+            taker_credit = self.config.taker_credit_bps * BPS * mid
 
-            self.theo_buy = mid - credit
-            self.theo_sell = mid + credit
+            self.targets.maker_buy = mid - maker_credit
+            self.targets.maker_sell = mid + maker_credit
+
+            self.targets.taker_buy = mid - taker_credit
+            self.targets.taker_sell = mid + taker_credit
 
         except Exception as e:
             msg = f"calculate_window: {e}"
@@ -204,8 +213,7 @@ class SlidingWindowTrader(RobotBase):
                 },
             },
             "binance": {
-                "theo buy": self.theo_buy,
-                "theo sell": self.theo_sell,
+                "targets": self.targets,
                 "last update": self.leader.theo_last_updated.time(),
                 "books seen": self.leader.books_seen,
             },

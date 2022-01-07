@@ -9,8 +9,7 @@ from src.idgen import dict_to_hash
 from .inputs import SlidingWindowInput
 
 from src.stgs.base import StrategyType, StrategyConfigBase
-from src.domain.asset import Asset, AssetPair
-
+from src.stgs import Asset, AssetPair, maker_fee_bps, taker_fee_bps
 
 
 class SleepSeconds(BaseModel):
@@ -27,7 +26,9 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     base_step_qty: Decimal = Decimal(0)
 
-    credit_bps: Decimal = Decimal(0)
+    maker_credit_bps: Decimal = Decimal(0)
+
+    taker_credit_bps: Decimal = Decimal(0)
 
     sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
 
@@ -42,9 +43,13 @@ class SlidingWindowConfig(StrategyConfigBase):
         self.set_params(self.reference_price)
 
     def set_params(self, ticker):
-        self.credit_bps = 2 * self.input.fee_bps + self.input.margin_bps
-        self.base_step_qty = round_decimal(self.input.quote_step_qty / ticker)
         self.reference_price = ticker
+
+        self.maker_credit_bps = 2 * maker_fee_bps + self.input.margin_bps
+        self.taker_credit_bps = 2 * taker_fee_bps + self.input.margin_bps
+
+        self.base_step_qty = round_decimal(self.input.quote_step_qty / ticker)
+        
 
     def is_valid(self):
         return self.input.is_valid()

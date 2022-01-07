@@ -1,7 +1,7 @@
 import asyncio
 from decimal import Decimal
 
-import src.domain.symbols as symbols
+import src.stgs.symbols as symbols
 from src.robots.factory import create_trader_from_strategy
 from src.stgs.sliding.config import SlidingWindowConfig
 

@@ -116,10 +116,12 @@ class RobotContext:
             return self.radio.run_station_forever(station)
 
 
+    def is_running(self,sha:str)->bool:
+        return sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING
+
     async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
-        sha = stg.sha
-        if sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING:
-            raise Exception(f"{sha} already running")
+        if self.is_running(stg.sha):
+            raise Exception(f"{stg.sha} already running")
 
         robot, balance_watcher, bridge_watcher = create_trader_from_strategy(stg)
         if not robot:
@@ -152,7 +154,7 @@ class RobotContext:
         try:
             robotrun = self.robots.get(sha)
             if not robotrun:
-                logger.error(f"clean_task: {sha} not found")
+                logger.info(f"clean_task: {sha} not found")
                 return
 
             if robotrun.aiotask:
@@ -184,10 +186,9 @@ class RobotContext:
 
     async def cancel_all(self) -> list:
         stopped_shas = []
-        for sha, task in self.robots.items():
-            if task.status == RobotRunStatus.RUNNING:
-                await self.cancel_task(sha)
-                stopped_shas.append(sha)
+        for sha in self.robots:
+            await self.cancel_task(sha)
+            stopped_shas.append(sha)
 
         self.robots.clear()
         return stopped_shas

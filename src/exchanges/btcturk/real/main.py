@@ -11,7 +11,7 @@ from typing import Callable, Optional
 
 import aiohttp
 
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
 from src.web.url import update_url_query_params

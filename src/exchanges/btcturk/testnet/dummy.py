@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 from src.exchanges.btcturk.testnet.models import (
     Account,
     AccountBalanceResponse,

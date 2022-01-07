@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from src.domain.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
+from src.stgs.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 from src.exchanges.factory import ExchangeType
 from src.stgs.base import StrategyType, StrategyInputBase
 
@@ -29,8 +29,6 @@ class SlidingWindowInput(StrategyInputBase):
     quote_step_qty: Decimal = Decimal(1500)
 
     step_bps: Decimal = Decimal("2.5")
-
-    fee_bps: Decimal = Decimal("12")
 
     margin_bps: Decimal = Decimal("1")
 

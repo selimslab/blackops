@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 
 
 @dataclass

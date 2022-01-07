@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from typing import List
 import src.pubsub.pub as pub
 from src.robots.context import robot_context
 from src.monitoring import logger
@@ -7,6 +8,10 @@ from src.stgs import StrategyConfig
 
 @dataclass
 class RobotApi:
+
+    def is_running(self,stg: StrategyConfig):
+        if robot_context.is_running(stg.sha):
+            raise Exception(f"{stg.sha} already running")
 
     async def run_task(self, stg: StrategyConfig):
         coros = await robot_context.create_coros(stg)
@@ -23,11 +28,16 @@ class RobotApi:
     async def stop_task(self, sha: str):
         await robot_context.cancel_task(sha)
         pub.publish_message(sha, f"{sha} stopped")
+        return sha 
 
-    async def stop_all_tasks(self):
-        return await robot_context.cancel_all()
+    async def stop_all_tasks(self)->List[str]:
+        shas = robot_context.get_tasks()
+        stopped =  await robot_context.cancel_all()
+        for sha in shas:
+            pub.publish_message(sha, f"{sha} stopped")
+        return stopped 
 
-    def get_tasks(self):
+    def get_tasks(self)->List[str]:
         return robot_context.get_tasks()
 
 

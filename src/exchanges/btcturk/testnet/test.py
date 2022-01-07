@@ -1,7 +1,7 @@
 import asyncio
 from decimal import Decimal
 
-from src.domain.asset import Asset, AssetPair
+from src.stgs import Asset, AssetPair
 
 from src.exchanges.btcturk.testnet.dummy import BtcturkDummy
 from src.monitoring import logger

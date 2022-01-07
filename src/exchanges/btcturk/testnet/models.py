@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from src.domain.asset import Asset, AssetPair, AssetPairSymbol, AssetSymbol
+from src.stgs import Asset, AssetPair, AssetPairSymbol, AssetSymbol
 
 
 class AccountBalanceResponse(BaseModel):
