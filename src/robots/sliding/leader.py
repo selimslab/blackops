@@ -12,8 +12,7 @@ class LeaderWatcher:
 
     async def book_generator(self) -> AsyncIterable:
         async for book in self.book_stream:
-            if book:
-                self.books_seen += 1
-                yield book
-                self.theo_last_updated = datetime.now()
+            yield book
+            self.books_seen += 1
+            self.theo_last_updated = datetime.now()
             await asyncio.sleep(0)

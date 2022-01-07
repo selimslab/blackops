@@ -27,16 +27,11 @@ async def binance_stream_generator(symbol: str, stream_type: str):
         async with ts as tscm:
             while True:
                 msg = await tscm.recv()
-                if msg:
-                    """
-                    {
-                        'e': 'error',
-                        'm': 'Max reconnect retries reached'
-                    }
-                    """
-                    if msg and msg.get("e", "") == "error":
-                        raise BinanceWebSocketException(msg)
 
+                if msg and msg.get("e", "") == "error":
+                    raise BinanceWebSocketException(msg)
+
+                if msg:
                     yield msg
 
                 await asyncio.sleep(0)

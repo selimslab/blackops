@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 import copy
 from dataclasses import dataclass
 from datetime import datetime
@@ -44,14 +45,19 @@ class FollowerWatcher:
 
     async def watch_books(self) -> None:
         async for book in self.book_stream:
-            if book:
-                self.update_follower_prices(book)
-                self.books_seen += 1
+            self.update_follower_prices(book)
+            self.books_seen += 1
+            asyncio.create_task(self.clear_bid_ask())
             await asyncio.sleep(0)
 
+    async def clear_bid_ask(self):
+        # prices are valid for max 200ms 
+        await asyncio.sleep(0.2) 
+
+        self.best_buyer = None
+        self.best_seller = None
+
     def update_follower_prices(self, book: dict) -> None:
-        if not book:
-            return
         try:
             best_ask = self.exchange.get_best_ask(book)
             if best_ask:

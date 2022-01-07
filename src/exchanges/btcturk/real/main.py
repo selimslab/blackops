@@ -43,8 +43,9 @@ class BtcturkApiClient(BtcturkBase):
 
     @asynccontextmanager
     async def timed_order_context(self):
+        print("timed_order_context")
         async with self.order_lock:
-            yield
+            yield 
             await asyncio.sleep(0.1)
 
     def _get_headers(self) -> dict:

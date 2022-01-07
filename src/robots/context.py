@@ -1,4 +1,6 @@
 import asyncio
+from contextlib import asynccontextmanager, contextmanager
+import traceback
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Coroutine, Dict, Optional, List
@@ -43,17 +45,16 @@ class BalancePublisher:
             self.radio.add_listener(balance_watcher.pubsub_key)
             return None
         else:
+            balance_task = periodic(
+                balance_watcher.watch_balance, config.sleep_seconds.update_balances
+            )
             station = Station(
                 pubsub_channel=balance_watcher.pubsub_key,
                 log_channel=config.sha,
                 listeners=1,
+                aiotask=asyncio.create_task(balance_task)
             )
-            balance_task = periodic(
-                balance_watcher.watch_balance, config.sleep_seconds.update_balances
-            )
-            station.aiotask = asyncio.create_task(balance_task)
-            self.radio.stations[station.pubsub_channel] = station
-            return self.radio.start_station(station)
+            return self.radio.run_station_forever(station)
 
 
 @dataclass
@@ -71,11 +72,11 @@ class BridgePublisher:
                 pubsub_channel=bridge_watcher.pubsub_key,
                 log_channel=stg.sha,
                 listeners=1,
+                aiotask=asyncio.create_task(bridge_watcher.watch_books()),
             )
-            bridge_task = bridge_watcher.watch_books()
-            station.aiotask = asyncio.create_task(bridge_task)
-            self.radio.stations[station.pubsub_channel] = station
-            return self.radio.start_station(station)
+            return self.radio.run_station_forever(station)
+
+
 
 bridge_publisher = BridgePublisher()
 balance_publisher = BalancePublisher()
@@ -87,28 +88,32 @@ class RobotContext:
     balance_publisher = balance_publisher
     bridge_publisher = bridge_publisher
     
-
-    async def start_robot(self, robotrun: RobotRun):
-        if not robotrun.aiotask:
-            raise Exception(f"no aiotask for robotrun")
+    @asynccontextmanager
+    async def robot_context(self, robotrun: RobotRun):
         try:
+            if not robotrun.aiotask:
+                raise Exception(f"no aiotask for robotrun")    
             self.robots[robotrun.sha] = robotrun
             robotrun.status = RobotRunStatus.RUNNING
-            await robotrun.aiotask
-        except asyncio.CancelledError as e:
-            msg = f"{robotrun.sha} cancelled: {e}"
-            pub.publish_error(channel=robotrun.log_channel, message=msg)
+            yield robotrun.aiotask
+        finally:
             await self.clean_task(robotrun.sha)
-        except Exception as e:
-            robotrun.status = RobotRunStatus.FAILED
-            # log
-            msg = f"start_robot: {robotrun.sha} failed: {e}, restarting.."
-            pub.publish_error(channel=robotrun.log_channel, message=msg)
-            logger.error(msg)
 
-            # restart robot
-            await self.clean_task(robotrun.sha)
-            await self.start_robot(robotrun)
+    async def run_forever(self, robotrun: RobotRun):
+        while True:
+            async with self.robot_context(robotrun) as robot_task:
+                try:
+                    await robot_task
+                except asyncio.CancelledError as e:
+                    msg = f"{robotrun.sha} cancelled: {e}"
+                    pub.publish_error(channel=robotrun.log_channel, message=msg)
+                    raise 
+                except Exception as e:
+                    robotrun.status = RobotRunStatus.FAILED
+                    msg = f"start_robot: {robotrun.sha} failed: {e}, restarting.. {traceback.format_exc()}"
+                    pub.publish_error(channel=robotrun.log_channel, message=msg)
+                    logger.error(msg)
+                    continue 
 
     def get_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
         robotrun = RobotRun(
@@ -119,7 +124,7 @@ class RobotContext:
             aiotask=None,
         )
         robotrun.aiotask = asyncio.create_task(robot.run())
-        return self.start_robot(robotrun)
+        return self.run_forever(robotrun)
 
 
     async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:

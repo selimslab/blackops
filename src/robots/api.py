@@ -9,13 +9,13 @@ from src.stgs import StrategyConfig
 class RobotApi:
 
     async def run_task(self, stg: StrategyConfig):
-
-        coros = robot_context.create_coros(stg)
+        coros = await robot_context.create_coros(stg)
 
         try:
             await asyncio.gather(*coros)
         except asyncio.CancelledError as e:
             logger.info(f"{stg.sha} cancelled: {e}")
+            raise 
         except Exception as e:
             logger.error(f"{stg.sha} failed: {e}")
     
@@ -23,7 +23,6 @@ class RobotApi:
     async def stop_task(self, sha: str):
         await robot_context.cancel_task(sha)
         pub.publish_message(sha, f"{sha} stopped")
-
 
     async def stop_all_tasks(self):
         return await robot_context.cancel_all()

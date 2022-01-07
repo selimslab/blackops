@@ -1,9 +1,9 @@
 import asyncio
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Coroutine, Dict, Optional
+from typing import Dict, Optional
 from src.monitoring import logger
 import src.pubsub.pub as pub
+from contextlib import asynccontextmanager
 
 
 @dataclass
@@ -18,20 +18,33 @@ class Station:
 class Radio:
     stations: Dict[str, Station] = field(default_factory=dict)
 
-    async def start_station(self, station: Station):
-        if not station.aiotask:
-            raise Exception(f"no aiotask set for station")
+    @asynccontextmanager
+    async def station_context(self, station: Station):
         try:
-            await station.aiotask
-        except asyncio.CancelledError as e:
-            msg = f"station {station.pubsub_channel} cancelled: {e}"
-            pub.publish_error(channel=station.log_channel, message=msg)
-            del self.stations[station.pubsub_channel]
-        except Exception as e:
-            msg = f"restarting station {station.pubsub_channel}: {e}"
-            pub.publish_error(channel=station.log_channel, message=msg)
-            logger.error(msg)
-            await self.start_station(station)
+            if not station.aiotask:
+                raise Exception(f"no aiotask set for station")
+            self.stations[station.pubsub_channel] = station
+            yield station.aiotask
+        finally:
+            self.clean_station(station)
+
+    def clean_station(self, station:Station):
+        del self.stations[station.pubsub_channel]
+
+    async def run_station_forever(self, station: Station):
+        while True:
+            async with self.station_context(station) as task:
+                try:
+                    await task
+                except asyncio.CancelledError as e:
+                    msg = f"station {station.pubsub_channel} cancelled: {e}"
+                    pub.publish_error(channel=station.log_channel, message=msg)
+                    raise 
+                except Exception as e:
+                    msg = f"restarting station {station.pubsub_channel}: {e}"
+                    pub.publish_error(channel=station.log_channel, message=msg)
+                    logger.error(msg)
+                    continue
 
     def add_listener(self, pubsub_channel: str):
         if pubsub_channel in self.stations:

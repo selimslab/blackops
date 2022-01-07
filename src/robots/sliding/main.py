@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal, getcontext
@@ -85,9 +86,13 @@ class SlidingWindowTrader(RobotBase):
         async for book in self.leader.book_generator():
             self.calculate_window(book)
             await self.should_transact()
+            asyncio.create_task(self.clear_theo())
 
-    def update_step(self):
-        self.current_step = self.follower.pair.base.free / self.config.base_step_qty
+    async def clear_theo(self):
+        # theo are valid for max 200ms 
+        await asyncio.sleep(0.2) 
+        self.theo_buy = None
+        self.theo_sell = None
 
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
@@ -100,8 +105,11 @@ class SlidingWindowTrader(RobotBase):
             if not mid:
                 return
 
-            if self.bridge_watcher and self.bridge_watcher.quote:
-                mid *= self.bridge_watcher.quote
+            if self.bridge_watcher:
+                if self.bridge_watcher.quote:
+                    mid *= self.bridge_watcher.quote
+                else:
+                    return
 
             self.update_step()
 
@@ -125,6 +133,9 @@ class SlidingWindowTrader(RobotBase):
 
         if self.should_short() and self.theo_sell:
             await self.follower.short(self.theo_sell)
+
+    def update_step(self):
+        self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
     def should_long(self) -> bool:
         if not self.follower.best_seller:

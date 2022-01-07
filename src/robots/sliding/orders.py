@@ -83,7 +83,7 @@ class OrderRobot:
         price = float(best_seller)
         qty = float(self.config.base_step_qty)  #  we buy base
 
-        with self.buy_lock:
+        async with self.buy_lock:
             try:
                 order_log = await self.submit_order("buy", price, qty)
                 if not order_log:
@@ -104,7 +104,7 @@ class OrderRobot:
 
         price = float(best_buyer)
 
-        with self.sell_lock:
+        async with self.sell_lock:
             try:
                 order_log = await self.submit_order("sell", price, qty)
                 if not order_log:

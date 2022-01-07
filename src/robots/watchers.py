@@ -20,6 +20,10 @@ class BookWatcher:
     quote: Optional[Decimal] = None
     books_seen: int = 0
 
+    async def clear_quote(self):
+        await asyncio.sleep(0.2)
+        self.quote = None
+
     async def watch_books(self):
         if not self.stream:
             raise ValueError("No stream")
@@ -28,9 +32,9 @@ class BookWatcher:
 
         async for book in self.stream:
             new_quote = self.exchange.get_mid(book)
-            if new_quote:
-                self.quote = new_quote
-                self.last_updated = datetime.now()
+            self.quote = new_quote
+            self.last_updated = datetime.now()
+            asyncio.create_task(self.clear_quote())
             await asyncio.sleep(0)
 
 
@@ -43,9 +47,8 @@ class BalanceWatcher:
 
     async def watch_balance(self):
         res = await self.exchange.get_account_balance()
-        if res:
-            self.balances = res
-            self.last_updated = datetime.now()
+        self.balances = res
+        self.last_updated = datetime.now()
 
 
 @dataclass
