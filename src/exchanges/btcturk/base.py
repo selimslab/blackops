@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
-from src.stgs import Asset
+from src.domain import Asset
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 

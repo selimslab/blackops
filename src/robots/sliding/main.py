@@ -1,12 +1,8 @@
 import asyncio
-from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import  dataclass
 from datetime import datetime
 from decimal import Decimal, getcontext
-from os import read
 from typing import Any, AsyncGenerator, Optional
-
-import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
 from src.exchanges.base import ExchangeAPIClientBase
@@ -17,8 +13,8 @@ from src.robots.sliding.leader import LeaderWatcher
 from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
 from src.periodic import periodic
-from src.stgs import BPS
-from src.numbers import one_bps_lower
+from src.domain import BPS
+from src.numberops import one_bps_lower
 
 getcontext().prec = 9
 
@@ -88,8 +84,7 @@ class SlidingWindowTrader(RobotBase):
             periodic(
                 self.follower.order_robot.cancel_all_open_orders,
                 self.config.sleep_seconds.cancel_all_open_orders,
-            ),
-            periodic(self.broadcast_stats, self.config.sleep_seconds.broadcast_stats),
+            )
         ]
 
         await asyncio.gather(*coroutines)
@@ -102,7 +97,7 @@ class SlidingWindowTrader(RobotBase):
 
     async def clear_targets(self):
         # theo are valid for max 200ms 
-        await asyncio.sleep(self.config.sleep_seconds.clear_prices)) 
+        await asyncio.sleep(self.config.sleep_seconds.clear_prices)
         self.targets.maker.buy = None
         self.targets.maker.sell = None
 
@@ -144,7 +139,7 @@ class SlidingWindowTrader(RobotBase):
         except Exception as e:
             msg = f"calculate_window: {e}"
             logger.error(msg)
-            pub.publish_error(self.channnel, msg)
+            pub.publish_error(message=msg)
 
     async def should_transact(self) -> None:
         if self.can_short():
@@ -178,6 +173,8 @@ class SlidingWindowTrader(RobotBase):
             return one_bps_lower(best_seller) # type: ignore
         elif best_seller <= self.targets.taker.buy: # type: ignore
             return self.targets.taker.buy
+        
+        return None
 
     def can_short(self)->bool:
         self.update_step()
@@ -197,6 +194,8 @@ class SlidingWindowTrader(RobotBase):
             return one_bps_lower(best_buyer)  # type: ignore
         elif best_buyer <= self.targets.taker.sell: # type: ignore
             return self.targets.taker.sell
+
+        return None
 
 
     async def close(self) -> None:
@@ -257,10 +256,3 @@ class SlidingWindowTrader(RobotBase):
 
         return stats
 
-    async def broadcast_stats(self) -> None:
-
-        message_dict = self.create_stats_message()
-
-        message = json.dumps(message_dict, default=str)
-
-        pub.publish_stats(self.channnel, message)

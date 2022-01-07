@@ -3,6 +3,15 @@ from datetime import datetime
 from src.pubsub.client import pusher_client
 from src.monitoring import logger
 
+from typing import Any
+from enum import Enum
+
+DEFAULT_CHANNEL = "7b2411e6822e2f36b872"
+
+ERROR = "ERROR"
+MESSAGE =  "MESSAGE"
+STATS = "STATS"
+
 
 def add_time(message):
     return {
@@ -11,19 +20,16 @@ def add_time(message):
     }
 
 
-def publish_error(channel: str, message):
-    try:
-        pusher_client.trigger(channel, "error", add_time(message))
-    except Exception as e:
-        logger.info(f"{message} {e}")
+def publish_error(message, channel: str=DEFAULT_CHANNEL):
+    pusher_client.trigger(channel, ERROR, add_time(message))
 
 
-def publish_message(channel: str, message):
-    pusher_client.trigger(channel, "message", add_time(message))
+def publish_message(message, channel: str=DEFAULT_CHANNEL):
+    pusher_client.trigger(channel, MESSAGE, add_time(message))
 
 
-def publish_stats(channel: str, message):
-    pusher_client.trigger(channel, "stats", add_time(message))
+def publish_stats(message, channel: str=DEFAULT_CHANNEL):
+    pusher_client.trigger(channel, STATS, add_time(message))
 
 
 if __name__ == "__main__":

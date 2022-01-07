@@ -6,7 +6,7 @@ from typing import Optional
 import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
-from src.stgs import Asset, AssetPair, OrderType, OrderId
+from src.domain import Asset, AssetPair, OrderType, OrderId
 from src.exchanges.base import ExchangeAPIClientBase
 from src.stgs.sliding.config import SlidingWindowConfig
 from src.monitoring import logger
@@ -61,13 +61,7 @@ class OrderRobot:
         except Exception as e:
             msg = f"watch_open_orders: {e}"
             logger.error(msg)
-            pub.publish_error(self.channel, msg)
-
-    def can_buy(self, best_seller: Decimal) -> bool:
-        return bool(best_seller) and not 
- 
-    def can_sell(self, best_buyer: Decimal) -> bool:
-        return bool(best_buyer) and bool(self.config.base_step_qty) and not 
+            pub.publish_error(message=msg)
 
     async def send_order(self, side:OrderType, price: Decimal, qty:Decimal) -> Optional[dict]:
         if side == OrderType.BUY:
@@ -125,5 +119,5 @@ class OrderRobot:
         except Exception as e:
             msg = f"send_order: {e}"
             logger.error(msg)
-            pub.publish_error(self.channel, msg)
+            pub.publish_error(message=msg)
             return None

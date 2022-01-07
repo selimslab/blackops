@@ -41,18 +41,9 @@ async def binance_stream_generator(symbol: str, stream_type: str):
         raise e
 
 
-def log_and_publish_error(channel, msg):
-    logger.error(f"log_and_publish_error: {msg}")
-    pub.publish_error(channel, msg)
-
-
-def log_and_publish_message(channel, msg):
-    logger.error(f"log_and_publish_message: {msg}")
-    pub.publish_message(channel, msg)
-
 
 async def reconnecting_binance_generator(
-    generator_factory: Callable, channel: str = "default"
+    generator_factory: Callable
 ):
 
     retries = 0
@@ -91,8 +82,8 @@ async def reconnecting_binance_generator(
             # log and raise any other error
             # for example a KeyError
             msg = f"Binance stream lost: {e}"
-            log_and_publish_error(channel, msg)
-
+            logger.error(msg)
+            pub.publish_error(message=msg)
             raise e
 
 
@@ -100,7 +91,7 @@ def create_book_stream(symbol: str, channel: str = "default"):
     def create_new_socket_conn():
         return binance_stream_generator(symbol, "@bookTicker")
 
-    return reconnecting_binance_generator(create_new_socket_conn, channel)
+    return reconnecting_binance_generator(create_new_socket_conn)
 
 
 async def test_orderbook_stream(symbol):

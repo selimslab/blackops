@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from src.stgs import Asset, AssetPair
+from src.domain import Asset, AssetPair
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.stgs.sliding import SlidingWindowConfig
@@ -72,8 +72,6 @@ def create_bridge_watcher_from_strategy(config: SlidingWindowConfig) -> Tuple:
 def sliding_window_factory(config: SlidingWindowConfig):
 
     config.is_valid()
-
-    pub_channel = config.sha
 
     leader_api_client, follower_api_client = create_clients(config)
 

@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from src.stgs import Asset, AssetPair
+from src.domain import Asset, AssetPair
 from src.exchanges.btcturk.testnet.models import (
     Account,
     AccountBalanceResponse,
@@ -99,7 +99,7 @@ class BtcturkDummy:
         self.account.open_orders[pair.symbol].asks.append(order)
         await asyncio.sleep(0.2)  # 300 limit
 
-        gain = Decimal(order.quantity) * Decimal(order.price) * self.sell_with_fee
+        gain = Decimal(order.quantity) * Decimal(order.price) 
         try:
             self.subtract_balance(pair.base, Decimal(order.quantity))
             self.add_balance(pair.quote, gain)

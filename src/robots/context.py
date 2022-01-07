@@ -61,12 +61,12 @@ class RobotContext:
                     await robot_task
                 except asyncio.CancelledError as e:
                     msg = f"{robotrun.sha} cancelled: {e}"
-                    pub.publish_error(channel=robotrun.log_channel, message=msg)
+                    pub.publish_error(message=msg)
                     raise 
                 except Exception as e:
                     robotrun.status = RobotRunStatus.FAILED
                     msg = f"start_robot: {robotrun.sha} failed: {e}, restarting.. {traceback.format_exc()}"
-                    pub.publish_error(channel=robotrun.log_channel, message=msg)
+                    pub.publish_error(message=msg)
                     logger.error(msg)
                     continue 
 

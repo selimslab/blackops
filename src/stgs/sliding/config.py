@@ -4,12 +4,12 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-from src.numbers import round_decimal
+from src.numberops import round_decimal
 from src.idgen import dict_to_hash
 from .inputs import SlidingWindowInput
 
 from src.stgs.base import StrategyType, StrategyConfigBase
-from src.stgs import Asset, AssetPair, maker_fee_bps, taker_fee_bps
+from src.domain import Asset, AssetPair, maker_fee_bps, taker_fee_bps
 
 
 class SleepSeconds(BaseModel):

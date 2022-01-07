@@ -10,7 +10,7 @@ from .base import StrategyType
 from .sliding import SlidingWindowInput, SlidingWindowConfig
 from src.storage.redis import async_redis_client
 from dataclasses import dataclass
-from src.stgs import Asset, AssetPair
+from src.domain import Asset, AssetPair
 from src.exchanges.btcturk import btc_real_api_client_public
 
 

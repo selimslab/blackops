@@ -40,7 +40,7 @@
 
       <br />
 
- 
+<!--  
       <div class="column is-one-quarter">
         <input
           class="input is-rounded"
@@ -51,7 +51,7 @@
       </div>
 
       <br />
-      <br />
+      <br /> -->
 
 
 
@@ -110,7 +110,7 @@
     const app = new Vue({
       el: "#app",
       data: {
-        sha: null,
+        sha: "7b2411e6822e2f36b872",
         messages: [],
         errors: [],
         stats: stats,
@@ -120,15 +120,15 @@
         connect: function (e) {
           var channel = pusher.subscribe(app.sha);
 
-          channel.bind("error", function (data) {
+          channel.bind("ERROR", function (data) {
             app.errors.unshift(data);
           });
       
-          channel.bind("message", function (data) {
+          channel.bind("MESSAGE", function (data) {
             app.messages.unshift(data);
           });
 
-          channel.bind("stats", function (data) {
+          channel.bind("STATS", function (data) {
             let stats = JSON.parse(data.message)
             app.stats = stats;
           });
@@ -136,8 +136,6 @@
         },
       },
     });
-
-
 
 
     var pusher = new Pusher("7b2411e6822e2f36b872", {

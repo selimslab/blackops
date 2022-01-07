@@ -39,11 +39,11 @@ class Radio:
                     await task
                 except asyncio.CancelledError as e:
                     msg = f"station {station.pubsub_channel} cancelled: {e}"
-                    pub.publish_error(channel=station.log_channel, message=msg)
+                    pub.publish_error(message=msg)
                     raise 
                 except Exception as e:
                     msg = f"restarting station {station.pubsub_channel}: {e} \n {traceback.format_exc()}"
-                    pub.publish_error(channel=station.log_channel, message=msg)
+                    pub.publish_error(message=msg)
                     logger.error(msg)
                     continue
 

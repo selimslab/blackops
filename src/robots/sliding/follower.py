@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Optional
 
 import src.pubsub.pub as pub
 from src.exchanges.base import ExchangeAPIClientBase
-from src.stgs.models import OrderType
+from src.domain import OrderType
 from src.stgs.sliding.config import SlidingWindowConfig
 from src.robots.sliding.orders import OrderRobot
 from src.robots.watchers import BalanceWatcher
@@ -72,7 +72,7 @@ class FollowerWatcher:
         except Exception as e:
             msg = f"update_follower_prices: {e}"
             logger.error(msg)
-            pub.publish_error(self.channnel, msg)
+            pub.publish_error(message=msg)
 
     async def update_balances(self) -> None:
         try:
@@ -99,7 +99,7 @@ class FollowerWatcher:
         except Exception as e:
             msg = f"update_balances: {e}"
             logger.error(msg)
-            pub.publish_error(self.channnel, msg)
+            pub.publish_error(message=msg)
             raise e
 
     def can_buy(self, price) -> bool:

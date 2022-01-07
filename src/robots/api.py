@@ -5,6 +5,9 @@ import src.pubsub.pub as pub
 from src.robots.context import robot_context
 from src.monitoring import logger
 from src.stgs import StrategyConfig
+import simplejson as json  # type: ignore
+from src.periodic import periodic
+
 
 @dataclass
 class RobotApi:
@@ -15,7 +18,6 @@ class RobotApi:
 
     async def run_task(self, stg: StrategyConfig):
         coros = await robot_context.create_coros(stg)
-
         try:
             await asyncio.gather(*coros)
         except asyncio.CancelledError as e:
@@ -27,14 +29,14 @@ class RobotApi:
 
     async def stop_task(self, sha: str):
         await robot_context.cancel_task(sha)
-        pub.publish_message(sha, f"{sha} stopped")
+        pub.publish_message(message=f"{sha} stopped")
         return sha 
 
     async def stop_all_tasks(self)->List[str]:
         shas = robot_context.get_tasks()
         stopped =  await robot_context.cancel_all()
         for sha in shas:
-            pub.publish_message(sha, f"{sha} stopped")
+            pub.publish_message(message=f"{sha} stopped")
         return stopped 
 
     def get_tasks(self)->List[str]:

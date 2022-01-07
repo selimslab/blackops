@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 
 from src.stgs import strategy_api
-from src.robots import robot_api
+from src.robots import robot_api, robot_stats
 from src.api.auth import auth
 
 router = APIRouter(dependencies=[Depends(auth)])
@@ -25,6 +25,7 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
     stg = await strategy_api.get_stg(sha)
     robot_api.is_running(stg)
     background_tasks.add_task(robot_api.run_task, stg)
+    background_tasks.add_task(robot_stats.broadcast_stats_periodically)
     return JSONResponse(content={"message": f"started strategy {sha}"})
 
 
