@@ -19,6 +19,7 @@ class BookWatcher:
     last_updated = datetime.now()
     quote: Optional[Decimal] = None
     books_seen: int = 0
+    clear_task = None
 
     async def clear_quote(self):
         await asyncio.sleep(0.2)
@@ -34,7 +35,9 @@ class BookWatcher:
             new_quote = self.exchange.get_mid(book)
             self.quote = new_quote
             self.last_updated = datetime.now()
-            asyncio.create_task(self.clear_quote())
+            if self.clear_task:
+                self.clear_task.cancel()
+            self.clear_task = asyncio.create_task(self.clear_quote())
             await asyncio.sleep(0)
 
 

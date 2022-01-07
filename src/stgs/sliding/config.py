@@ -14,9 +14,9 @@ from src.domain import Asset, AssetPair, maker_fee_bps, taker_fee_bps
 
 class SleepSeconds(BaseModel):
     update_balances: float = 0.72
-    cancel_all_open_orders: float = 3
-    broadcast_stats: float = 1
-    clear_prices: float = 0.32
+    cancel_all_open_orders: float = 2.4
+    broadcast_stats: float = 0.4
+    clear_prices: float = 0.4
 
 class SlidingWindowConfig(StrategyConfigBase):
     input:SlidingWindowInput

@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import  dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal, getcontext
 from typing import Any, AsyncGenerator, Optional
@@ -18,6 +18,7 @@ from src.numberops import one_bps_lower
 
 getcontext().prec = 9
 
+
 @dataclass
 class TargetPrices:
     buy: Optional[Decimal] = None
@@ -26,8 +27,10 @@ class TargetPrices:
 
 @dataclass
 class Targets:
-    maker :TargetPrices = TargetPrices()
-    taker :TargetPrices = TargetPrices()
+    maker : TargetPrices = TargetPrices()
+    taker : TargetPrices = TargetPrices()
+
+
 
 
 @dataclass
@@ -46,10 +49,12 @@ class SlidingWindowTrader(RobotBase):
 
     bridge_watcher: Optional[BookWatcher] = None
     bridge_pubsub_key: Optional[str] = None
-  
+
     current_step: Decimal = Decimal("0")
 
     targets: Targets = Targets()
+
+    clear_task = None
 
     def __post_init__(self) -> None:
         self.config_dict = self.config.dict()
@@ -93,7 +98,9 @@ class SlidingWindowTrader(RobotBase):
         async for book in self.leader.book_generator():
             self.calculate_window(book)
             await self.should_transact()
-            asyncio.create_task(self.clear_targets())
+            if self.clear_task:
+                self.clear_task.cancel()
+            self.clear_task = asyncio.create_task(self.clear_targets())
 
     async def clear_targets(self):
         # theo are valid for max 200ms 
@@ -124,7 +131,7 @@ class SlidingWindowTrader(RobotBase):
             self.update_step()
 
             step_size = self.config.input.step_bps * BPS * mid * self.current_step  
-            
+
             mid -= step_size
 
             maker_credit = self.config.maker_credit_bps * BPS * mid
@@ -155,7 +162,7 @@ class SlidingWindowTrader(RobotBase):
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
-    def can_long(self)->bool:
+    def can_long(self) -> bool:
         self.update_step()
 
         have_all_prices = bool(self.follower.best_seller and self.targets.taker.buy and self.targets.maker.buy)
@@ -170,13 +177,13 @@ class SlidingWindowTrader(RobotBase):
 
         best_seller = self.follower.best_seller
         if self.targets.taker.buy < best_seller < self.targets.maker.buy:  # type: ignore
-            return one_bps_lower(best_seller) # type: ignore
-        elif best_seller <= self.targets.taker.buy: # type: ignore
+            return one_bps_lower(best_seller)  # type: ignore
+        elif best_seller <= self.targets.taker.buy:  # type: ignore
             return self.targets.taker.buy
-        
+
         return None
 
-    def can_short(self)->bool:
+    def can_short(self) -> bool:
         self.update_step()
 
         have_all_prices = bool(self.follower.best_buyer and self.targets.taker.sell and self.targets.maker.sell)
@@ -192,22 +199,35 @@ class SlidingWindowTrader(RobotBase):
 
         if self.targets.taker.sell < best_buyer < self.targets.maker.sell:  # type: ignore
             return one_bps_lower(best_buyer)  # type: ignore
-        elif best_buyer <= self.targets.taker.sell: # type: ignore
+        elif best_buyer <= self.targets.taker.sell:  # type: ignore
             return self.targets.taker.sell
 
         return None
-
 
     async def close(self) -> None:
         await self.follower.order_robot.cancel_all_open_orders()
 
     def create_stats_message(self) -> dict:
         stats = {
+            "pair": self.follower.pair.base.symbol +self.follower.pair.quote.symbol,
             "current time": datetime.now(),
             "start time": self.task_start_time,
             "orders delivered": {
                 "buy": self.follower.order_robot.buy_orders_delivered,
                 "sell": self.follower.order_robot.sell_orders_delivered,
+            },
+            "prices": {
+                "binance": {
+                    "targets": asdict(self.targets),
+                    "last update": self.leader.theo_last_updated.time(),
+                    "books seen": self.leader.books_seen,
+                },
+                "btcturk": {
+                    "bid": self.follower.best_buyer,
+                    "ask": self.follower.best_seller,
+                    "last update": self.follower.bid_ask_last_updated.time(),
+                    "books seen": self.follower.books_seen,
+                }
             },
             "balances": {
                 "step": self.current_step,
@@ -232,17 +252,6 @@ class SlidingWindowTrader(RobotBase):
                     },
                 },
             },
-            "binance": {
-                "targets": self.targets,
-                "last update": self.leader.theo_last_updated.time(),
-                "books seen": self.leader.books_seen,
-            },
-            "btcturk": {
-                "bid": self.follower.best_buyer,
-                "ask": self.follower.best_seller,
-                "last update": self.follower.bid_ask_last_updated.time(),
-                "books seen": self.follower.books_seen,
-            },
         }
 
         if self.bridge_watcher:
@@ -255,4 +264,3 @@ class SlidingWindowTrader(RobotBase):
         stats["config"] = self.config_dict
 
         return stats
-

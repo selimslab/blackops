@@ -32,6 +32,8 @@ class FollowerWatcher:
 
     start_balances_saved: bool = False
 
+    clear_task = None
+
     def __post_init__(self):
 
         self.order_robot = OrderRobot(
@@ -48,7 +50,9 @@ class FollowerWatcher:
         async for book in self.book_stream:
             self.update_follower_prices(book)
             self.books_seen += 1
-            asyncio.create_task(self.clear_bid_ask())
+            if self.clear_task:
+                self.clear_task.cancel()
+            self.clear_task = asyncio.create_task(self.clear_bid_ask())
             await asyncio.sleep(0)
 
     async def clear_bid_ask(self):

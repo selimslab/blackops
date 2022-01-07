@@ -6,7 +6,7 @@ from src.monitoring import logger
 from typing import Any
 from enum import Enum
 
-DEFAULT_CHANNEL = "7b2411e6822e2f36b872"
+DEFAULT_CHANNEL = "f7299bf"
 
 ERROR = "ERROR"
 MESSAGE =  "MESSAGE"
@@ -33,4 +33,5 @@ def publish_stats(message, channel: str=DEFAULT_CHANNEL):
 
 
 if __name__ == "__main__":
-    publish_error("test", "test")
+    import json
+    publish_stats(message=json.dumps({"dsd":"fsdfds"}))
