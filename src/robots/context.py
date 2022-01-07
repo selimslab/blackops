@@ -33,60 +33,15 @@ class RobotRun:
     aiotask: Optional[asyncio.Task] = None
 
 
-@dataclass
-class BalancePublisher:
-    radio: Radio = radio
-
-
-    def get_balance_task(
-        self, config: StrategyConfig, balance_watcher: BalanceWatcher
-    ) -> Optional[Coroutine]:
-        if balance_watcher.pubsub_key in self.radio.stations:
-            self.radio.add_listener(balance_watcher.pubsub_key)
-            return None
-        else:
-            balance_task = periodic(
-                balance_watcher.watch_balance, config.sleep_seconds.update_balances
-            )
-            station = Station(
-                pubsub_channel=balance_watcher.pubsub_key,
-                log_channel=config.sha,
-                listeners=1,
-                aiotask=asyncio.create_task(balance_task)
-            )
-            return self.radio.run_station_forever(station)
-
 
 @dataclass
-class BridgePublisher:
-    radio: Radio = radio
-
-    def get_bridge_task(
-        self, stg: StrategyConfig, bridge_watcher: BookWatcher
-    ) -> Optional[Coroutine]:
-        if bridge_watcher.pubsub_key in self.radio.stations:
-            self.radio.add_listener(bridge_watcher.pubsub_key)
-            return None
-        else:
-            station = Station(
-                pubsub_channel=bridge_watcher.pubsub_key,
-                log_channel=stg.sha,
-                listeners=1,
-                aiotask=asyncio.create_task(bridge_watcher.watch_books()),
-            )
-            return self.radio.run_station_forever(station)
-
-
-
-bridge_publisher = BridgePublisher()
-balance_publisher = BalancePublisher()
-
+class RobotRunner:
+    pass 
 
 @dataclass
 class RobotContext:
     robots: Dict[str, RobotRun] = field(default_factory=dict)
-    balance_publisher = balance_publisher
-    bridge_publisher = bridge_publisher
+    radio: Radio = radio
     
     @asynccontextmanager
     async def robot_context(self, robotrun: RobotRun):
@@ -115,7 +70,7 @@ class RobotContext:
                     logger.error(msg)
                     continue 
 
-    def get_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
+    def create_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
         robotrun = RobotRun(
             sha=sha,
             log_channel=sha,
@@ -125,6 +80,40 @@ class RobotContext:
         )
         robotrun.aiotask = asyncio.create_task(robot.run())
         return self.run_forever(robotrun)
+
+
+    def create_balance_task(
+        self, config: StrategyConfig, balance_watcher: BalanceWatcher
+    ) -> Optional[Coroutine]:
+        if balance_watcher.pubsub_key in self.radio.stations:
+            self.radio.add_listener(balance_watcher.pubsub_key)
+            return None
+        else:
+            balance_task = periodic(
+                balance_watcher.watch_balance, config.sleep_seconds.update_balances
+            )
+            station = Station(
+                pubsub_channel=balance_watcher.pubsub_key,
+                log_channel=config.sha,
+                listeners=1,
+                aiotask=asyncio.create_task(balance_task)
+            )
+            return self.radio.run_station_forever(station)
+            
+    def create_bridge_task(
+        self, stg: StrategyConfig, bridge_watcher: BookWatcher
+    ) -> Optional[Coroutine]:
+        if bridge_watcher.pubsub_key in self.radio.stations:
+            self.radio.add_listener(bridge_watcher.pubsub_key)
+            return None
+        else:
+            station = Station(
+                pubsub_channel=bridge_watcher.pubsub_key,
+                log_channel=stg.sha,
+                listeners=1,
+                aiotask=asyncio.create_task(bridge_watcher.watch_books()),
+            )
+            return self.radio.run_station_forever(station)
 
 
     async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
@@ -141,15 +130,15 @@ class RobotContext:
 
         coros = []
 
-        robot_task = self.get_robot_task(stg.sha, robot)
+        robot_task = self.create_robot_task(stg.sha, robot)
         coros.append(robot_task)
 
-        balance_task = self.balance_publisher.get_balance_task(stg, balance_watcher)
+        balance_task = self.create_balance_task(stg, balance_watcher)
         if balance_task:
             coros.append(balance_task)
 
         if bridge_watcher:
-            bridge_task = self.bridge_publisher.get_bridge_task(stg, bridge_watcher)
+            bridge_task = self.create_bridge_task(stg, bridge_watcher)
             if bridge_task:
                 coros.append(bridge_task)
 

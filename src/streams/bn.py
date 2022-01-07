@@ -19,8 +19,6 @@ class BinanceOverflowException(Exception):
 async def binance_stream_generator(symbol: str, stream_type: str):
     client = await AsyncClient.create()
     try:
-        # TODO multiple streams from the same ws
-        # f"ethusdt{stream_type}"
         bm = BinanceSocketManager(client)
         ts = bm.multiplex_socket([f"{symbol.lower()}{stream_type}"])
 

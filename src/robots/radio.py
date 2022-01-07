@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass, field
+import traceback
 from typing import Dict, Optional
 from src.monitoring import logger
 import src.pubsub.pub as pub
@@ -41,7 +42,7 @@ class Radio:
                     pub.publish_error(channel=station.log_channel, message=msg)
                     raise 
                 except Exception as e:
-                    msg = f"restarting station {station.pubsub_channel}: {e}"
+                    msg = f"restarting station {station.pubsub_channel}: {e} \n {traceback.format_exc()}"
                     pub.publish_error(channel=station.log_channel, message=msg)
                     logger.error(msg)
                     continue
