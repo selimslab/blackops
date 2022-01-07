@@ -64,8 +64,7 @@ def create_bridge_watcher_from_strategy(config: SlidingWindowConfig) -> Tuple:
         ) = watcher_factory.create_book_watcher_if_not_exists(
             ex_type=ExchangeType(stg.bridge_exchange),
             network=network,
-            symbol=stg.bridge + stg.quote,
-            pub_channel=config.sha,
+            symbol=stg.bridge + stg.quote
         )
     return bridge_pubsub_key, bridge_watcher
 
@@ -87,15 +86,15 @@ def sliding_window_factory(config: SlidingWindowConfig):
 
     if stg.bridge:
         leader_book_stream = stream_factory.create_stream_if_not_exists(
-            ExchangeType(stg.leader_exchange), stg.base + stg.bridge, pub_channel
+            ExchangeType(stg.leader_exchange), stg.base + stg.bridge
         )
     else:
         leader_book_stream = stream_factory.create_stream_if_not_exists(
-            ExchangeType(stg.leader_exchange), pair.symbol, pub_channel
+            ExchangeType(stg.leader_exchange), pair.symbol
         )
 
     follower_book_stream = stream_factory.create_stream_if_not_exists(
-        ExchangeType(stg.follower_exchange), pair.symbol, pub_channel
+        ExchangeType(stg.follower_exchange), pair.symbol
     )
 
     trader = SlidingWindowTrader(

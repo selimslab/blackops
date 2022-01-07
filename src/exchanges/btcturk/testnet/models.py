@@ -3,21 +3,13 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from src.stgs import Asset, AssetPair, AssetPairSymbol, AssetSymbol
+from src.stgs import Asset, AssetPair, AssetPairSymbol, AssetSymbol, OrderId, OrderType
 
 
 class AccountBalanceResponse(BaseModel):
     success: bool
     data: Optional[List[Asset]] = None
     message: Optional[str] = None
-
-
-OrderId = int
-
-
-class OrderType(str, Enum):
-    BUY = "buy"
-    SELL = "sell"
 
 
 class OrderData(BaseModel):

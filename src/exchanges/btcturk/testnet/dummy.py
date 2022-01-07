@@ -21,10 +21,6 @@ from src.monitoring import logger
 class BtcturkDummy:
     account: Account = field(default_factory=Account)
 
-    fee_percent: Decimal = Decimal("0.0018")
-    buy_with_fee = Decimal("1") + fee_percent
-    sell_with_fee = Decimal("1") - fee_percent
-
     async def mock_account_balance(self) -> AccountBalanceResponse:
         return AccountBalanceResponse(
             success=True, data=list(self.account.assets.values())
@@ -64,7 +60,7 @@ class BtcturkDummy:
 
         quote_balance = self.account.assets[pair.quote.symbol].free
 
-        cost = Decimal(order.quantity) * Decimal(order.price) * self.buy_with_fee
+        cost = Decimal(order.quantity) * Decimal(order.price) 
 
         if quote_balance < cost:
             return SubmitOrderResponse(

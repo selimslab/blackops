@@ -24,7 +24,7 @@ class SlidingWindowInput(StrategyInputBase):
     leader_exchange: ExchangeType = ExchangeType.BINANCE
     follower_exchange: ExchangeType = ExchangeType.BTCTURK
 
-    max_step: Decimal = Decimal(10)
+    max_step: Decimal = Decimal(10) 
 
     quote_step_qty: Decimal = Decimal(1500)
 

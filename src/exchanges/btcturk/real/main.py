@@ -46,7 +46,7 @@ class BtcturkApiClient(BtcturkBase):
         print("timed_order_context")
         async with self.order_lock:
             yield 
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
     def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
@@ -145,7 +145,6 @@ class BtcturkApiClient(BtcturkBase):
         }
         try:
             if self.order_lock.locked():
-                logger.info("another order in progress")
                 return None
             async with self.timed_order_context():
                 async with self.session.post(

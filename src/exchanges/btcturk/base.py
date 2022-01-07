@@ -12,10 +12,6 @@ from src.monitoring import logger
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
-    fee_percent: Decimal = Decimal("0.0012")
-    buy_with_fee: Decimal = Decimal("1") + fee_percent
-    sell_with_fee: Decimal = Decimal("1") - fee_percent
-
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:
         if not orders:
@@ -104,7 +100,7 @@ class BtcturkBase(ExchangeAPIClientBase):
         order_ids = [i for i in order_ids if i]
         for order_id in order_ids:
             await self.cancel_order(order_id)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
     @staticmethod
     def parse_submit_order_response(res: dict):

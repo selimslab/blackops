@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal
-
+from enum import Enum
 from pydantic.main import BaseModel
 
 AssetSymbol = str
@@ -34,3 +34,11 @@ class AssetPair:
 
     def __str__(self):
         return f"{self.base}_{self.quote}"
+
+
+OrderId = int
+
+
+class OrderType(str, Enum):
+    BUY = "buy"
+    SELL = "sell"

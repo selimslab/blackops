@@ -10,30 +10,33 @@ class Test:
     order_lock = asyncio.Lock()
 
     @asynccontextmanager
-    async def timed_order_context(self):
-        async with self.order_lock:
+    async def timed_order_context(self, lock):
+        async with lock:
             yield
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
     async def order(self, i):
-        if self.order_lock.locked():
+        lock = self.order_lock
+        if lock.locked():
             return f"order_in_progress", i
-        async with self.timed_order_context():
+        async with self.timed_order_context(lock):
             return i
 
 
 async def robot(name, t, sleep):
     await asyncio.sleep(sleep)
     name = f"r-{name}"
-    for i in range(10):
-        res = await t.order(f"{name} {i}")
-        print(res)
-        await asyncio.sleep(0.2)
-
+    ok = 0
+    for i in range(20):
+        res = await t.order(i)
+        if res == i:
+            ok += 1
+        await asyncio.sleep(random.randint(1, 3)*0.1)
+    print(name,ok)
 
 async def test_order_lock():
     t = Test()
-    aws = [robot(i, t, random.randint(0, 1)) for i in range(10)]
+    aws = [robot(i, t, random.randint(0, 1)) for i in range(7)]
     await asyncio.gather(*aws)
 
 

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal, getcontext
+from os import read
 from typing import Any, AsyncGenerator, Optional
 
 import simplejson as json  # type: ignore
@@ -17,16 +18,22 @@ from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
 from src.periodic import periodic
 from src.stgs import BPS
+from src.numbers import one_bps_lower
 
 getcontext().prec = 9
 
 @dataclass
 class TargetPrices:
-    taker_buy: Optional[Decimal] = None
-    taker_sell: Optional[Decimal] = None
+    buy: Optional[Decimal] = None
+    sell : Optional[Decimal] = None
 
-    maker_buy: Optional[Decimal] = None
-    maker_sell: Optional[Decimal] = None
+
+@dataclass
+class Targets:
+    maker :TargetPrices = TargetPrices()
+    taker :TargetPrices = TargetPrices()
+
+
 @dataclass
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
@@ -46,7 +53,7 @@ class SlidingWindowTrader(RobotBase):
   
     current_step: Decimal = Decimal("0")
 
-    targets: TargetPrices = TargetPrices()
+    targets: Targets = Targets()
 
     def __post_init__(self) -> None:
         self.config_dict = self.config.dict()
@@ -76,7 +83,7 @@ class SlidingWindowTrader(RobotBase):
             self.follower.watch_books(),
             periodic(
                 self.follower.update_balances,
-                self.config.sleep_seconds.update_balances / 4,
+                self.config.sleep_seconds.update_balances / 6,
             ),
             periodic(
                 self.follower.order_robot.cancel_all_open_orders,
@@ -91,13 +98,16 @@ class SlidingWindowTrader(RobotBase):
         async for book in self.leader.book_generator():
             self.calculate_window(book)
             await self.should_transact()
-            asyncio.create_task(self.clear_theo())
+            asyncio.create_task(self.clear_targets())
 
-    async def clear_theo(self):
+    async def clear_targets(self):
         # theo are valid for max 200ms 
-        await asyncio.sleep(0.2) 
-        self.theo_buy = None
-        self.theo_sell = None
+        await asyncio.sleep(self.config.sleep_seconds.clear_prices)) 
+        self.targets.maker.buy = None
+        self.targets.maker.sell = None
+
+        self.targets.taker.buy = None
+        self.targets.taker.sell = None
 
     def calculate_window(self, book: dict) -> None:
         """Update theo_buy and theo_sell"""
@@ -118,18 +128,18 @@ class SlidingWindowTrader(RobotBase):
 
             self.update_step()
 
-            step_size = self.config.input.step_bps * BPS * self.current_step * mid 
+            step_size = self.config.input.step_bps * BPS * mid * self.current_step  
             
             mid -= step_size
 
             maker_credit = self.config.maker_credit_bps * BPS * mid
             taker_credit = self.config.taker_credit_bps * BPS * mid
 
-            self.targets.maker_buy = mid - maker_credit
-            self.targets.maker_sell = mid + maker_credit
+            self.targets.maker.buy = mid - maker_credit
+            self.targets.maker.sell = mid + maker_credit
 
-            self.targets.taker_buy = mid - taker_credit
-            self.targets.taker_sell = mid + taker_credit
+            self.targets.taker.buy = mid - taker_credit
+            self.targets.taker.sell = mid + taker_credit
 
         except Exception as e:
             msg = f"calculate_window: {e}"
@@ -137,42 +147,57 @@ class SlidingWindowTrader(RobotBase):
             pub.publish_error(self.channnel, msg)
 
     async def should_transact(self) -> None:
-        if self.should_long() and self.theo_buy:
-            await self.follower.long(self.theo_buy)
+        if self.can_short():
+            price = self.get_short_price()
+            if price:
+                await self.follower.short(price)
 
-        if self.should_short() and self.theo_sell:
-            await self.follower.short(self.theo_sell)
+        if self.can_long():
+            price = self.get_long_price()
+            if price:
+                await self.follower.long(price)
 
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
-    def should_long(self) -> bool:
-        if not self.follower.best_seller:
-            return False
-
-        if not self.theo_buy:
-            return False
-
+    def can_long(self)->bool:
         self.update_step()
 
-        return (
-            bool(self.follower.best_seller <= self.theo_buy) 
-            and self.current_step <= self.config.input.max_step
-        )
+        have_all_prices = bool(self.follower.best_seller and self.targets.taker.buy and self.targets.maker.buy)
+        step_ok = self.current_step <= self.config.input.max_step
+        ready = have_all_prices and step_ok
+        return ready
 
-    def should_short(self) -> bool:
-        if not self.follower.best_buyer:
-            return False
+    def get_long_price(self) -> Optional[Decimal]:
 
-        if not self.theo_sell:
-            return False
+        if not self.can_long():
+            return None 
 
+        best_seller = self.follower.best_seller
+        if self.targets.taker.buy < best_seller < self.targets.maker.buy:  # type: ignore
+            return one_bps_lower(best_seller) # type: ignore
+        elif best_seller <= self.targets.taker.buy: # type: ignore
+            return self.targets.taker.buy
+
+    def can_short(self)->bool:
         self.update_step()
 
-        return (
-            bool(self.follower.best_buyer >= self.theo_sell) 
-            and self.current_step <= self.config.input.max_step
-        )
+        have_all_prices = bool(self.follower.best_buyer and self.targets.taker.sell and self.targets.maker.sell)
+        have_balance = self.follower.pair.base.free >= self.config.base_step_qty
+        ready = have_all_prices and have_balance
+        return ready
+
+    def get_short_price(self) -> Optional[Decimal]:
+        if not self.can_short():
+            return None
+
+        best_buyer = self.follower.best_buyer
+
+        if self.targets.taker.sell < best_buyer < self.targets.maker.sell:  # type: ignore
+            return one_bps_lower(best_buyer)  # type: ignore
+        elif best_buyer <= self.targets.taker.sell: # type: ignore
+            return self.targets.taker.sell
+
 
     async def close(self) -> None:
         await self.follower.order_robot.cancel_all_open_orders()
@@ -181,13 +206,9 @@ class SlidingWindowTrader(RobotBase):
         stats = {
             "current time": datetime.now(),
             "start time": self.task_start_time,
-            "orders": {
-                "buy": {
-                    "delivered": self.follower.order_robot.buy_orders_delivered,
-                },
-                "sell": {
-                    "delivered": self.follower.order_robot.sell_orders_delivered,
-                },
+            "orders delivered": {
+                "buy": self.follower.order_robot.buy_orders_delivered,
+                "sell": self.follower.order_robot.sell_orders_delivered,
             },
             "balances": {
                 "step": self.current_step,

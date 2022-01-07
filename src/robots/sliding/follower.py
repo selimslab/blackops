@@ -8,6 +8,7 @@ from typing import AsyncGenerator, Optional
 
 import src.pubsub.pub as pub
 from src.exchanges.base import ExchangeAPIClientBase
+from src.stgs.models import OrderType
 from src.stgs.sliding.config import SlidingWindowConfig
 from src.robots.sliding.orders import OrderRobot
 from src.robots.watchers import BalanceWatcher
@@ -51,9 +52,8 @@ class FollowerWatcher:
             await asyncio.sleep(0)
 
     async def clear_bid_ask(self):
-        # prices are valid for max 200ms 
-        await asyncio.sleep(0.2) 
-
+        # fresh or none 
+        await asyncio.sleep(self.config.sleep_seconds.clear_prices) 
         self.best_buyer = None
         self.best_seller = None
 
@@ -102,33 +102,34 @@ class FollowerWatcher:
             pub.publish_error(self.channnel, msg)
             raise e
 
-    def can_buy(self, theo_buy) -> bool:
+    def can_buy(self, price) -> bool:
         return (
             bool(self.pair.quote.free) 
-            and self.pair.quote.free >= theo_buy * self.config.base_step_qty
+            and self.pair.quote.free >= price * self.config.base_step_qty
         )
 
-    async def long(self, theo_buy: Decimal) -> Optional[dict]:
-        if not self.can_buy(theo_buy):
+    async def long(self, price: Decimal) -> Optional[dict]:
+        if not self.can_buy(price):
             return None
 
-        order_log = await self.order_robot.send_long_order(theo_buy)
+        order_log = await self.order_robot.send_order(OrderType.BUY, price, self.config.base_step_qty)
 
         if order_log:
-            logger.info(order_log)
+            # If we deliver order, we reflect it in balance until we read the current balance
             self.pair.base.free += self.config.base_step_qty
             return order_log
 
         return None
 
-    async def short(self, theo_sell: Decimal) -> Optional[dict]:
-        qty = float(self.config.base_step_qty)
-        if self.pair.base.free < qty:
-            qty = float(self.pair.base.free) * 0.98
+    async def short(self, price: Decimal) -> Optional[dict]:
+        qty = self.config.base_step_qty
 
-        order_log = await self.order_robot.send_short_order(theo_sell, qty)
+        if self.pair.base.free < qty:
+            qty = self.pair.base.free * Decimal("0.98")
+
+        order_log = await self.order_robot.send_order(OrderType.SELL, price, qty)
+
         if order_log:
-            logger.info(order_log)
             # If we deliver order, we reflect it in balance until we read the current balance
             self.pair.base.free -= self.config.base_step_qty
             return order_log

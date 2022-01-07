@@ -6,10 +6,12 @@ from typing import Optional
 import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
-from src.stgs import Asset, AssetPair
+from src.stgs import Asset, AssetPair, OrderType, OrderId
 from src.exchanges.base import ExchangeAPIClientBase
 from src.stgs.sliding.config import SlidingWindowConfig
 from src.monitoring import logger
+
+
 
 
 @dataclass
@@ -50,9 +52,8 @@ class OrderRobot:
             ) = self.exchange.parse_open_orders(open_orders)
 
             if self.open_sell_orders or self.open_buy_orders:
-                await asyncio.sleep(0.1) # allow the last order to fill
                 await self.exchange.cancel_multiple_orders(
-                    self.open_sell_orders + self.open_buy_orders
+                    self.open_buy_orders + self.open_sell_orders
                 )
 
             self.prev_order_count = self.total_orders_delivered
@@ -63,60 +64,37 @@ class OrderRobot:
             pub.publish_error(self.channel, msg)
 
     def can_buy(self, best_seller: Decimal) -> bool:
-        if best_seller and not self.buy_lock.locked():
-            return True
-
-        return False
-
+        return bool(best_seller) and not 
+ 
     def can_sell(self, best_buyer: Decimal) -> bool:
-        if best_buyer and self.config.base_step_qty and not self.sell_lock.locked():
-            return True
+        return bool(best_buyer) and bool(self.config.base_step_qty) and not 
 
-        return False
+    async def send_order(self, side:OrderType, price: Decimal, qty:Decimal) -> Optional[dict]:
+        if side == OrderType.BUY:
+            lock = self.buy_lock
+        else:
+            lock = self.sell_lock
 
-    async def send_long_order(self, best_seller: Decimal) -> Optional[dict]:
-        # we buy and sell at the quantized steps
-        # so we buy or sell a quantum
-        if not self.can_buy(best_seller):
+        if lock.locked():
             return None
 
-        price = float(best_seller)
-        qty = float(self.config.base_step_qty)  #  we buy base
-
-        async with self.buy_lock:
+        async with lock:
             try:
-                order_log = await self.submit_order("buy", price, qty)
-                if not order_log:
-                    return None
-
-                order_id = self.parse_order_id(order_log)
-                if order_id:
-                    self.buy_orders_delivered += 1
-                    return order_log
-                return None
-            except Exception as e:
-                logger.info(f"send_long_order: {e}")
-                return None
-
-    async def send_short_order(self, best_buyer: Decimal, qty: float) -> Optional[dict]:
-        if not self.can_sell(best_buyer):
-            return None
-
-        price = float(best_buyer)
-
-        async with self.sell_lock:
-            try:
-                order_log = await self.submit_order("sell", price, qty)
+                order_log = await self.submit_order(side, price, qty)
                 if not order_log:
                     return None
                 order_id = self.parse_order_id(order_log)
                 if order_id:
-                    self.sell_orders_delivered += 1
+                    if side == OrderType.BUY:
+                        self.buy_orders_delivered += 1
+                    else:
+                        self.sell_orders_delivered += 1
                     return order_log
                 return None
             except Exception as e:
-                logger.info(f"send_short_order: {e}")
+                logger.info(f"send_order: {e}: [{side, price, self.config.base_step_qty}]")
                 return None
+
 
     @staticmethod
     def parse_order_id(order_log: dict):
@@ -124,10 +102,10 @@ class OrderRobot:
         order_id = data.get("id")
         return order_id
 
-    async def submit_order(self, side, price, qty) -> Optional[dict]:
+    async def submit_order(self, side:OrderType, price:Decimal, qty:Decimal) -> Optional[dict]:
         try:
             res: Optional[dict] = await self.exchange.submit_limit_order(
-                self.pair, side, price, qty
+                self.pair, side.value, float(price), float(qty)
             )
             ok = (
                 bool(res)

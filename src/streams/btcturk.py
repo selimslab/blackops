@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 import simplejson as json  # type: ignore
 
 from src.monitoring import logger
-from src.web.ws import reconnecting_generator, ws_stream
+from src.web.ws import ResilientGenerator, ws_stream
 
 
 def get_orderbook_message(symbol: str):
@@ -65,12 +65,12 @@ def create_bt_gen(message_type: MessageType, symbol, sleep_seconds):
 
 
 def create_reconnecting_ws_stream(
-    message_type: MessageType, symbol: str, channel: str, sleep_seconds: float
+    message_type: MessageType, symbol: str, sleep_seconds: float
 ):
     def gen_factory():
         return create_bt_gen(message_type, symbol, sleep_seconds)
 
-    return reconnecting_generator(gen_factory, channel)
+    return ResilientGenerator().reconnecting_generator(gen_factory)
 
 
 async def parsing_generator(gen: AsyncGenerator):
@@ -84,10 +84,10 @@ async def parsing_generator(gen: AsyncGenerator):
 
 
 def create_book_stream(
-    symbol: str, channel: str = "default", sleep_seconds: float = 0.11
+    symbol: str,sleep_seconds: float = 0.11
 ) -> AsyncGenerator:
     gen = create_reconnecting_ws_stream(
-        MessageType.ORDERBOOK, symbol, channel, sleep_seconds
+        MessageType.ORDERBOOK, symbol, sleep_seconds
     )
     return parsing_generator(gen)
 

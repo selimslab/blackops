@@ -58,7 +58,7 @@ class WatcherFactory:
     BALANCE_WATCHERS: Dict[str, BalanceWatcher] = field(default_factory=dict)
 
     def create_book_watcher_if_not_exists(
-        self, ex_type: ExchangeType, network: NetworkType, symbol: str, pub_channel: str
+        self, ex_type: ExchangeType, network: NetworkType, symbol: str
     ) -> Tuple:
 
         key = "_".join((ex_type.value, network.value, "book"))
@@ -71,7 +71,7 @@ class WatcherFactory:
         )
 
         stream = stream_factory.create_stream_if_not_exists(
-            ex_type, symbol, pub_channel
+            ex_type, symbol
         )
 
         watcher = BookWatcher(pubsub_key=key, exchange=api_client, stream=stream)

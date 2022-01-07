@@ -1,5 +1,5 @@
 from decimal import Decimal
-from .main import round_decimal
+from .main import round_decimal, one_bps_lower
 
 def test_round():
     shib = Decimal("0.00041596")
@@ -12,3 +12,10 @@ def test_round():
     assert round_decimal(Decimal("5063291.139240")) == Decimal("5000000")
     assert round_decimal(step_try/shib) == Decimal('7000000')
     assert round_decimal(step_try/btc) == Decimal("0.004")
+
+    assert one_bps_lower(Decimal("0.00378")) == Decimal("0.00377")
+    assert one_bps_lower(Decimal("54.67")) == Decimal("54.66")
+    assert one_bps_lower(Decimal("0.000001")) == Decimal("0")
+    assert one_bps_lower(Decimal("5456")) == Decimal("5455")
+    assert one_bps_lower(Decimal("5456000")) == Decimal("5455999")
+    assert one_bps_lower(Decimal("0.00378000")) == Decimal("0.00377999")
