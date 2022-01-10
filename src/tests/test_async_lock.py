@@ -1,5 +1,4 @@
 import asyncio
-import collections
 import random
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -31,8 +30,9 @@ async def robot(name, t, sleep):
         res = await t.order(i)
         if res == i:
             ok += 1
-        await asyncio.sleep(random.randint(1, 3)*0.1)
-    print(name,ok)
+        await asyncio.sleep(random.randint(1, 3) * 0.1)
+    print(name, ok)
+
 
 async def test_order_lock():
     t = Test()

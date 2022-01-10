@@ -7,16 +7,17 @@ from typing import Optional
 import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
-from src.domain import Asset, AssetPair, OrderType, OrderId
+from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.exchanges.base import ExchangeAPIClientBase
-from src.stgs.sliding.config import SlidingWindowConfig
 from src.monitoring import logger
+from src.stgs.sliding.config import SlidingWindowConfig
 
 
 @dataclass
 class OpenOrders:
     buy: list = field(default_factory=list)
     sell: list = field(default_factory=list)
+
 
 @dataclass
 class OrdersDelivered:
@@ -27,10 +28,12 @@ class OrdersDelivered:
     def total(self):
         return self.buy + self.sell
 
+
 @dataclass
 class OrderLocks:
     buy: asyncio.Lock = asyncio.Lock()
     sell: asyncio.Lock = asyncio.Lock()
+
 
 @dataclass
 class OrderApi:
@@ -39,7 +42,7 @@ class OrderApi:
     exchange: ExchangeAPIClientBase
 
     order_locks: OrderLocks = OrderLocks()
-    open_orders:OpenOrders = OpenOrders()
+    open_orders: OpenOrders = OpenOrders()
 
     orders_delivered: OrdersDelivered = OrdersDelivered()
     prev_order_count: int = 0
@@ -47,7 +50,7 @@ class OrderApi:
     @asynccontextmanager
     async def timeout_lock(self, lock, timeout=0.5):
         async with lock:
-            yield 
+            yield
             await asyncio.sleep(timeout)
 
     async def cancel_all_open_orders(self) -> None:
@@ -76,7 +79,9 @@ class OrderApi:
             logger.error(msg)
             pub.publish_error(message=msg)
 
-    async def send_order(self, side:OrderType, price: Decimal, qty:Decimal) -> Optional[dict]:
+    async def send_order(
+        self, side: OrderType, price: Decimal, qty: Decimal
+    ) -> Optional[dict]:
         if side == OrderType.BUY:
             lock = self.order_locks.buy
         else:
@@ -99,9 +104,10 @@ class OrderApi:
                     return order_log
                 return None
             except Exception as e:
-                logger.info(f"send_order: {e}: [{side, price, self.config.base_step_qty}]")
+                logger.info(
+                    f"send_order: {e}: [{side, price, self.config.base_step_qty}]"
+                )
                 return None
-
 
     @staticmethod
     def parse_order_id(order_log: dict):
@@ -109,7 +115,9 @@ class OrderApi:
         order_id = data.get("id")
         return order_id
 
-    async def submit_order(self, side:OrderType, price:Decimal, qty:Decimal) -> Optional[dict]:
+    async def submit_order(
+        self, side: OrderType, price: Decimal, qty: Decimal
+    ) -> Optional[dict]:
         try:
             res: Optional[dict] = await self.exchange.submit_limit_order(
                 self.pair, side.value, float(price), float(qty)

@@ -11,7 +11,6 @@ from src.monitoring import logger
 
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
-
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:
         if not orders:

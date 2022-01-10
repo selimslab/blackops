@@ -1,11 +1,11 @@
 import asyncio
-from decimal import Decimal
-from typing import Callable, Optional, Union
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 import src.pubsub.pub as pub
 from src.monitoring import logger
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+
 
 async def periodic(func: Callable, sleep_seconds: float) -> None:
     while True:
@@ -15,7 +15,6 @@ async def periodic(func: Callable, sleep_seconds: float) -> None:
             logger.error(f"periodic: {e}")
         finally:
             await asyncio.sleep(sleep_seconds)
-
 
 
 @dataclass

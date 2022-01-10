@@ -83,12 +83,8 @@ async def parsing_generator(gen: AsyncGenerator):
                 continue
 
 
-def create_book_stream(
-    symbol: str,sleep_seconds: float = 0.11
-) -> AsyncGenerator:
-    gen = create_reconnecting_ws_stream(
-        MessageType.ORDERBOOK, symbol, sleep_seconds
-    )
+def create_book_stream(symbol: str, sleep_seconds: float = 0.11) -> AsyncGenerator:
+    gen = create_reconnecting_ws_stream(MessageType.ORDERBOOK, symbol, sleep_seconds)
     return parsing_generator(gen)
 
 

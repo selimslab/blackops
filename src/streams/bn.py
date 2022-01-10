@@ -41,10 +41,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
         raise e
 
 
-
-async def reconnecting_binance_generator(
-    generator_factory: Callable
-):
+async def reconnecting_binance_generator(generator_factory: Callable):
 
     retries = 0
 

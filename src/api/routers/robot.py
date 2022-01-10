@@ -1,9 +1,9 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 
-from src.stgs import strategy_api
-from src.robots import robot_api, robot_stats
 from src.api.auth import auth
+from src.robots import robot_api
+from src.stgs import strategy_api
 
 router = APIRouter(dependencies=[Depends(auth)])
 

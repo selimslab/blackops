@@ -1,8 +1,8 @@
-from enum import Enum
-import pydantic 
-from pydantic import BaseModel,Field
 from datetime import datetime
-from typing import Optional
+from enum import Enum
+
+import pydantic
+from pydantic import BaseModel, Field
 
 
 class StrategyType(str, Enum):
@@ -21,4 +21,3 @@ class StrategyConfigBase(BaseModel):
     type: StrategyType = StrategyType.SLIDING_WINDOW
     sha: str = ""
     created_at: str = Field(default_factory=lambda: str(datetime.now().isoformat()))
-

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
+
 from pydantic.main import BaseModel
 
 AssetSymbol = str
@@ -8,7 +9,7 @@ AssetPairSymbol = str
 
 BPS = Decimal("1") / Decimal("10000")
 taker_fee_bps: Decimal = Decimal("12")
-maker_fee_bps: Decimal = taker_fee_bps / 2 
+maker_fee_bps: Decimal = taker_fee_bps / 2
 
 
 class Asset(BaseModel):

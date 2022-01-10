@@ -1,15 +1,13 @@
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
-
-from src.numberops import round_decimal
-from src.idgen import dict_to_hash
-from .inputs import SlidingWindowInput
-
-from src.stgs.base import StrategyType, StrategyConfigBase
 from src.domain import Asset, AssetPair, maker_fee_bps, taker_fee_bps
+from src.idgen import dict_to_hash
+from src.numberops import round_decimal
+from src.stgs.base import StrategyConfigBase, StrategyType
+
+from .inputs import SlidingWindowInput
 
 
 class SleepSeconds(BaseModel):
@@ -18,12 +16,13 @@ class SleepSeconds(BaseModel):
     broadcast_stats: float = 0.4
     clear_prices: float = 0.4
 
+
 class SlidingWindowConfig(StrategyConfigBase):
-    input:SlidingWindowInput
+    input: SlidingWindowInput
 
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
-    reference_price:Decimal
+    reference_price: Decimal
 
     base_step_qty: Decimal = Decimal(0)
 
@@ -50,12 +49,9 @@ class SlidingWindowConfig(StrategyConfigBase):
         self.taker_credit_bps = 2 * taker_fee_bps + self.input.margin_bps
 
         self.base_step_qty = round_decimal(self.input.quote_step_qty / ticker)
-        
 
     def is_valid(self):
         return self.input.is_valid()
 
-    def create_pair(self)->AssetPair:
-        return AssetPair(
-            Asset(symbol=self.input.base), Asset(symbol=self.input.quote)
-        )
+    def create_pair(self) -> AssetPair:
+        return AssetPair(Asset(symbol=self.input.base), Asset(symbol=self.input.quote))

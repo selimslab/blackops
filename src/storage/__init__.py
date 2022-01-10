@@ -1,1 +1,1 @@
-from .redis import redis_client, async_redis_client
+from .redis import async_redis_client, redis_client

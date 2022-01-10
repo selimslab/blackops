@@ -1,2 +1,2 @@
-from .api import strategy_api, StrategyInput, StrategyConfig
+from .api import StrategyConfig, StrategyInput, strategy_api
 from .base import StrategyType

@@ -1,12 +1,12 @@
-
 from decimal import Decimal
 from typing import Optional
 
 from pydantic import Field
 
-from src.stgs.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 from src.exchanges.factory import ExchangeType
-from src.stgs.base import StrategyType, StrategyInputBase
+from src.stgs.base import StrategyInputBase, StrategyType
+from src.stgs.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
+
 
 class SlidingWindowInput(StrategyInputBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
@@ -18,13 +18,13 @@ class SlidingWindowInput(StrategyInputBase):
     bridge_exchange: Optional[ExchangeType] = ExchangeType.BINANCE
     use_bridge = True
 
-    testnet = True 
+    testnet = True
     use_real_money = False
 
     leader_exchange: ExchangeType = ExchangeType.BINANCE
     follower_exchange: ExchangeType = ExchangeType.BTCTURK
 
-    max_step: Decimal = Decimal(10) 
+    max_step: Decimal = Decimal(10)
 
     quote_step_qty: Decimal = Decimal(1500)
 
@@ -40,14 +40,12 @@ class SlidingWindowInput(StrategyInputBase):
         if self.testnet == self.use_real_money:
             return Exception("test or real money?")
 
-
     def is_valid_exchanges(self):
         if self.leader_exchange != ExchangeType.BINANCE:
             raise ValueError(f"{self.leader_exchange} is not supported")
 
         if self.follower_exchange != ExchangeType.BTCTURK:
             raise ValueError(f"{self.follower_exchange} is not supported")
-
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
@@ -61,7 +59,6 @@ class SlidingWindowInput(StrategyInputBase):
 
         if self.base not in BTCTURK_TRY_BASES:
             raise ValueError(f"{self.follower_exchange} has no {self.base} / TRY pair ")
-
 
     def is_valid_bridge(self):
         if self.use_bridge is False and self.bridge:
@@ -77,10 +74,15 @@ class SlidingWindowInput(StrategyInputBase):
         if self.bridge and self.bridge not in SUPPORTED_BRIDDGES:
             raise ValueError(f"{self.bridge} is not a supported bridge")
 
-        if self.bridge_exchange and self.bridge_exchange and self.bridge_exchange not in [
-            ExchangeType.BINANCE,
-            ExchangeType.BTCTURK,
-        ]:
+        if (
+            self.bridge_exchange
+            and self.bridge_exchange
+            and self.bridge_exchange
+            not in [
+                ExchangeType.BINANCE,
+                ExchangeType.BTCTURK,
+            ]
+        ):
             raise ValueError(
                 f"{self.bridge_exchange} is not a supported bridge exchange"
             )
@@ -94,4 +96,3 @@ class SlidingWindowInput(StrategyInputBase):
         self.is_valid_exchanges()
         self.is_valid_symbols()
         self.is_valid_bridge()
-

@@ -1,16 +1,13 @@
 import asyncio
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal
-from typing import AsyncGenerator, Dict, Optional, Tuple, Union
+from typing import AsyncGenerator, Dict, Optional, Union
 
 import src.pubsub.pub as pub
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
-from src.streams.factory import stream_factory
 from src.monitoring import logger
-
+from src.streams.factory import stream_factory
 
 
 @dataclass
@@ -65,9 +62,7 @@ class WatcherFactory:
             logger.info(f"Reusing book watcher for {ex_type}")
             return self.BOOK_WATCHERS[key]
 
-        stream = stream_factory.create_stream_if_not_exists(
-            ex_type, symbol
-        )
+        stream = stream_factory.create_stream_if_not_exists(ex_type, symbol)
 
         api_client = api_client_factory.create_api_client_if_not_exists(
             ex_type, network

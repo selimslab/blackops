@@ -1,20 +1,13 @@
 import asyncio
-import traceback
 from dataclasses import dataclass
-from enum import Enum
-from typing import Coroutine, Dict, Optional, List
-
-from src.robots.radio import radio, Radio, Station
-
-from src.robots.watchers import watcher_factory
+from typing import Coroutine, Optional
 
 import src.pubsub.pub as pub
-from src.stgs import StrategyConfig
-from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
 from src.periodic import periodic
-
-
+from src.robots.radio import Radio, Station, radio
+from src.robots.watchers import BalanceWatcher, BookWatcher, watcher_factory
+from src.stgs import StrategyConfig
 
 
 @dataclass
@@ -36,10 +29,10 @@ class StationApi:
                 pubsub_channel=balance_gen.pubsub_key,
                 log_channel=pub.DEFAULT_CHANNEL,
                 listeners=1,
-                aiotask=asyncio.create_task(balance_task)
+                aiotask=asyncio.create_task(balance_task),
             )
             return self.radio.run_station_till_cancelled(station)
-            
+
     def create_bridge_station_if_not_exists(
         self, stg: StrategyConfig, bridge_gen: BookWatcher
     ) -> Optional[Coroutine]:
@@ -58,7 +51,7 @@ class StationApi:
 
     def create_log_station_if_not_exists(self, task):
         if pub.DEFAULT_CHANNEL in self.radio.stations:
-            return None 
+            return None
         else:
             station = Station(
                 name="stats_station",

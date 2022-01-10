@@ -12,7 +12,6 @@ from typing import Callable, Optional
 import aiohttp
 
 from src.domain import Asset, AssetPair
-
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
 from src.web import update_url_query_params
@@ -41,7 +40,6 @@ class BtcturkApiClient(BtcturkBase):
     def __post_init__(self):
         self.headers = self._get_headers()
 
-
     async def create_session_if_not_exists(self):
         if not self.session:
             self.session = aiohttp.ClientSession()
@@ -49,7 +47,7 @@ class BtcturkApiClient(BtcturkBase):
     @asynccontextmanager
     async def timed_order_context(self):
         async with self.order_lock:
-            yield 
+            yield
             await asyncio.sleep(0.16)
 
     def _get_headers(self) -> dict:
@@ -212,7 +210,7 @@ class BtcturkApiClient(BtcturkBase):
                 return None
             if self.order_lock.locked():
                 return None
-            
+
             await self.create_session_if_not_exists()
             async with self.timed_order_context():
                 uri = update_url_query_params(self.order_url, {"id": order_id})

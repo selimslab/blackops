@@ -1,15 +1,16 @@
 import asyncio
-from dataclasses import dataclass, field
 import traceback
-from typing import Dict, Optional
-from src.monitoring import logger
-import src.pubsub.pub as pub
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from typing import Dict, Optional
+
+import src.pubsub.pub as pub
+from src.monitoring import logger
 
 
 @dataclass
 class Station:
-    name:str 
+    name: str
     pubsub_channel: str
     log_channel: str
     listeners: int = 0
@@ -30,7 +31,7 @@ class Radio:
         finally:
             self.clean_station(station)
 
-    def clean_station(self, station:Station):
+    def clean_station(self, station: Station):
         del self.stations[station.pubsub_channel]
 
     async def run_station_till_cancelled(self, station: Station):
@@ -41,7 +42,7 @@ class Radio:
                 except asyncio.CancelledError as e:
                     msg = f"station {station.pubsub_channel} cancelled: {e}"
                     pub.publish_error(message=msg)
-                    raise 
+                    raise
                 except Exception as e:
                     msg = f"restarting station {station.pubsub_channel}: {e} \n {traceback.format_exc()}"
                     pub.publish_error(message=msg)

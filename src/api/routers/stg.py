@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.auth import auth
-from src.stgs import strategy_api, StrategyConfig, StrategyInput
+from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
 router = APIRouter(dependencies=[Depends(auth)])
 

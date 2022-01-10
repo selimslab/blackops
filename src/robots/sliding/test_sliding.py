@@ -1,9 +1,7 @@
-from urllib.parse import quote
 import pytest
 import pytest_asyncio
-from src.stgs import strategy_api, StrategyConfig, StrategyInput
 
-
+from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
 
 @pytest.mark.asyncio
@@ -12,14 +10,6 @@ async def test_end_to_end():
     config = await strategy_api.create_stg(stg_in)
     res = await strategy_api.get_stg(config.sha)
     assert res == config
-
-
-
-
-
-
-
-
 
 
 # import asyncio

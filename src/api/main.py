@@ -3,10 +3,10 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from src.robots import robot_api
 from src.api.routers.home import router as home_router
-from src.api.routers.stg import router as stg_router
 from src.api.routers.robot import router as robot_router
+from src.api.routers.stg import router as stg_router
+from src.robots import robot_api
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 

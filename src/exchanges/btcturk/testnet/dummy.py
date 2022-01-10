@@ -5,15 +5,12 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from src.domain import Asset, AssetPair
-from src.exchanges.btcturk.testnet.models import (
-    Account,
-    AccountBalanceResponse,
-    OpenOrdersData,
-    OpenOrdersResponse,
-    OrderData,
-    OrderType,
-    SubmitOrderResponse,
-)
+from src.exchanges.btcturk.testnet.models import (Account,
+                                                  AccountBalanceResponse,
+                                                  OpenOrdersData,
+                                                  OpenOrdersResponse,
+                                                  OrderData, OrderType,
+                                                  SubmitOrderResponse)
 from src.monitoring import logger
 
 
@@ -60,7 +57,7 @@ class BtcturkDummy:
 
         quote_balance = self.account.assets[pair.quote.symbol].free
 
-        cost = Decimal(order.quantity) * Decimal(order.price) 
+        cost = Decimal(order.quantity) * Decimal(order.price)
 
         if quote_balance < cost:
             return SubmitOrderResponse(
@@ -99,7 +96,7 @@ class BtcturkDummy:
         self.account.open_orders[pair.symbol].asks.append(order)
         await asyncio.sleep(0.2)  # 300 limit
 
-        gain = Decimal(order.quantity) * Decimal(order.price) 
+        gain = Decimal(order.quantity) * Decimal(order.price)
         try:
             self.subtract_balance(pair.base, Decimal(order.quantity))
             self.add_balance(pair.quote, gain)

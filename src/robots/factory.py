@@ -1,10 +1,8 @@
-from typing import Tuple
-
-from src.stgs import StrategyConfig, StrategyType
+from src.monitoring import logger
 from src.robots.sliding.factory import sliding_window_factory
 from src.robots.sliding.main import SlidingWindowTrader
 from src.robots.watchers import BalanceWatcher, BookWatcher
-from src.monitoring import logger
+from src.stgs import StrategyConfig, StrategyType
 
 Robot = SlidingWindowTrader  # union type
 

@@ -1,9 +1,9 @@
-from enum import Enum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from src.domain import Asset, AssetPair, AssetPairSymbol, AssetSymbol, OrderId, OrderType
+from src.domain import (Asset, AssetPair, AssetPairSymbol, AssetSymbol,
+                        OrderId, OrderType)
 
 
 class AccountBalanceResponse(BaseModel):

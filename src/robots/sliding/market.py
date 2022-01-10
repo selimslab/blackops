@@ -1,19 +1,18 @@
 import asyncio
 import copy
 from dataclasses import dataclass
-from datetime import datetime
 from decimal import Decimal
-from typing import AsyncGenerator, Optional
+from typing import Optional
 
 import src.pubsub.pub as pub
-from src.exchanges.base import ExchangeAPIClientBase
 from src.domain import OrderType
-from src.stgs.sliding.config import SlidingWindowConfig
+from src.exchanges.base import ExchangeAPIClientBase
+from src.monitoring import logger
+from src.periodic import SingleTaskContext
 from src.robots.sliding.orders import OrderApi
 from src.robots.watchers import BalanceWatcher, BookWatcher
-from src.monitoring import logger
+from src.stgs.sliding.config import SlidingWindowConfig
 
-from src.periodic import SingleTaskContext
 
 @dataclass
 class MarketPrices:
@@ -25,25 +24,25 @@ class MarketPrices:
 class MarketWatcher:
     config: SlidingWindowConfig
 
-    book_station:BookWatcher
-    balance_station:BalanceWatcher
+    book_station: BookWatcher
+    balance_station: BalanceWatcher
 
     prices: MarketPrices = MarketPrices()
 
     start_balances_saved: bool = False
-    fresh_price_task:SingleTaskContext = SingleTaskContext()
-
+    fresh_price_task: SingleTaskContext = SingleTaskContext()
 
     def __post_init__(self):
 
         self.order_api = OrderApi(
-            config=self.config, pair=self.config.create_pair(), exchange=self.book_station.api_client
+            config=self.config,
+            pair=self.config.create_pair(),
+            exchange=self.book_station.api_client,
         )
 
         self.pair = self.config.create_pair()
 
         self.start_pair = self.config.create_pair()
-
 
     async def update_prices(self) -> None:
         async for book in self.book_station.stream:
@@ -61,7 +60,7 @@ class MarketWatcher:
                 pub.publish_error(message=msg)
 
     async def clear_prices(self):
-        await asyncio.sleep(self.config.sleep_seconds.clear_prices) 
+        await asyncio.sleep(self.config.sleep_seconds.clear_prices)
         self.prices = MarketPrices()
 
     async def update_balances(self) -> None:
@@ -94,7 +93,7 @@ class MarketWatcher:
 
     def can_buy(self, price) -> bool:
         return (
-            bool(self.pair.quote.free) 
+            bool(self.pair.quote.free)
             and self.pair.quote.free >= price * self.config.base_step_qty
         )
 
@@ -102,7 +101,9 @@ class MarketWatcher:
         if not self.can_buy(price):
             return None
 
-        order_log = await self.order_api.send_order(OrderType.BUY, price, self.config.base_step_qty)
+        order_log = await self.order_api.send_order(
+            OrderType.BUY, price, self.config.base_step_qty
+        )
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance

@@ -1,1 +1,2 @@
-from .models import Asset, AssetPair, AssetSymbol, AssetPairSymbol, BPS, taker_fee_bps, maker_fee_bps, OrderType, OrderId
+from .models import (BPS, Asset, AssetPair, AssetPairSymbol, AssetSymbol,
+                     OrderId, OrderType, maker_fee_bps, taker_fee_bps)
