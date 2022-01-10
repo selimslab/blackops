@@ -44,22 +44,25 @@ class MarketWatcher:
 
         self.start_pair = self.config.create_pair()
 
-    async def update_prices(self) -> None:
+    async def watch_books(self) -> None:
         async for book in self.book_station.stream:
-            try:
-                async with self.fresh_price_task.refresh_task(self.clear_prices):
-                    self.prices.ask = self.book_station.api_client.get_best_ask(book)
+            await self.update_prices(book)
 
-                    self.prices.bid = self.book_station.api_client.get_best_bid(book)
+    async def update_prices(self, book) -> None:
+        try:
+            async with self.fresh_price_task.refresh_task(self.clear_prices):
+                self.prices.ask = self.book_station.api_client.get_best_ask(book)
 
-                    self.book_station.last_updated = datetime.now()
+                self.prices.bid = self.book_station.api_client.get_best_bid(book)
 
-                await asyncio.sleep(0)
+                self.book_station.last_updated = datetime.now()
 
-            except Exception as e:
-                msg = f"update_follower_prices: {e}"
-                logger.error(msg)
-                pub.publish_error(message=msg)
+            await asyncio.sleep(0)
+
+        except Exception as e:
+            msg = f"update_follower_prices: {e}"
+            logger.error(msg)
+            pub.publish_error(message=msg)
 
     async def clear_prices(self):
         await asyncio.sleep(self.config.sleep_seconds.clear_prices)

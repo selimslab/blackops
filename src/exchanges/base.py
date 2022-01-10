@@ -36,9 +36,7 @@ class ExchangeAPIClientBase(ABC):
         if not best_bid or not best_ask:
             return None
 
-        mid = (best_bid + best_ask) / Decimal("2")
-
-        return mid
+        return (best_bid + best_ask) / Decimal("2")
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float

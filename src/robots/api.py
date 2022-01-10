@@ -12,7 +12,8 @@ from src.stgs import StrategyConfig
 
 @dataclass
 class RobotApi:
-    async def run_task(self, stg: StrategyConfig):
+    @staticmethod
+    async def run_task(stg: StrategyConfig):
         if robot_runner.is_running(stg.sha):
             raise Exception(f"{stg.sha} already running")
 

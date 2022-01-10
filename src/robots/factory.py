@@ -64,30 +64,29 @@ class RobotFactory:
         robotrun.aiotask = asyncio.create_task(robot.run())
         return robot_runner.run_forever(robotrun)
 
-    def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
-        if robot_runner.is_running(stg.sha):
-            raise Exception(f"{stg.sha} already running")
-
-        robot = self.create_robot(stg)
+    def create_coros(self, robot: Robot) -> List[Coroutine]:
         if not robot:
-            raise Exception(f"start_task: no robot")
+            raise Exception(f"create_coros: no robot")
+
+        if robot_runner.is_running(robot.config.sha):
+            raise Exception(f"create_coros: {robot.config.sha} already running")
 
         coros = []
 
-        robot_coro = self.create_robot_coro(stg.sha, robot)
-        coros.append(robot_coro)
+        trader_coro = self.create_robot_coro(robot.config.sha, robot)
+        coros.append(trader_coro)
 
         balance_coro = self.get_balance_coro(robot)
         if balance_coro:
             balance_coro = self.get_balance_coro(robot)
 
-        stats_coro = self.get_stats_coro(robot)
-        if stats_coro:
-            coros.append(stats_coro)
-
         bridge_coro = self.get_bridge_coro(robot)
         if bridge_coro:
             coros.append(bridge_coro)
+
+        stats_coro = self.get_stats_coro(robot)
+        if stats_coro:
+            coros.append(stats_coro)
 
         return coros
 

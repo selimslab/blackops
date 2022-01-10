@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from src.domain import Asset, AssetPair, maker_fee_bps, taker_fee_bps
+from src.domain import BPS, Asset, AssetPair, maker_fee_bps, taker_fee_bps
 from src.exchanges.btcturk import btc_real_api_client_public
 from src.idgen import dict_to_hash
 from src.numberops import round_decimal
@@ -20,6 +20,12 @@ class SleepSeconds(BaseModel):
     clear_prices: float = 0.4
 
 
+class Credits(BaseModel):
+    maker: Decimal = Decimal(0)
+    taker: Decimal = Decimal(0)
+    step: Decimal = Decimal(0)
+
+
 class SlidingWindowConfig(StrategyConfigBase):
     input: SlidingWindowInput
 
@@ -31,9 +37,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     base_step_qty: Decimal = Decimal(0)
 
-    maker_credit_bps: Decimal = Decimal(0)
-
-    taker_credit_bps: Decimal = Decimal(0)
+    credits: Credits = Credits()
 
     sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
 
@@ -49,8 +53,9 @@ class SlidingWindowConfig(StrategyConfigBase):
             Asset(symbol=self.input.base), Asset(symbol=self.input.quote)
         )
 
-        self.maker_credit_bps = 2 * maker_fee_bps + self.input.margin_bps
-        self.taker_credit_bps = 2 * taker_fee_bps + self.input.margin_bps
+        self.credits.maker = (2 * maker_fee_bps + self.input.margin_bps) * BPS
+        self.credits.taker = (2 * taker_fee_bps + self.input.margin_bps) * BPS
+        self.credits.step = self.input.step_bps * BPS
 
         self.set_ticker_params()
 

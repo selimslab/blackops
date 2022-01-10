@@ -5,9 +5,8 @@ from decimal import Decimal, getcontext
 from typing import Any, Optional
 
 import src.pubsub.pub as pub
-from src.domain import BPS
 from src.monitoring import logger
-from src.numberops import one_bps_lower
+from src.numberops import one_bps_higher, one_bps_lower, round_decimal
 from src.periodic import SingleTaskContext, periodic
 from src.robots.base import RobotBase
 from src.robots.pubs import BalancePub, BookPub
@@ -65,8 +64,8 @@ class SlidingWindowTrader(RobotBase):
         )
 
         aws: Any = [
-            self.watch_leader(),
-            self.follower.update_prices(),
+            self.watch_leader_books(),
+            self.follower.watch_books(),
             periodic(
                 self.follower.update_balances,
                 self.config.sleep_seconds.update_balances / 6,
@@ -78,18 +77,21 @@ class SlidingWindowTrader(RobotBase):
         ]
 
         if self.bridge_station:
-            aws.append(self.watch_bridge())
+            aws.append(self.watch_bridge_books())
 
         await asyncio.gather(*aws)
 
-    async def watch_leader(self) -> None:
+    async def watch_leader_books(self) -> None:
         async for book in self.leader_station.stream:
-            async with self.fresh_price_task.refresh_task(self.clear_targets):
-                self.calculate_window(book)
-                self.leader_station.last_updated = datetime.now()
-                await self.should_transact()
+            await self.decide(book)
 
-    async def watch_bridge(self) -> None:
+    async def decide(self, book) -> None:
+        async with self.fresh_price_task.refresh_task(self.clear_targets):
+            self.calculate_window(book)
+            self.leader_station.last_updated = datetime.now()
+            await self.should_transact()
+
+    async def watch_bridge_books(self) -> None:
         if not self.bridge_station:
             raise Exception("no bridge_station")
 
@@ -123,16 +125,15 @@ class SlidingWindowTrader(RobotBase):
 
             self.update_step()
 
-            step_size = self.config.input.step_bps * BPS * mid * self.current_step
+            step_size = self.config.credits.step * mid * self.current_step
 
             mid -= step_size
 
-            maker_credit = self.config.maker_credit_bps * BPS * mid
-            taker_credit = self.config.taker_credit_bps * BPS * mid
-
+            maker_credit = self.config.credits.maker * mid
             self.targets.maker.buy = mid - maker_credit
             self.targets.maker.sell = mid + maker_credit
 
+            taker_credit = self.config.credits.taker * mid
             self.targets.taker.buy = mid - taker_credit
             self.targets.taker.sell = mid + taker_credit
 
@@ -155,6 +156,11 @@ class SlidingWindowTrader(RobotBase):
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
+    # def update_base_qty(self, mid):
+    #     self.config.base_step_qty = round_decimal(
+    #         self.config.input.quote_step_qty / mid
+    #     )
+
     def can_long(self) -> bool:
         self.update_step()
 
@@ -168,7 +174,12 @@ class SlidingWindowTrader(RobotBase):
         return prices_ok and step_ok
 
     def get_long_price(self) -> Optional[Decimal]:
-
+        """
+        if targets.taker.buy < ask <= targets.maker.buy
+            buy order at one_bps_lower(ask)
+        if ask <= targets.taker.buy:
+            buy order at taker.buy
+        """
         if not self.can_long():
             return None
 
@@ -177,14 +188,14 @@ class SlidingWindowTrader(RobotBase):
             ask
             and self.targets.taker.buy
             and self.targets.maker.buy
-            and self.targets.taker.buy < ask < self.targets.maker.buy
+            and self.targets.taker.buy < ask <= self.targets.maker.buy
         ):
 
             return one_bps_lower(ask)
         elif ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
             return self.targets.taker.buy
-
-        return None
+        else:
+            return None
 
     def can_short(self) -> bool:
         self.update_step()
@@ -199,6 +210,12 @@ class SlidingWindowTrader(RobotBase):
         return prices_ok and balance_ok
 
     def get_short_price(self) -> Optional[Decimal]:
+        """
+        if targets.maker.sell <= bid < targets.taker.sell
+            sell order at one_bps_higher(bid)
+        if bid >= targets.taker.sell:
+            sell order at bid
+        """
         if not self.can_short():
             return None
 
@@ -208,13 +225,13 @@ class SlidingWindowTrader(RobotBase):
             bid
             and self.targets.taker.sell
             and self.targets.maker.sell
-            and self.targets.taker.sell < bid < self.targets.maker.sell
+            and self.targets.maker.sell <= bid < self.targets.taker.sell
         ):
-            return one_bps_lower(bid)
-        elif bid and self.targets.taker.sell and bid <= self.targets.taker.sell:
-            return self.targets.taker.sell
-
-        return None
+            return one_bps_higher(bid)
+        elif bid and self.targets.taker.sell and bid >= self.targets.taker.sell:
+            return bid
+        else:
+            return None
 
     async def close(self) -> None:
         await self.follower.order_api.cancel_all_open_orders()
