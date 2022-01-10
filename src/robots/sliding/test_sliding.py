@@ -1,10 +1,9 @@
 import pytest
 import pytest_asyncio
 
-from src.stgs import StrategyConfig, StrategyInput, strategy_api
 from src.robots import robot_api
 from src.robots.factory import create_trader_from_strategy
-
+from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
 
 async def bt_stream():
@@ -26,7 +25,7 @@ async def bt_stream():
         },
     ]
 
-    
+
 @pytest.mark.asyncio
 async def test_end_to_end():
     stg_in = StrategyInput(base="ETH", quote="USDT", use_bridge=False)
@@ -35,8 +34,6 @@ async def test_end_to_end():
     assert res == config
 
     trader = create_trader_from_strategy(res)
-
-    
 
 
 # import asyncio

@@ -13,7 +13,7 @@ from src.periodic import periodic
 from src.robots.factory import create_trader_from_strategy
 from src.robots.radio import Radio, Station, radio
 from src.robots.sliding.main import SlidingWindowTrader
-from src.robots.watchers import StatsPub, BookPub, BalancePub, stats_pub
+from src.robots.watchers import BalancePub, BookPub, StatsPub, stats_pub
 from src.stgs import StrategyConfig
 
 
@@ -77,22 +77,29 @@ class RobotContext:
         coros = []
 
         balance_coro = periodic(
-                robot.balance_station.watch_balance, robot.config.sleep_seconds.update_balances
-            )
+            robot.balance_station.watch_balance,
+            robot.config.sleep_seconds.update_balances,
+        )
         balance_station_coro = self.radio.create_station_if_not_exists(
             robot.balance_station, balance_coro
         )
         if balance_station_coro:
             coros.append(balance_station_coro)
 
-        stats_coro = periodic(self.broadcast_stats, robot.config.sleep_seconds.broadcast_stats)
-        stats_station_coro = self.radio.create_station_if_not_exists(stats_pub,stats_coro)
+        stats_coro = periodic(
+            self.broadcast_stats, robot.config.sleep_seconds.broadcast_stats
+        )
+        stats_station_coro = self.radio.create_station_if_not_exists(
+            stats_pub, stats_coro
+        )
         if stats_station_coro:
             coros.append(stats_station_coro)
 
         if robot.bridge_station:
             bridge_coro = robot.bridge_station.watch_books()
-            bridge_station_coro = self.radio.create_station_if_not_exists(robot.bridge_station, bridge_coro)
+            bridge_station_coro = self.radio.create_station_if_not_exists(
+                robot.bridge_station, bridge_coro
+            )
             if bridge_station_coro:
                 coros.append(bridge_station_coro)
 

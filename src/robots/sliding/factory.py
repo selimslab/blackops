@@ -48,12 +48,10 @@ def sliding_window_factory(config: SlidingWindowConfig):
         ex_type=ExchangeType(stg.bridge_exchange), network=network, symbol=pair.symbol
     )
 
-
     if network == NetworkType.TESTNET:
         follower_watcher.api_client.dummy_exchange.add_balance(  # type:ignore
             Asset(symbol=stg.quote), stg.max_step * stg.quote_step_qty * 2
         )
-
 
     trader = SlidingWindowTrader(
         config=config,

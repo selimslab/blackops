@@ -10,7 +10,7 @@ from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 from src.periodic import SingleTaskContext
 from src.robots.sliding.orders import OrderApi
-from src.robots.watchers import BookPub, BalancePub
+from src.robots.watchers import BalancePub, BookPub
 from src.stgs.sliding.config import SlidingWindowConfig
 
 

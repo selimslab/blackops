@@ -12,14 +12,16 @@ from src.streams.factory import stream_factory
 
 @dataclass
 class PublisherBase:
-    pubsub_key: str 
+    pubsub_key: str
 
 
 @dataclass
 class StatsPub(PublisherBase):
     pass
 
+
 stats_pub = StatsPub(pubsub_key=pub.DEFAULT_CHANNEL)
+
 
 @dataclass
 class BalancePub(PublisherBase):
@@ -56,7 +58,9 @@ class BookPub(PublisherBase):
             self.last_updated = datetime.now()
             await asyncio.sleep(0)
 
+
 PubsubProducer = Union[BalancePub, BookPub]
+
 
 @dataclass
 class PubFactory:
@@ -70,7 +74,7 @@ class PubFactory:
         key = "_".join((ex_type.value, network.value, "book"))
         if key in self.PUBS:
             logger.info(f"Reusing book watcher for {ex_type}")
-            return self.PUBS[key] # type: ignore
+            return self.PUBS[key]  # type: ignore
 
         stream = stream_factory.create_stream_if_not_exists(ex_type, symbol)
 
