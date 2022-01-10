@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Coroutine, Dict, Optional, List
 
 import src.pubsub.pub as pub
-from src.robots.base import RobotBase
 from src.stgs import StrategyConfig
 from src.robots.factory import create_trader_from_strategy
 from src.robots.sliding.main import SlidingWindowTrader
@@ -43,6 +42,9 @@ class RobotContext:
     robots: Dict[str, RobotRun] = field(default_factory=dict)
     radio: Radio = radio
     
+    def is_running(self,sha:str)->bool:
+        return sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING
+
     @asynccontextmanager
     async def robot_context(self, robotrun: RobotRun):
         try:
@@ -82,42 +84,6 @@ class RobotContext:
         return self.run_forever(robotrun)
 
 
-    def create_balance_task(
-        self, config: StrategyConfig, balance_watcher: BalanceWatcher
-    ) -> Optional[Coroutine]:
-        if balance_watcher.pubsub_key in self.radio.stations:
-            self.radio.add_listener(balance_watcher.pubsub_key)
-            return None
-        else:
-            balance_task = periodic(
-                balance_watcher.watch_balance, config.sleep_seconds.update_balances
-            )
-            station = Station(
-                pubsub_channel=balance_watcher.pubsub_key,
-                log_channel=config.sha,
-                listeners=1,
-                aiotask=asyncio.create_task(balance_task)
-            )
-            return self.radio.run_station_forever(station)
-            
-    def create_bridge_task(
-        self, stg: StrategyConfig, bridge_watcher: BookWatcher
-    ) -> Optional[Coroutine]:
-        if bridge_watcher.pubsub_key in self.radio.stations:
-            self.radio.add_listener(bridge_watcher.pubsub_key)
-            return None
-        else:
-            station = Station(
-                pubsub_channel=bridge_watcher.pubsub_key,
-                log_channel=stg.sha,
-                listeners=1,
-                aiotask=asyncio.create_task(bridge_watcher.watch_books()),
-            )
-            return self.radio.run_station_forever(station)
-
-
-    def is_running(self,sha:str)->bool:
-        return sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING
 
     async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
         if self.is_running(stg.sha):
@@ -144,9 +110,6 @@ class RobotContext:
             if bridge_task:
                 coros.append(bridge_task)
 
-        print("robots", self.robots.keys())
-        print("stations", radio.stations.keys())
-
         return coros 
 
 
@@ -171,18 +134,16 @@ class RobotContext:
 
     def drop_listeners(self,robotrun: RobotRun) -> None:
         if robotrun.robot:
+            self.radio.drop_listener(pub.DEFAULT_CHANNEL)
             self.radio.drop_listener(robotrun.robot.balance_pubsub_key)
             if robotrun.robot.bridge_pubsub_key:
                 self.radio.drop_listener(robotrun.robot.bridge_pubsub_key)
-
 
     async def cancel_task(self, sha: str) -> None:
         if sha not in self.robots:
             logger.error(f"cancel_task: {sha} not found")
             return
         await self.clean_task(sha)
-        print("robots", self.robots.keys())
-        print("stations", radio.stations.keys())
 
     async def cancel_all(self) -> list:
         stopped_shas = []

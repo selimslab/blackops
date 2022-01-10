@@ -9,6 +9,29 @@ from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.streams.factory import stream_factory
 from src.monitoring import logger
+from src.robots.stats import STAT_MESSAGE_FUNCS
+from src.robots.context import robot_context
+import simplejson as json  # type: ignore
+from src.stgs import StrategyType
+
+
+@dataclass
+class StatsPublisher:
+    pubsub_key: str
+
+    async def broadcast_stats(self) -> None:
+        stats = {}
+        for robotrun in robot_context.robots.values():
+            
+            func = STAT_MESSAGE_FUNCS[StrategyType(robotrun.robot.config.type)]
+            
+            stat_dict = func(robotrun.robot)
+
+            stats[robotrun.sha] = stat_dict
+
+        if stats:
+            stats = json.dumps(stats, default=str)
+            pub.publish_stats(message=stats)
 
 
 @dataclass
@@ -54,11 +77,13 @@ class BalanceWatcher:
         self.last_updated = datetime.now()
 
 
+
 @dataclass
 class WatcherFactory:
 
     BOOK_WATCHERS: Dict[str, BookWatcher] = field(default_factory=dict)
     BALANCE_WATCHERS: Dict[str, BalanceWatcher] = field(default_factory=dict)
+    stats_publisher :Optional[StatsPublisher] = None 
 
     def create_book_watcher_if_not_exists(
         self, ex_type: ExchangeType, network: NetworkType, symbol: str
@@ -101,6 +126,12 @@ class WatcherFactory:
         self.BALANCE_WATCHERS[key] = watcher
 
         return key, watcher
+
+    def create_stats_watcher_if_not_exists(self):
+        if not self.stats_publisher:
+            self.stats_publisher = StatsPublisher(pub.DEFAULT_CHANNEL)
+        return self.stats_publisher
+
 
 
 watcher_factory = WatcherFactory()

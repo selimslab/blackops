@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from src.domain import Asset, AssetPair
+from src.domain import Asset
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.stgs.sliding import SlidingWindowConfig

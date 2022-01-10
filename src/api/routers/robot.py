@@ -23,8 +23,6 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
     5. View logs on the home page
     """
     stg = await strategy_api.get_stg(sha)
-    robot_api.is_running(stg)
-    background_tasks.add_task(robot_stats.broadcast_stats_periodically, stg.sleep_seconds.broadcast_stats)
     background_tasks.add_task(robot_api.run_task, stg)
     return JSONResponse(content={"message": f"started strategy {sha}"})
 

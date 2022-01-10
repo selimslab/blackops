@@ -17,6 +17,7 @@ class RobotApi:
             raise Exception(f"{stg.sha} already running")
 
     async def run_task(self, stg: StrategyConfig):
+        self.is_running(stg)
         coros = await robot_context.create_coros(stg)
         try:
             await asyncio.gather(*coros)

@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
@@ -29,6 +30,12 @@ class OrderRobot:
     buy_orders_delivered: int = 0
     sell_orders_delivered: int = 0
     prev_order_count: int = 0
+
+    @asynccontextmanager
+    async def timeout_lock(self, lock, timeout=0.5):
+        async with lock:
+            yield 
+            await asyncio.sleep(timeout)
 
     @property
     def total_orders_delivered(self):
@@ -72,7 +79,7 @@ class OrderRobot:
         if lock.locked():
             return None
 
-        async with lock:
+        async with self.timeout_lock(lock):
             try:
                 order_log = await self.submit_order(side, price, qty)
                 if not order_log:

@@ -44,10 +44,9 @@ class BtcturkApiClient(BtcturkBase):
 
     @asynccontextmanager
     async def timed_order_context(self):
-        print("timed_order_context")
         async with self.order_lock:
             yield 
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.16)
 
     def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
@@ -204,8 +203,11 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if not order_id:
                 return None
-            uri = update_url_query_params(self.order_url, {"id": order_id})
-            return await self._http(uri, self.session.delete)
+            if self.order_lock.locked():
+                return None
+            async with self.timed_order_context():
+                uri = update_url_query_params(self.order_url, {"id": order_id})
+                return await self._http(uri, self.session.delete)
         except Exception as e:
             # we could not cancel the order, its normal
             logger.info(f"cancel_order: {e}")
