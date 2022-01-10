@@ -3,18 +3,14 @@ import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Coroutine, Dict, List, Optional
+from typing import Dict, Optional
 
 import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
 from src.monitoring import logger
-from src.periodic import periodic
-from src.robots.factory import create_trader_from_strategy
-from src.robots.radio import Radio, Station, radio
+from src.robots.radio import Radio, radio
 from src.robots.sliding.main import SlidingWindowTrader
-from src.robots.watchers import BalancePub, BookPub, StatsPub, stats_pub
-from src.stgs import StrategyConfig
 
 
 class RobotRunStatus(Enum):
@@ -35,13 +31,7 @@ class RobotRun:
 
 @dataclass
 class RobotRunner:
-    pass
-
-
-@dataclass
-class RobotContext:
     robots: Dict[str, RobotRun] = field(default_factory=dict)
-    radio: Radio = radio
 
     def is_running(self, sha: str) -> bool:
         return sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING
@@ -73,61 +63,6 @@ class RobotContext:
                     logger.error(msg)
                     continue
 
-    def create_stations(self, robot: SlidingWindowTrader) -> List[Coroutine]:
-        coros = []
-
-        balance_coro = periodic(
-            robot.balance_station.watch_balance,
-            robot.config.sleep_seconds.update_balances,
-        )
-        balance_station_coro = self.radio.create_station_if_not_exists(
-            robot.balance_station, balance_coro
-        )
-        if balance_station_coro:
-            coros.append(balance_station_coro)
-
-        stats_coro = periodic(
-            self.broadcast_stats, robot.config.sleep_seconds.broadcast_stats
-        )
-        stats_station_coro = self.radio.create_station_if_not_exists(
-            stats_pub, stats_coro
-        )
-        if stats_station_coro:
-            coros.append(stats_station_coro)
-
-        if robot.bridge_station:
-            bridge_coro = robot.bridge_station.watch_books()
-            bridge_station_coro = self.radio.create_station_if_not_exists(
-                robot.bridge_station, bridge_coro
-            )
-            if bridge_station_coro:
-                coros.append(bridge_station_coro)
-
-        return coros
-
-    def create_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
-        robotrun = RobotRun(
-            sha=sha,
-            log_channel=sha,
-            robot=robot,
-            status=RobotRunStatus.PENDING,
-            aiotask=None,
-        )
-        robotrun.aiotask = asyncio.create_task(robot.run())
-        return self.run_forever(robotrun)
-
-    async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
-        if self.is_running(stg.sha):
-            raise Exception(f"{stg.sha} already running")
-
-        robot = create_trader_from_strategy(stg)
-        if not robot:
-            raise Exception(f"start_task: no robot")
-
-        robot_task = self.create_robot_task(stg.sha, robot)
-        stations = self.create_stations(robot)
-        return [robot_task] + stations
-
     async def clean_task(self, sha: str) -> None:
         try:
             robotrun = self.robots.get(sha)
@@ -149,10 +84,10 @@ class RobotContext:
 
     def drop_listeners(self, robotrun: RobotRun) -> None:
         if robotrun.robot:
-            self.radio.drop_listener(pub.DEFAULT_CHANNEL)
-            self.radio.drop_listener(robotrun.robot.balance_station.pubsub_key)
+            radio.drop_listener(pub.DEFAULT_CHANNEL)
+            radio.drop_listener(robotrun.robot.balance_station.pubsub_key)
             if robotrun.robot.bridge_station:
-                self.radio.drop_listener(robotrun.robot.bridge_station.pubsub_key)
+                radio.drop_listener(robotrun.robot.bridge_station.pubsub_key)
 
     async def cancel_task(self, sha: str) -> None:
         if sha not in self.robots:
@@ -174,7 +109,7 @@ class RobotContext:
 
     async def broadcast_stats(self) -> None:
         stats = {}
-        for robotrun in robot_context.robots.values():
+        for robotrun in self.robots.values():
 
             stat_dict = robotrun.robot.create_stats_message()
 
@@ -185,4 +120,4 @@ class RobotContext:
             pub.publish_stats(message=stats_msg)
 
 
-robot_context = RobotContext()
+robot_runner = RobotRunner()

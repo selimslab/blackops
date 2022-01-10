@@ -2,8 +2,8 @@ from src.domain import Asset
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.monitoring import logger
+from src.robots.pubs import pub_factory
 from src.robots.sliding.main import SlidingWindowTrader
-from src.robots.watchers import pub_factory
 from src.stgs.sliding import SlidingWindowConfig
 from src.streams.factory import stream_factory
 

@@ -10,8 +10,8 @@ from src.monitoring import logger
 from src.numberops import one_bps_lower
 from src.periodic import SingleTaskContext, periodic
 from src.robots.base import RobotBase
+from src.robots.pubs import BalancePub, BookPub
 from src.robots.sliding.market import MarketWatcher
-from src.robots.watchers import BalancePub, BookPub
 from src.stgs.sliding.config import SlidingWindowConfig
 
 getcontext().prec = 9

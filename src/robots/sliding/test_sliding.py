@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 
 from src.robots import robot_api
-from src.robots.factory import create_trader_from_strategy
+from src.robots.factory import robot_factory
 from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
 
@@ -33,7 +33,7 @@ async def test_end_to_end():
     res = await strategy_api.get_stg(config.sha)
     assert res == config
 
-    trader = create_trader_from_strategy(res)
+    coros = robot_factory.create_coros(res)
 
 
 # import asyncio

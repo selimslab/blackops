@@ -6,7 +6,7 @@ from typing import Coroutine, Dict, Optional
 
 import src.pubsub.pub as pub
 from src.monitoring import logger
-from src.robots.watchers import PublisherBase
+from src.robots.pubs import PublisherBase
 
 
 @dataclass
