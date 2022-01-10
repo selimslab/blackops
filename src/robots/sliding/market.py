@@ -1,12 +1,12 @@
 import asyncio
 import copy
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
 import src.pubsub.pub as pub
 from src.domain import OrderType
-from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 from src.periodic import SingleTaskContext
 from src.robots.pubs import BalancePub, BookPub
@@ -51,6 +51,8 @@ class MarketWatcher:
                     self.prices.ask = self.book_station.api_client.get_best_ask(book)
 
                     self.prices.bid = self.book_station.api_client.get_best_bid(book)
+
+                    self.book_station.last_updated = datetime.now()
 
                 await asyncio.sleep(0)
 

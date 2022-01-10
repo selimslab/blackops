@@ -16,7 +16,7 @@ class RobotApi:
         if robot_runner.is_running(stg.sha):
             raise Exception(f"{stg.sha} already running")
 
-        coros = await robot_factory.create_coros(stg)
+        coros = robot_factory.create_coros(stg)
         try:
             await asyncio.gather(*coros)
         except asyncio.CancelledError as e:

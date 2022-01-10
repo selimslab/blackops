@@ -30,22 +30,21 @@ def sliding_window_factory(config: SlidingWindowConfig):
     pair = config.create_pair()
 
     if stg.bridge:
-
         leader_watcher = pub_factory.create_book_pub_if_not_exists(
-            ex_type=ExchangeType(stg.bridge_exchange),
+            ex_type=ExchangeType(stg.leader_exchange),
             network=network,
             symbol=stg.base + stg.quote,
         )
 
     else:
         leader_watcher = pub_factory.create_book_pub_if_not_exists(
-            ex_type=ExchangeType(stg.bridge_exchange),
+            ex_type=ExchangeType(stg.leader_exchange),
             network=network,
             symbol=pair.symbol,
         )
 
     follower_watcher = pub_factory.create_book_pub_if_not_exists(
-        ex_type=ExchangeType(stg.bridge_exchange), network=network, symbol=pair.symbol
+        ex_type=ExchangeType(stg.follower_exchange), network=network, symbol=pair.symbol
     )
 
     if network == NetworkType.TESTNET:

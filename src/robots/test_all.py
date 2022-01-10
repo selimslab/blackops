@@ -1,9 +1,39 @@
+import asyncio
+from datetime import datetime
+from decimal import Decimal
+from pprint import pprint
+
 import pytest
 import pytest_asyncio
 
 from src.robots import robot_api
 from src.robots.factory import robot_factory
+from src.robots.radio import radio
 from src.stgs import StrategyConfig, StrategyInput, strategy_api
+
+
+@pytest.mark.asyncio
+async def test_end_to_end():
+    stg_in = StrategyInput(base="ETH", quote="USDT", use_bridge=False)
+    res = await strategy_api.create_stg(stg_in)
+    config = await strategy_api.get_stg(res.sha)
+
+    coros = robot_factory.create_coros(res)
+    pprint(radio.get_stations())
+
+    assert len(coros) == 2
+
+    assert robot_api.get_tasks() == []
+
+    assert radio.get_stations() == []
+
+    # task = asyncio.create_task(robot_api.run_task(res))
+
+    # assert robot_api.get_tasks() == [config.sha]
+
+    pprint(radio.get_stations())
+
+    await robot_api.stop_task(config.sha)
 
 
 async def bt_stream():
@@ -25,21 +55,6 @@ async def bt_stream():
         },
     ]
 
-
-@pytest.mark.asyncio
-async def test_end_to_end():
-    stg_in = StrategyInput(base="ETH", quote="USDT", use_bridge=False)
-    config = await strategy_api.create_stg(stg_in)
-    res = await strategy_api.get_stg(config.sha)
-    assert res == config
-
-    coros = robot_factory.create_coros(res)
-
-
-# import asyncio
-# from datetime import datetime
-# from decimal import Decimal
-# from pprint import pprint
 
 # import simplejson as json  # type: ignore
 # from async_timeout import timeout

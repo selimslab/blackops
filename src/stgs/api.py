@@ -51,8 +51,7 @@ class StrategyAPI:
         else:
             raise ValueError("stg not found")
 
-    async def get_ticker(self, stg: StrategyInput) -> Decimal:
-        pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
+    async def get_ticker(self, pair: AssetPair) -> Decimal:
 
         ticker = await btc_real_api_client_public.get_ticker(pair)
         if not ticker:
@@ -62,7 +61,9 @@ class StrategyAPI:
 
     async def create_stg(self, stg: StrategyInput) -> StrategyConfig:
 
-        ticker = await self.get_ticker(stg)
+        pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
+
+        ticker = await self.get_ticker(pair)
 
         stg_config = StrategyConfig(input=stg, reference_price=ticker)
 

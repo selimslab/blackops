@@ -64,7 +64,7 @@ class RobotFactory:
         robotrun.aiotask = asyncio.create_task(robot.run())
         return robot_runner.run_forever(robotrun)
 
-    async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
+    def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
         if robot_runner.is_running(stg.sha):
             raise Exception(f"{stg.sha} already running")
 

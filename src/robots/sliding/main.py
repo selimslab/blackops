@@ -86,6 +86,7 @@ class SlidingWindowTrader(RobotBase):
         async for book in self.leader_station.stream:
             async with self.fresh_price_task.refresh_task(self.clear_targets):
                 self.calculate_window(book)
+                self.leader_station.last_updated = datetime.now()
                 await self.should_transact()
 
     async def watch_bridge(self) -> None:
@@ -94,6 +95,7 @@ class SlidingWindowTrader(RobotBase):
 
         async for book in self.bridge_station.stream:
             if book:
+                self.bridge_station.last_updated = datetime.now()
                 self.targets.bridge = self.bridge_station.api_client.get_mid(book)
 
     async def clear_targets(self):

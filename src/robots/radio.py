@@ -2,7 +2,7 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Coroutine, Dict, Optional
+from typing import Coroutine, Dict, List, Optional
 
 import src.pubsub.pub as pub
 from src.monitoring import logger
@@ -77,6 +77,9 @@ class Radio:
                 aiotask=asyncio.create_task(coro),
             )
             return self.run_station_till_cancelled(station)
+
+    def get_stations(self) -> List[Station]:
+        return list(self.stations.values())
 
 
 radio = Radio()

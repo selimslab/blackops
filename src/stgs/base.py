@@ -18,6 +18,5 @@ class StrategyInputBase(BaseModel):
 
 class StrategyConfigBase(BaseModel):
     input: StrategyInputBase
-    type: StrategyType = StrategyType.SLIDING_WINDOW
+    type: StrategyType
     sha: str = ""
-    created_at: str = Field(default_factory=lambda: str(datetime.now().isoformat()))
