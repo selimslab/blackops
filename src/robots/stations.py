@@ -14,6 +14,9 @@ from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
 from src.periodic import periodic
 
+
+
+
 @dataclass
 class StationApi:
     radio: Radio = radio
@@ -31,7 +34,7 @@ class StationApi:
             station = Station(
                 name="balance_station",
                 pubsub_channel=balance_gen.pubsub_key,
-                log_channel=config.sha,
+                log_channel=pub.DEFAULT_CHANNEL,
                 listeners=1,
                 aiotask=asyncio.create_task(balance_task)
             )
@@ -47,23 +50,22 @@ class StationApi:
             station = Station(
                 name="bridge_station",
                 pubsub_channel=bridge_gen.pubsub_key,
-                log_channel=stg.sha,
+                log_channel=pub.DEFAULT_CHANNEL,
                 listeners=1,
                 aiotask=asyncio.create_task(bridge_gen.watch_books()),
             )
             return self.radio.run_station_till_cancelled(station)
 
-    def create_log_station_if_not_exists(self, stg: StrategyConfig):
-        stats_publisher = watcher_factory.create_stats_watcher_if_not_exists()
-        if stats_publisher.pubsub_key in self.radio.stations:
+    def create_log_station_if_not_exists(self, task):
+        if pub.DEFAULT_CHANNEL in self.radio.stations:
             return None 
         else:
             station = Station(
                 name="stats_station",
-                pubsub_channel=stats_publisher.pubsub_key,
-                log_channel=stg.sha,
+                pubsub_channel=pub.DEFAULT_CHANNEL,
+                log_channel=pub.DEFAULT_CHANNEL,
                 listeners=1,
-                aiotask=asyncio.create_task(periodic(stats_publisher.broadcast_stats, stg.sleep_seconds.broadcast_stats)),
+                aiotask=task,
             )
             return self.radio.run_station_till_cancelled(station)
 

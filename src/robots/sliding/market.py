@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import asynccontextmanager
 import copy
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,81 +9,68 @@ import src.pubsub.pub as pub
 from src.exchanges.base import ExchangeAPIClientBase
 from src.domain import OrderType
 from src.stgs.sliding.config import SlidingWindowConfig
-from src.robots.sliding.orders import OrderRobot
-from src.robots.watchers import BalanceWatcher
+from src.robots.sliding.orders import OrderApi
+from src.robots.watchers import BalanceWatcher, BookWatcher
 from src.monitoring import logger
+
+from src.periodic import SingleTaskContext
+
+@dataclass
+class MarketPrices:
+    bid: Optional[Decimal] = None
+    ask: Optional[Decimal] = None
 
 
 @dataclass
-class FollowerWatcher:
+class MarketWatcher:
     config: SlidingWindowConfig
 
-    exchange: ExchangeAPIClientBase
+    book_station:BookWatcher
+    balance_station:BalanceWatcher
 
-    book_stream: AsyncGenerator
-    balance_watcher: BalanceWatcher
-
-    best_seller: Optional[Decimal] = None
-    best_buyer: Optional[Decimal] = None
-
-    bid_ask_last_updated: datetime = datetime.now()
-    books_seen: int = 0
+    prices: MarketPrices = MarketPrices()
 
     start_balances_saved: bool = False
+    fresh_price_task:SingleTaskContext = SingleTaskContext()
 
-    clear_task = None
 
     def __post_init__(self):
 
-        self.order_robot = OrderRobot(
-            config=self.config, pair=self.config.create_pair(), exchange=self.exchange
+        self.order_api = OrderApi(
+            config=self.config, pair=self.config.create_pair(), exchange=self.book_station.api_client
         )
-        self.channnel = self.config.sha
 
         self.pair = self.config.create_pair()
 
         self.start_pair = self.config.create_pair()
 
 
-    async def watch_books(self) -> None:
-        async for book in self.book_stream:
-            self.update_follower_prices(book)
-            self.books_seen += 1
-            if self.clear_task:
-                self.clear_task.cancel()
-            self.clear_task = asyncio.create_task(self.clear_bid_ask())
-            await asyncio.sleep(0)
+    async def update_prices(self) -> None:
+        async for book in self.book_station.stream:
+            try:
+                async with self.fresh_price_task.refresh_task(self.clear_prices):
+                    self.prices.ask = self.book_station.api_client.get_best_ask(book)
 
-    async def clear_bid_ask(self):
-        # fresh or none 
+                    self.prices.bid = self.book_station.api_client.get_best_bid(book)
+
+                await asyncio.sleep(0)
+
+            except Exception as e:
+                msg = f"update_follower_prices: {e}"
+                logger.error(msg)
+                pub.publish_error(message=msg)
+
+    async def clear_prices(self):
         await asyncio.sleep(self.config.sleep_seconds.clear_prices) 
-        self.best_buyer = None
-        self.best_seller = None
-
-    def update_follower_prices(self, book: dict) -> None:
-        try:
-            best_ask = self.exchange.get_best_ask(book)
-            if best_ask:
-                self.best_seller = best_ask
-
-            best_bid = self.exchange.get_best_bid(book)
-            if best_bid:
-                self.best_buyer = best_bid
-
-            self.bid_ask_last_updated = datetime.now()
-
-        except Exception as e:
-            msg = f"update_follower_prices: {e}"
-            logger.error(msg)
-            pub.publish_error(message=msg)
+        self.prices = MarketPrices()
 
     async def update_balances(self) -> None:
         try:
-            res: Optional[dict] = self.balance_watcher.balances
+            res: Optional[dict] = self.balance_station.balances
             if not res:
                 return
 
-            balances = self.exchange.parse_account_balance(
+            balances = self.book_station.api_client.parse_account_balance(
                 res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
@@ -116,7 +102,7 @@ class FollowerWatcher:
         if not self.can_buy(price):
             return None
 
-        order_log = await self.order_robot.send_order(OrderType.BUY, price, self.config.base_step_qty)
+        order_log = await self.order_api.send_order(OrderType.BUY, price, self.config.base_step_qty)
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance
@@ -131,7 +117,7 @@ class FollowerWatcher:
         if self.pair.base.free < qty:
             qty = self.pair.base.free * Decimal("0.98")
 
-        order_log = await self.order_robot.send_order(OrderType.SELL, price, qty)
+        order_log = await self.order_api.send_order(OrderType.SELL, price, qty)
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance

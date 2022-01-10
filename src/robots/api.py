@@ -43,5 +43,4 @@ class RobotApi:
     def get_tasks(self)->List[str]:
         return robot_context.get_tasks()
 
-
 robot_api = RobotApi()

@@ -40,7 +40,11 @@ class BtcturkApiClient(BtcturkBase):
 
     def __post_init__(self):
         self.headers = self._get_headers()
-        self.session = aiohttp.ClientSession()
+
+
+    async def create_session_if_not_exists(self):
+        if not self.session:
+            self.session = aiohttp.ClientSession()
 
     @asynccontextmanager
     async def timed_order_context(self):
@@ -70,7 +74,7 @@ class BtcturkApiClient(BtcturkBase):
     async def activate_rate_limit(self) -> None:
         with self.rate_limit_lock:
             await self._close_session()
-            self.session = aiohttp.ClientSession()
+            await self.create_session_if_not_exists()
             await asyncio.sleep(self.rate_limit_seconds)
 
     async def _get(self, uri: str):
@@ -112,6 +116,7 @@ class BtcturkApiClient(BtcturkBase):
          'requestFund': '0'},
         """
         try:
+            await self.create_session_if_not_exists()
             return await self._http(self.balance_url, self.session.get)
         except Exception as e:
             raise e
@@ -146,6 +151,7 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if self.order_lock.locked():
                 return None
+            await self.create_session_if_not_exists()
             async with self.timed_order_context():
                 async with self.session.post(
                     self.order_url, headers=self._get_headers(), json=params
@@ -197,6 +203,7 @@ class BtcturkApiClient(BtcturkBase):
 
         params = {"pairSymbol": pair.symbol}
         uri = update_url_query_params(self.open_orders_url, params)
+        await self.create_session_if_not_exists()
         return await self._http(uri, self.session.get)
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
@@ -205,6 +212,8 @@ class BtcturkApiClient(BtcturkBase):
                 return None
             if self.order_lock.locked():
                 return None
+            
+            await self.create_session_if_not_exists()
             async with self.timed_order_context():
                 uri = update_url_query_params(self.order_url, {"id": order_id})
                 return await self._http(uri, self.session.delete)

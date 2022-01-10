@@ -4,6 +4,7 @@ import traceback
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Coroutine, Dict, Optional, List
+import simplejson as json  # type: ignore
 
 import src.pubsub.pub as pub
 from src.stgs import StrategyConfig
@@ -14,6 +15,7 @@ from src.monitoring import logger
 from src.periodic import periodic
 
 from src.robots.radio import radio, Radio, Station
+from src.robots.stations import StationApi, station_api
 
 
 class RobotRunStatus(Enum):
@@ -41,6 +43,7 @@ class RobotRunner:
 class RobotContext:
     robots: Dict[str, RobotRun] = field(default_factory=dict)
     radio: Radio = radio
+    station_api: StationApi = station_api
     
     def is_running(self,sha:str)->bool:
         return sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING
@@ -72,6 +75,27 @@ class RobotContext:
                     logger.error(msg)
                     continue 
 
+    def create_stations(self, robot:SlidingWindowTrader) -> List[Coroutine]:
+        coros = []
+
+        balance_task = self.station_api.create_balance_station_if_not_exists(robot.config, robot.balance_station)
+        if balance_task:
+            coros.append(balance_task)
+
+        stats_task = asyncio.create_task(periodic(self.broadcast_stats, robot.config.sleep_seconds.broadcast_stats))
+        
+        self.station_api.create_log_station_if_not_exists(stats_task)
+        if stats_task:
+            coros.append(stats_task)
+
+        if robot.bridge_station:
+            bridge_task = self.station_api.create_bridge_station_if_not_exists(robot.config, robot.bridge_station)
+            if bridge_task:
+                coros.append(bridge_task)
+
+        return coros
+
+
     def create_robot_task(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
         robotrun = RobotRun(
             sha=sha,
@@ -84,33 +108,17 @@ class RobotContext:
         return self.run_forever(robotrun)
 
 
-
     async def create_coros(self, stg: StrategyConfig) -> List[Coroutine]:
         if self.is_running(stg.sha):
             raise Exception(f"{stg.sha} already running")
 
-        robot, balance_watcher, bridge_watcher = create_trader_from_strategy(stg)
+        robot = create_trader_from_strategy(stg)
         if not robot:
             raise Exception(f"start_task: no robot")
 
-        if not balance_watcher:
-            raise Exception(f"start_task: no balance_watcher")
-
-        coros = []
-
         robot_task = self.create_robot_task(stg.sha, robot)
-        coros.append(robot_task)
-
-        balance_task = self.create_balance_task(stg, balance_watcher)
-        if balance_task:
-            coros.append(balance_task)
-
-        if bridge_watcher:
-            bridge_task = self.create_bridge_task(stg, bridge_watcher)
-            if bridge_task:
-                coros.append(bridge_task)
-
-        return coros 
+        stations = self.create_stations(robot)
+        return [robot_task] + stations 
 
 
     async def clean_task(self, sha: str) -> None:
@@ -135,9 +143,9 @@ class RobotContext:
     def drop_listeners(self,robotrun: RobotRun) -> None:
         if robotrun.robot:
             self.radio.drop_listener(pub.DEFAULT_CHANNEL)
-            self.radio.drop_listener(robotrun.robot.balance_pubsub_key)
-            if robotrun.robot.bridge_pubsub_key:
-                self.radio.drop_listener(robotrun.robot.bridge_pubsub_key)
+            self.radio.drop_listener(robotrun.robot.balance_station.pubsub_key)
+            if robotrun.robot.bridge_station:
+                self.radio.drop_listener(robotrun.robot.bridge_station.pubsub_key)
 
     async def cancel_task(self, sha: str) -> None:
         if sha not in self.robots:
@@ -156,6 +164,20 @@ class RobotContext:
 
     def get_tasks(self) -> list:
         return list(self.robots.keys())
+
+
+    async def broadcast_stats(self) -> None:
+        stats = {}
+        for robotrun in robot_context.robots.values():
+                        
+            stat_dict = robotrun.robot.create_stats_message()
+
+            stats[robotrun.sha] = stat_dict
+
+        if stats:
+            stats = json.dumps(stats, default=str)
+            pub.publish_stats(message=stats)
+
 
 
 robot_context = RobotContext()

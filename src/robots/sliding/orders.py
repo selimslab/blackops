@@ -13,22 +13,35 @@ from src.stgs.sliding.config import SlidingWindowConfig
 from src.monitoring import logger
 
 
-
+@dataclass
+class OpenOrders:
+    buy: list = field(default_factory=list)
+    sell: list = field(default_factory=list)
 
 @dataclass
-class OrderRobot:
+class OrdersDelivered:
+    buy: int = 0
+    sell: int = 0
+
+    @property
+    def total(self):
+        return self.buy + self.sell
+
+@dataclass
+class OrderLocks:
+    buy: asyncio.Lock = asyncio.Lock()
+    sell: asyncio.Lock = asyncio.Lock()
+
+@dataclass
+class OrderApi:
     config: SlidingWindowConfig
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 
-    buy_lock: asyncio.Lock = asyncio.Lock()
-    sell_lock: asyncio.Lock = asyncio.Lock()
+    order_locks: OrderLocks = OrderLocks()
+    open_orders:OpenOrders = OpenOrders()
 
-    open_sell_orders: list = field(default_factory=list)
-    open_buy_orders: list = field(default_factory=list)
-
-    buy_orders_delivered: int = 0
-    sell_orders_delivered: int = 0
+    orders_delivered: OrdersDelivered = OrdersDelivered()
     prev_order_count: int = 0
 
     @asynccontextmanager
@@ -37,16 +50,9 @@ class OrderRobot:
             yield 
             await asyncio.sleep(timeout)
 
-    @property
-    def total_orders_delivered(self):
-        return self.buy_orders_delivered + self.sell_orders_delivered
-
-    def __post_init__(self):
-        self.channel = self.config.sha
-
     async def cancel_all_open_orders(self) -> None:
         try:
-            if self.total_orders_delivered in (0, self.prev_order_count):
+            if self.orders_delivered.total in (0, self.prev_order_count):
                 return
 
             open_orders: Optional[dict] = await self.exchange.get_open_orders(self.pair)
@@ -63,7 +69,7 @@ class OrderRobot:
                     self.open_buy_orders + self.open_sell_orders
                 )
 
-            self.prev_order_count = self.total_orders_delivered
+            self.prev_order_count = self.orders_delivered.total
 
         except Exception as e:
             msg = f"watch_open_orders: {e}"
@@ -72,9 +78,9 @@ class OrderRobot:
 
     async def send_order(self, side:OrderType, price: Decimal, qty:Decimal) -> Optional[dict]:
         if side == OrderType.BUY:
-            lock = self.buy_lock
+            lock = self.order_locks.buy
         else:
-            lock = self.sell_lock
+            lock = self.order_locks.sell
 
         if lock.locked():
             return None
@@ -87,9 +93,9 @@ class OrderRobot:
                 order_id = self.parse_order_id(order_log)
                 if order_id:
                     if side == OrderType.BUY:
-                        self.buy_orders_delivered += 1
+                        self.orders_delivered.buy += 1
                     else:
-                        self.sell_orders_delivered += 1
+                        self.orders_delivered.sell += 1
                     return order_log
                 return None
             except Exception as e:

@@ -11,5 +11,7 @@ def create_real_client():
 def create_testnet_client():
     return BtcturkApiClientTestnet()
 
+def create_public_real_client():
+    return BtcturkApiClient()
 
-btc_real_api_client_public = BtcturkApiClient()
+btc_real_api_client_public = create_public_real_client()

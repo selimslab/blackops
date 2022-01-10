@@ -15,7 +15,7 @@ FACTORIES = {
 
 def create_trader_from_strategy(
     stg: StrategyConfig,
-) -> Tuple[SlidingWindowTrader, BalanceWatcher, BookWatcher]:
+) -> Robot:
     try:
         stg.is_valid()
         factory_func = FACTORIES[StrategyType(stg.type)]
