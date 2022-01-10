@@ -2,14 +2,41 @@ import pytest
 import pytest_asyncio
 
 from src.stgs import StrategyConfig, StrategyInput, strategy_api
+from src.robots import robot_api
+from src.robots.factory import create_trader_from_strategy
 
 
+
+async def bt_stream():
+    bt_test_data = [
+        431,
+        {
+            "CS": 1144463,
+            "PS": "ETHUSDT",
+            "AO": [
+                {"A": "1.329", "P": "3775.2"},
+                {"A": "0.09253216", "P": "3782.3"},
+                {"A": "13.24959588", "P": "3773.7"},
+            ],
+            "BO": [
+                {"A": "0.1854", "P": "3775.1"},
+                {"A": "0.3345592", "P": "3775"},
+                {"A": "13.24959588", "P": "3773.7"},
+            ],
+        },
+    ]
+
+    
 @pytest.mark.asyncio
 async def test_end_to_end():
-    stg_in = StrategyInput(base="ETH", quote="USDT")
+    stg_in = StrategyInput(base="ETH", quote="USDT", use_bridge=False)
     config = await strategy_api.create_stg(stg_in)
     res = await strategy_api.get_stg(config.sha)
     assert res == config
+
+    trader = create_trader_from_strategy(res)
+
+    
 
 
 # import asyncio

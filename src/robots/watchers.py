@@ -11,11 +11,21 @@ from src.streams.factory import stream_factory
 
 
 @dataclass
-class BalanceWatcher:
-    pubsub_key: str
+class PublisherBase:
+    pubsub_key: str 
+
+
+@dataclass
+class StatsPub(PublisherBase):
+    pass
+
+stats_pub = StatsPub(pubsub_key=pub.DEFAULT_CHANNEL)
+
+@dataclass
+class BalancePub(PublisherBase):
     exchange: ExchangeAPIClientBase
-    balances: Optional[dict] = None
     last_updated = datetime.now()
+    balances: Optional[dict] = None
 
     async def watch_balance(self):
         res = await self.exchange.get_account_balance()
@@ -25,8 +35,8 @@ class BalanceWatcher:
 
 
 @dataclass
-class BookWatcher:
-    pubsub_key: str
+class BookPub(PublisherBase):
+
     stream: AsyncGenerator
     api_client: ExchangeAPIClientBase
 
@@ -46,21 +56,21 @@ class BookWatcher:
             self.last_updated = datetime.now()
             await asyncio.sleep(0)
 
+PubsubProducer = Union[BalancePub, BookPub]
 
 @dataclass
-class WatcherFactory:
+class PubFactory:
 
-    BOOK_WATCHERS: Dict[str, BookWatcher] = field(default_factory=dict)
-    BALANCE_WATCHERS: Dict[str, BalanceWatcher] = field(default_factory=dict)
+    PUBS: Dict[str, PubsubProducer] = field(default_factory=dict)
 
-    def create_book_watcher_if_not_exists(
+    def create_book_pub_if_not_exists(
         self, ex_type: ExchangeType, network: NetworkType, symbol: str
-    ) -> BookWatcher:
+    ) -> BookPub:
 
         key = "_".join((ex_type.value, network.value, "book"))
-        if key in self.BOOK_WATCHERS:
+        if key in self.PUBS:
             logger.info(f"Reusing book watcher for {ex_type}")
-            return self.BOOK_WATCHERS[key]
+            return self.PUBS[key] # type: ignore
 
         stream = stream_factory.create_stream_if_not_exists(ex_type, symbol)
 
@@ -68,30 +78,30 @@ class WatcherFactory:
             ex_type, network
         )
 
-        watcher = BookWatcher(pubsub_key=key, api_client=api_client, stream=stream)
+        watcher = BookPub(pubsub_key=key, api_client=api_client, stream=stream)
 
-        self.BOOK_WATCHERS[key] = watcher
+        self.PUBS[key] = watcher
 
         return watcher
 
-    def create_balance_watcher_if_not_exists(
+    def create_balance_pub_if_not_exists(
         self, ex_type: ExchangeType, network: NetworkType
-    ) -> BalanceWatcher:
+    ) -> BalancePub:
         key = "_".join((ex_type.value, network.value, "balance"))
 
-        if key in self.BALANCE_WATCHERS:
+        if key in self.PUBS:
             logger.info(f"Reusing balance watcher for {ex_type}")
-            return self.BALANCE_WATCHERS[key]
+            return self.PUBS[key]  # type: ignore
 
         api_client = api_client_factory.create_api_client_if_not_exists(
             ex_type, network
         )
 
-        watcher = BalanceWatcher(pubsub_key=key, exchange=api_client)
+        watcher = BalancePub(pubsub_key=key, exchange=api_client)
 
-        self.BALANCE_WATCHERS[key] = watcher
+        self.PUBS[key] = watcher
 
         return watcher
 
 
-watcher_factory = WatcherFactory()
+pub_factory = PubFactory()

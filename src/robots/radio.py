@@ -7,10 +7,17 @@ from typing import Dict, Optional
 import src.pubsub.pub as pub
 from src.monitoring import logger
 
+import asyncio
+from dataclasses import dataclass
+from typing import Coroutine, Optional
+
+import src.pubsub.pub as pub
+from src.monitoring import logger
+from src.robots.watchers import PublisherBase
+
 
 @dataclass
 class Station:
-    name: str
     pubsub_channel: str
     log_channel: str
     listeners: int = 0
@@ -62,6 +69,22 @@ class Radio:
     def stop_station_if_no_listeners(self, station: Station):
         if station.listeners == 0 and station.aiotask:
             station.aiotask.cancel()
+
+
+    def create_station_if_not_exists(
+        self, producer: PublisherBase, coro:Coroutine
+    ) -> Optional[Coroutine]:
+        if producer.pubsub_key in self.stations:
+            self.add_listener(producer.pubsub_key)
+            return None
+        else:
+            station = Station(
+                pubsub_channel=producer.pubsub_key,
+                log_channel=pub.DEFAULT_CHANNEL,
+                listeners=1,
+                aiotask=asyncio.create_task(coro),
+            )
+            return self.run_station_till_cancelled(station)
 
 
 radio = Radio()

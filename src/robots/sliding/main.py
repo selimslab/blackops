@@ -11,7 +11,7 @@ from src.numberops import one_bps_lower
 from src.periodic import SingleTaskContext, periodic
 from src.robots.base import RobotBase
 from src.robots.sliding.market import MarketWatcher
-from src.robots.watchers import BalanceWatcher, BookWatcher
+from src.robots.watchers import BalancePub, BookPub
 from src.stgs.sliding.config import SlidingWindowConfig
 
 getcontext().prec = 9
@@ -34,10 +34,10 @@ class Targets:
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
 
-    leader_station: BookWatcher
-    follower_station: BookWatcher
-    balance_station: BalanceWatcher
-    bridge_station: Optional[BookWatcher] = None
+    leader_station: BookPub
+    follower_station: BookPub
+    balance_station: BalancePub
+    bridge_station: Optional[BookPub] = None
 
     current_step: Decimal = Decimal("0")
 

@@ -10,7 +10,7 @@ from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 from src.periodic import SingleTaskContext
 from src.robots.sliding.orders import OrderApi
-from src.robots.watchers import BalanceWatcher, BookWatcher
+from src.robots.watchers import BookPub, BalancePub
 from src.stgs.sliding.config import SlidingWindowConfig
 
 
@@ -24,8 +24,8 @@ class MarketPrices:
 class MarketWatcher:
     config: SlidingWindowConfig
 
-    book_station: BookWatcher
-    balance_station: BalanceWatcher
+    book_station: BookPub
+    balance_station: BalancePub
 
     prices: MarketPrices = MarketPrices()
 
