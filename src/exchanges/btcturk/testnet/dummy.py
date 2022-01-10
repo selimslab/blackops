@@ -5,12 +5,15 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from src.domain import Asset, AssetPair
-from src.exchanges.btcturk.testnet.models import (Account,
-                                                  AccountBalanceResponse,
-                                                  OpenOrdersData,
-                                                  OpenOrdersResponse,
-                                                  OrderData, OrderType,
-                                                  SubmitOrderResponse)
+from src.exchanges.btcturk.testnet.models import (
+    Account,
+    AccountBalanceResponse,
+    OpenOrdersData,
+    OpenOrdersResponse,
+    OrderData,
+    OrderType,
+    SubmitOrderResponse,
+)
 from src.monitoring import logger
 
 
