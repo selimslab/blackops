@@ -4,9 +4,9 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Coroutine, Dict, List, Optional
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
-from src.robots.pubs import PublisherBase
+from src.pubsub.pubs import PublisherBase
 
 
 @dataclass
@@ -34,18 +34,18 @@ class Radio:
     def clean_station(self, station: Station):
         del self.stations[station.pubsub_channel]
 
-    async def run_station_till_cancelled(self, station: Station):
+    async def run_until_cancelled(self, station: Station):
         while True:
             async with self.station_context(station) as task:
                 try:
                     await task
                 except asyncio.CancelledError as e:
                     msg = f"station {station.pubsub_channel} cancelled: {e}"
-                    pub.publish_error(message=msg)
-                    raise
+                    log_pub.publish_error(message=msg)
+                    break
                 except Exception as e:
                     msg = f"restarting station {station.pubsub_channel}: {e} \n {traceback.format_exc()}"
-                    pub.publish_error(message=msg)
+                    log_pub.publish_error(message=msg)
                     logger.error(msg)
                     continue
 
@@ -72,11 +72,11 @@ class Radio:
         else:
             station = Station(
                 pubsub_channel=producer.pubsub_key,
-                log_channel=pub.DEFAULT_CHANNEL,
+                log_channel=log_pub.DEFAULT_CHANNEL,
                 listeners=1,
                 aiotask=asyncio.create_task(coro),
             )
-            return self.run_station_till_cancelled(station)
+            return self.run_until_cancelled(station)
 
     def get_stations(self) -> List[Station]:
         return list(self.stations.values())

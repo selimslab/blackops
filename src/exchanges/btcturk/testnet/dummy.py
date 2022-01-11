@@ -1,4 +1,3 @@
-import asyncio
 import random
 import time
 from dataclasses import dataclass, field
@@ -70,8 +69,6 @@ class BtcturkDummy:
 
         self.account.open_orders[pair.symbol].bids.append(order)
 
-        await asyncio.sleep(0.2)  # 300 limit
-
         try:
             self.subtract_balance(pair.quote, cost)
             self.add_balance(pair.base, Decimal(order.quantity))
@@ -97,7 +94,6 @@ class BtcturkDummy:
             )
 
         self.account.open_orders[pair.symbol].asks.append(order)
-        await asyncio.sleep(0.2)  # 300 limit
 
         gain = Decimal(order.quantity) * Decimal(order.price)
         try:

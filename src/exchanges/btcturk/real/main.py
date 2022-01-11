@@ -11,6 +11,7 @@ from typing import Callable, Optional
 
 import aiohttp
 
+import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
@@ -154,9 +155,11 @@ class BtcturkApiClient(BtcturkBase):
                 async with self.session.post(
                     self.order_url, headers=self._get_headers(), json=params
                 ) as res:
-                    return await res.json(content_type=None)
+                    return await res.json()
         except Exception as e:
-            logger.error(f"submit_limit_order: {e}")
+            msg = f"submit_limit_order: {e}"
+            logger.error(msg)
+            log_pub.publish_error(msg)
             raise e
 
     async def get_open_orders(self, pair: AssetPair) -> Optional[dict]:
@@ -235,7 +238,9 @@ class BtcturkApiClient(BtcturkBase):
             bid, ask = data["bid"], data["ask"]
             return (Decimal(str(bid)) + Decimal(str(ask))) / Decimal("2")
         except Exception as e:
-            logger.error(f"get_ticker {e}")
+            msg = f"get_ticker {e}"
+            logger.error(msg)
+            log_pub.publish_error(msg)
             return None
 
     # def get_orderbook(pair:str):

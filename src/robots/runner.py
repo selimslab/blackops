@@ -7,13 +7,13 @@ from typing import Dict, Optional
 
 import simplejson as json  # type: ignore
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
-from src.robots.radio import Radio, radio
+from src.pubsub.radio import Radio, radio
 from src.robots.sliding.main import SlidingWindowTrader
 
 
-class RobotRunStatus(Enum):
+class TaskStatus(Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -24,7 +24,7 @@ class RobotRunStatus(Enum):
 class RobotRun:
     sha: str
     log_channel: str
-    status: RobotRunStatus
+    status: TaskStatus
     robot: SlidingWindowTrader
     aiotask: Optional[asyncio.Task] = None
 
@@ -34,7 +34,7 @@ class RobotRunner:
     robots: Dict[str, RobotRun] = field(default_factory=dict)
 
     def is_running(self, sha: str) -> bool:
-        return sha in self.robots and self.robots[sha].status == RobotRunStatus.RUNNING
+        return sha in self.robots and self.robots[sha].status == TaskStatus.RUNNING
 
     @asynccontextmanager
     async def robot_context(self, robotrun: RobotRun):
@@ -42,24 +42,24 @@ class RobotRunner:
             if not robotrun.aiotask:
                 raise Exception(f"no aiotask for robotrun")
             self.robots[robotrun.sha] = robotrun
-            robotrun.status = RobotRunStatus.RUNNING
+            robotrun.status = TaskStatus.RUNNING
             yield robotrun.aiotask
         finally:
             await self.clean_task(robotrun.sha)
 
-    async def run_forever(self, robotrun: RobotRun):
+    async def run_until_cancelled(self, robotrun: RobotRun):
         while True:
             async with self.robot_context(robotrun) as robot_task:
                 try:
                     await robot_task
                 except asyncio.CancelledError as e:
                     msg = f"{robotrun.sha} cancelled: {e}"
-                    pub.publish_error(message=msg)
-                    raise
+                    log_pub.publish_error(message=msg)
+                    break
                 except Exception as e:
-                    robotrun.status = RobotRunStatus.FAILED
+                    robotrun.status = TaskStatus.FAILED
                     msg = f"start_robot: {robotrun.sha} failed: {e}, restarting.. {traceback.format_exc()}"
-                    pub.publish_error(message=msg)
+                    log_pub.publish_error(message=msg)
                     logger.error(msg)
                     continue
 
@@ -67,7 +67,9 @@ class RobotRunner:
         try:
             robotrun = self.robots.get(sha)
             if not robotrun:
-                logger.info(f"clean_task: {sha} not found")
+                msg = f"clean_task: {sha} not found"
+                logger.error(msg)
+                log_pub.publish_error(msg)
                 return
 
             if robotrun.aiotask:
@@ -79,20 +81,25 @@ class RobotRunner:
 
             del self.robots[sha]
         except Exception as e:
-            logger.error(f"clean_task: {e}")
+            msg = f"clean_task: {e}"
+            logger.error(msg)
+            log_pub.publish_error(msg)
             raise e
 
     def drop_listeners(self, robotrun: RobotRun) -> None:
         if robotrun.robot:
-            radio.drop_listener(pub.DEFAULT_CHANNEL)
-            radio.drop_listener(robotrun.robot.balance_station.pubsub_key)
-            if robotrun.robot.bridge_station:
-                radio.drop_listener(robotrun.robot.bridge_station.pubsub_key)
+            # leader and follower pubs are not really publishing for now
+            radio.drop_listener(log_pub.DEFAULT_CHANNEL)
+            radio.drop_listener(robotrun.robot.balance_pub.pubsub_key)
+            if robotrun.robot.bridge_pub:
+                radio.drop_listener(robotrun.robot.bridge_pub.pubsub_key)
 
     async def cancel_task(self, sha: str) -> None:
         if sha not in self.robots:
-            logger.error(f"cancel_task: {sha} not found")
-            return
+            msg = f"cancel_task: {sha} not found"
+            logger.error(msg)
+            log_pub.publish_error(msg)
+            raise Exception(msg)
         await self.clean_task(sha)
 
     async def cancel_all(self) -> list:
@@ -117,7 +124,7 @@ class RobotRunner:
 
         if stats:
             stats_msg = json.dumps(stats, default=str)
-            pub.publish_stats(message=stats_msg)
+            log_pub.publish_stats(message=stats_msg)
 
 
 robot_runner = RobotRunner()

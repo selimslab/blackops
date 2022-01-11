@@ -5,11 +5,11 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-import src.pubsub.pub as pub
-from src.domain import OrderType
+import src.pubsub.log_pub as log_pub
+from src.domain import OrderType, create_asset_pair
 from src.monitoring import logger
 from src.periodic import SingleTaskContext
-from src.robots.pubs import BalancePub, BookPub
+from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import SlidingWindowConfig
 
@@ -24,8 +24,8 @@ class MarketPrices:
 class MarketWatcher:
     config: SlidingWindowConfig
 
-    book_station: BookPub
-    balance_station: BalancePub
+    book_pub: BookPub
+    balance_pub: BalancePub
 
     prices: MarketPrices = MarketPrices()
 
@@ -36,33 +36,35 @@ class MarketWatcher:
 
         self.order_api = OrderApi(
             config=self.config,
-            pair=self.config.create_pair(),
-            exchange=self.book_station.api_client,
+            pair=create_asset_pair(self.config.input.base, self.config.input.quote),
+            exchange=self.book_pub.api_client,
         )
 
-        self.pair = self.config.create_pair()
+        self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
 
-        self.start_pair = self.config.create_pair()
+        self.start_pair = create_asset_pair(
+            self.config.input.base, self.config.input.quote
+        )
 
     async def watch_books(self) -> None:
-        async for book in self.book_station.stream:
+        async for book in self.book_pub.stream:
             await self.update_prices(book)
 
     async def update_prices(self, book) -> None:
         try:
             async with self.fresh_price_task.refresh_task(self.clear_prices):
-                self.prices.ask = self.book_station.api_client.get_best_ask(book)
+                self.prices.ask = self.book_pub.api_client.get_best_ask(book)
 
-                self.prices.bid = self.book_station.api_client.get_best_bid(book)
+                self.prices.bid = self.book_pub.api_client.get_best_bid(book)
 
-                self.book_station.last_updated = datetime.now()
+                self.book_pub.last_updated = datetime.now()
 
             await asyncio.sleep(0)
 
         except Exception as e:
             msg = f"update_follower_prices: {e}"
             logger.error(msg)
-            pub.publish_error(message=msg)
+            log_pub.publish_error(message=msg)
 
     async def clear_prices(self):
         await asyncio.sleep(self.config.sleep_seconds.clear_prices)
@@ -70,11 +72,11 @@ class MarketWatcher:
 
     async def update_balances(self) -> None:
         try:
-            res: Optional[dict] = self.balance_station.balances
+            res: Optional[dict] = self.balance_pub.balances
             if not res:
                 return
 
-            balances = self.book_station.api_client.parse_account_balance(
+            balances = self.book_pub.api_client.parse_account_balance(
                 res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
@@ -93,7 +95,7 @@ class MarketWatcher:
         except Exception as e:
             msg = f"update_balances: {e}"
             logger.error(msg)
-            pub.publish_error(message=msg)
+            log_pub.publish_error(message=msg)
             raise e
 
     def can_buy(self, price) -> bool:
@@ -127,6 +129,6 @@ class MarketWatcher:
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance
-            self.pair.base.free -= self.config.base_step_qty
+            self.pair.base.free -= qty
             return order_log
         return None

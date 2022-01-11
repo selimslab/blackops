@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import AsyncGenerator, Dict, Optional, Union
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.monitoring import logger
@@ -20,7 +20,7 @@ class StatsPub(PublisherBase):
     pass
 
 
-stats_pub = StatsPub(pubsub_key=pub.DEFAULT_CHANNEL)
+stats_pub = StatsPub(pubsub_key=log_pub.DEFAULT_CHANNEL)
 
 
 @dataclass
@@ -29,7 +29,7 @@ class BalancePub(PublisherBase):
     last_updated = datetime.now()
     balances: Optional[dict] = None
 
-    async def watch_balance(self):
+    async def ask_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
             self.balances = res
@@ -46,7 +46,7 @@ class BookPub(PublisherBase):
     books_seen: int = 0
     last_updated = datetime.now()
 
-    async def watch_books(self):
+    async def consume_stream(self):
         if not self.stream:
             raise ValueError("No stream")
         if not self.api_client:

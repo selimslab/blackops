@@ -4,7 +4,7 @@ from typing import Callable
 from aiohttp.client_exceptions import ClientConnectionError
 from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 
 
@@ -80,7 +80,7 @@ async def reconnecting_binance_generator(generator_factory: Callable):
             # for example a KeyError
             msg = f"Binance stream lost: {e}"
             logger.error(msg)
-            pub.publish_error(message=msg)
+            log_pub.publish_error(message=msg)
             raise e
 
 

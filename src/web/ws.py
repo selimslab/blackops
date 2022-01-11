@@ -9,7 +9,7 @@ from websockets.exceptions import (
     WebSocketException,
 )
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 
 

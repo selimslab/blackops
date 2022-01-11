@@ -4,12 +4,12 @@ from datetime import datetime
 from decimal import Decimal, getcontext
 from typing import Any, Optional
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 from src.numberops import one_bps_higher, one_bps_lower, round_decimal
 from src.periodic import SingleTaskContext, periodic
+from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
-from src.robots.pubs import BalancePub, BookPub
 from src.robots.sliding.market import MarketWatcher
 from src.stgs.sliding.config import SlidingWindowConfig
 
@@ -33,10 +33,10 @@ class Targets:
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
 
-    leader_station: BookPub
-    follower_station: BookPub
-    balance_station: BalancePub
-    bridge_station: Optional[BookPub] = None
+    leader_pub: BookPub
+    follower_pub: BookPub
+    balance_pub: BalancePub
+    bridge_pub: Optional[BookPub] = None
 
     current_step: Decimal = Decimal("0")
 
@@ -50,8 +50,8 @@ class SlidingWindowTrader(RobotBase):
 
         self.follower = MarketWatcher(
             config=self.config,
-            book_station=self.follower_station,
-            balance_station=self.balance_station,
+            book_pub=self.follower_pub,
+            balance_pub=self.balance_pub,
         )
 
     async def run(self) -> None:
@@ -76,46 +76,40 @@ class SlidingWindowTrader(RobotBase):
             ),
         ]
 
-        if self.bridge_station:
+        if self.bridge_pub:
             aws.append(self.watch_bridge_books())
 
         await asyncio.gather(*aws)
 
     async def watch_leader_books(self) -> None:
-        async for book in self.leader_station.stream:
+        async for book in self.leader_pub.stream:
             await self.decide(book)
 
     async def decide(self, book) -> None:
         async with self.fresh_price_task.refresh_task(self.clear_targets):
             self.calculate_window(book)
-            self.leader_station.last_updated = datetime.now()
+            self.leader_pub.last_updated = datetime.now()
             await self.should_transact()
 
     async def watch_bridge_books(self) -> None:
-        if not self.bridge_station:
-            raise Exception("no bridge_station")
+        if not self.bridge_pub:
+            raise Exception("no bridge_pub")
 
-        async for book in self.bridge_station.stream:
+        async for book in self.bridge_pub.stream:
             if book:
-                self.bridge_station.last_updated = datetime.now()
-                self.targets.bridge = self.bridge_station.api_client.get_mid(book)
+                self.bridge_pub.last_updated = datetime.now()
+                self.targets.bridge = self.bridge_pub.api_client.get_mid(book)
 
     async def clear_targets(self):
-        # theo are valid for max 200ms
         await asyncio.sleep(self.config.sleep_seconds.clear_prices)
-        self.targets.maker.buy = None
-        self.targets.maker.sell = None
-
-        self.targets.taker.buy = None
-        self.targets.taker.sell = None
+        self.targets = Targets()
 
     def calculate_window(self, book: dict) -> None:
-        """Update theo_buy and theo_sell"""
         if not book:
             return
 
         try:
-            mid = self.leader_station.api_client.get_mid(book)
+            mid = self.leader_pub.api_client.get_mid(book)
 
             if not mid:
                 return
@@ -140,30 +134,24 @@ class SlidingWindowTrader(RobotBase):
         except Exception as e:
             msg = f"calculate_window: {e}"
             logger.error(msg)
-            pub.publish_error(message=msg)
+            log_pub.publish_error(message=msg)
 
     async def should_transact(self) -> None:
-        if self.can_short():
-            price = self.get_short_price()
-            if price:
-                await self.follower.short(price)
+        self.update_step()
+
+        sell_price = self.get_short_price()
+        if sell_price:
+            await self.follower.short(sell_price)
 
         if self.can_long():
-            price = self.get_long_price()
-            if price:
-                await self.follower.long(price)
+            buy_price = self.get_long_price()
+            if buy_price:
+                await self.follower.long(buy_price)
 
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
-    # def update_base_qty(self, mid):
-    #     self.config.base_step_qty = round_decimal(
-    #         self.config.input.quote_step_qty / mid
-    #     )
-
     def can_long(self) -> bool:
-        self.update_step()
-
         prices_ok = bool(
             self.follower.prices.ask
             and self.targets.taker.buy
@@ -190,24 +178,11 @@ class SlidingWindowTrader(RobotBase):
             and self.targets.maker.buy
             and self.targets.taker.buy < ask <= self.targets.maker.buy
         ):
-
             return one_bps_lower(ask)
         elif ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
             return self.targets.taker.buy
         else:
             return None
-
-    def can_short(self) -> bool:
-        self.update_step()
-
-        prices_ok = bool(
-            self.follower.prices.bid
-            and self.targets.taker.sell
-            and self.targets.maker.sell
-        )
-        balance_ok = self.follower.pair.base.free >= self.config.base_step_qty
-
-        return prices_ok and balance_ok
 
     def get_short_price(self) -> Optional[Decimal]:
         """
@@ -216,8 +191,6 @@ class SlidingWindowTrader(RobotBase):
         if bid >= targets.taker.sell:
             sell order at bid
         """
-        if not self.can_short():
-            return None
 
         bid = self.follower.prices.bid
 
@@ -248,14 +221,14 @@ class SlidingWindowTrader(RobotBase):
             "prices": {
                 "binance": {
                     "targets": asdict(self.targets),
-                    "last update": self.leader_station.last_updated.time(),
-                    "books seen": self.leader_station.books_seen,
+                    "last update": self.leader_pub.last_updated.time(),
+                    "books seen": self.leader_pub.books_seen,
                 },
                 "btcturk": {
                     "bid": self.follower.prices.bid,
                     "ask": self.follower.prices.ask,
-                    "last update": self.follower_station.last_updated.time(),
-                    "books seen": self.follower_station.books_seen,
+                    "last update": self.follower_pub.last_updated.time(),
+                    "books seen": self.follower_pub.books_seen,
                 },
             },
             "balances": {
@@ -283,11 +256,11 @@ class SlidingWindowTrader(RobotBase):
             },
         }
 
-        if self.bridge_station:
+        if self.bridge_pub:
             stats["bridge"] = {
                 "exchange": self.config.input.bridge_exchange,
                 "quote": self.targets.bridge,
-                "last update": self.bridge_station.last_updated,
+                "last update": self.bridge_pub.last_updated,
             }
 
         stats["config"] = self.config_dict

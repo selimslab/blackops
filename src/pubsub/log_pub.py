@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from src.monitoring import logger
-from src.pubsub.client import pusher_client
+from src.pubsub.pusher_client import pusher_client
 
 DEFAULT_CHANNEL = "f7299bf"
 

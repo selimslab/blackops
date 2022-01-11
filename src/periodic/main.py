@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 
 

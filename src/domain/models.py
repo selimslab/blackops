@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
 
@@ -25,16 +24,20 @@ class Asset(BaseModel):
         return self.free + self.locked
 
 
-@dataclass
-class AssetPair:
+class AssetPair(BaseModel):
     base: Asset
     quote: Asset
 
-    def __post_init__(self):
-        self.symbol: AssetPairSymbol = self.base.symbol + self.quote.symbol
+    @property
+    def symbol(self):
+        return self.base.symbol + self.quote.symbol
 
     def __str__(self):
         return f"{self.base}_{self.quote}"
+
+
+def create_asset_pair(base: AssetSymbol, quote: AssetSymbol) -> AssetPair:
+    return AssetPair(base=Asset(symbol=base), quote=Asset(symbol=quote))
 
 
 OrderId = int

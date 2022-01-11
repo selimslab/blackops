@@ -3,7 +3,7 @@ import datetime as dt
 import pprint
 from contextlib import asynccontextmanager
 
-from src.domain import Asset, AssetPair
+from src.domain import Asset, AssetPair, create_asset_pair
 from src.environment import apiKey, apiSecret
 from src.exchanges.btcturk.real.main import BtcturkApiClient
 
@@ -63,7 +63,7 @@ async def test_submit_limit_order(api_client):
         quantity=10,
         price=1,
         order_type="sell",
-        pair=AssetPair(Asset(symbol="XRP"), Asset(symbol="USDT")),
+        pair=create_asset_pair("XRP", "USDT"),
     )
     pprint.pprint(res)
 
@@ -99,7 +99,7 @@ async def test_bt_api():
         # await test_get_account_balance(api_client)
 
         res = api_client.get_ticker(
-            pair=AssetPair(Asset(symbol="ETH"), Asset(symbol="USDT"))
+            pair=create_asset_pair("ETH", "USDT"),
         )
         print(res)
 

@@ -1,36 +1,34 @@
 import asyncio
-import concurrent.futures
-import functools
-from datetime import datetime
 from decimal import Decimal
-from pprint import pformat, pprint
 
 import pytest
 import pytest_asyncio
 
+from src.domain import Asset, AssetPair, create_asset_pair
 from src.monitoring import logger
+from src.pubsub.radio import radio
 from src.robots import robot_api
 from src.robots.factory import Robot, robot_factory
-from src.robots.radio import radio
 from src.robots.sliding.main import TargetPrices, Targets
 from src.robots.sliding.market import MarketPrices
+from src.robots.sliding.orders import OrdersDelivered
 from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
 
-async def get_config():
+async def create_config():
     stg_in = StrategyInput(base="ETH", quote="USDT", use_bridge=False)
     config = await strategy_api.create_stg(stg_in)
     return config
 
 
 async def get_robot():
-    return robot_factory.create_robot(await get_config())
+    return robot_factory.create_robot(await create_config())
 
 
 @pytest.mark.asyncio
 async def test_end_to_end():
 
-    config = await get_config()
+    config = await create_config()
 
     res = await strategy_api.get_stg(config.sha)
     assert res.input == config.input
@@ -74,7 +72,8 @@ async def test_end_to_end():
         await asyncio.sleep(0.1)
         assert robot.follower.prices == exp
         await asyncio.sleep(0.2)
-
+        assert robot.follower.prices == exp
+        await asyncio.sleep(0.1)
         assert robot.follower.prices == MarketPrices(bid=None, ask=None)
 
     ###########
@@ -136,6 +135,34 @@ async def test_end_to_end():
     for book, exp in zip(bn_books, expected):
         robot.calculate_window(book)
         assert robot.targets == exp
+
+    # test dummy exchange
+    await robot.balance_pub.ask_balance()
+    await robot.follower.update_balances()
+    assert robot.follower.pair == AssetPair(
+        base=Asset(symbol="ETH", free=Decimal("0"), locked=Decimal("0")),
+        quote=Asset(symbol="USDT", free=Decimal("30000"), locked=Decimal("0")),
+    )
+
+    await robot.follower.long(Decimal(3000))
+    assert robot.follower.order_api.orders_delivered == OrdersDelivered(buy=1, sell=0)
+
+    await robot.balance_pub.ask_balance()
+    await robot.follower.update_balances()
+    assert robot.follower.pair == AssetPair(
+        base=Asset(symbol="ETH", free=Decimal("0.5"), locked=Decimal("0")),
+        quote=Asset(symbol="USDT", free=Decimal("28500.00"), locked=Decimal("0")),
+    )
+
+    await robot.follower.short(Decimal(4000))
+    assert robot.follower.order_api.orders_delivered == OrdersDelivered(buy=1, sell=1)
+
+    await robot.balance_pub.ask_balance()
+    await robot.follower.update_balances()
+    assert robot.follower.pair == AssetPair(
+        base=Asset(symbol="ETH", free=Decimal("0"), locked=Decimal("0")),
+        quote=Asset(symbol="USDT", free=Decimal("30500.00"), locked=Decimal("0")),
+    )
 
     # print(pformat(vars(robot), indent=4, width=1))
 
@@ -282,3 +309,6 @@ def bt_stream():
 
 # if __name__ == "__main__":
 #     asyncio.run(test_serialize())
+
+if __name__ == "__main__":
+    asyncio.run(test_end_to_end())

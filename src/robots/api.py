@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import List
 
-import src.pubsub.pub as pub
+import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 from src.periodic import periodic
 from src.robots.factory import robot_factory
@@ -17,25 +17,28 @@ class RobotApi:
         if robot_runner.is_running(stg.sha):
             raise Exception(f"{stg.sha} already running")
 
-        coros = robot_factory.create_coros(stg)
+        robot = robot_factory.create_robot(stg)
+        coros = robot_factory.create_coros(robot)
         try:
+            # coros are self-healing so if we have an error here, it means a problem
             await asyncio.gather(*coros)
-        except asyncio.CancelledError as e:
-            logger.info(f"{stg.sha} cancelled: {e}")
-            raise
         except Exception as e:
-            msg = f"{stg.sha} failed: {e}"
+            msg = f"{stg.sha} failed: {e}, along with the radios"
             logger.error(msg)
-            pub.publish_message(message=msg)
+            log_pub.publish_message(message=msg)
 
     async def stop_task(self, sha: str):
         await robot_runner.cancel_task(sha)
-        pub.publish_message(message=f"{sha} stopped")
+        msg = f"{sha} stopped"
+        logger.info(msg)
+        log_pub.publish_message(message=msg)
         return sha
 
     async def stop_all_tasks(self) -> List[str]:
         stopped = await robot_runner.cancel_all()
-        pub.publish_message(message=f"{stopped} stopped")
+        msg = f"{stopped} stopped"
+        logger.info(msg)
+        log_pub.publish_message(message=msg)
         return stopped
 
     def get_tasks(self) -> List[str]:

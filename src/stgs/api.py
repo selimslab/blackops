@@ -61,7 +61,7 @@ class StrategyAPI:
 
     async def create_stg(self, stg: StrategyInput) -> StrategyConfig:
 
-        pair = AssetPair(Asset(symbol=stg.base), Asset(symbol=stg.quote))
+        pair = AssetPair(base=Asset(symbol=stg.base), quote=Asset(symbol=stg.quote))
 
         ticker = await self.get_ticker(pair)
 
