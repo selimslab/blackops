@@ -71,7 +71,7 @@ class BtcturkApiClient(BtcturkBase):
         return headers
 
     async def activate_rate_limit(self) -> None:
-        with self.rate_limit_lock:
+        async with self.rate_limit_lock:
             await self._close_session()
             await self.create_session_if_not_exists()
             await asyncio.sleep(self.rate_limit_seconds)
