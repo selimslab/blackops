@@ -37,10 +37,6 @@ class BtcturkApiClient(BtcturkBase):
     def __post_init__(self):
         self.headers = self._get_headers()
 
-    async def create_session_if_not_exists(self):
-        if not self.session:
-            self.session = aiohttp.ClientSession()
-
     def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
 
@@ -190,7 +186,8 @@ class BtcturkApiClient(BtcturkBase):
 
         params = {"pairSymbol": pair.symbol}
         uri = update_url_query_params(self.open_orders_url, params)
-        await self.create_session_if_not_exists()
+        if not self.session:
+            self.session = aiohttp.ClientSession()
         return await self._http(uri, self.session.get)
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:

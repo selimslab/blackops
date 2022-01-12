@@ -5,6 +5,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
+import aiohttp
+
 from src.domain import Asset
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
@@ -27,11 +29,9 @@ class BtcturkBase(ExchangeAPIClientBase):
     async def activate_rate_limit(self) -> None:
         async with self.rate_limit_lock:
             await self._close_session()
-            await self.create_session_if_not_exists()
+            if not self.session:
+                self.session = aiohttp.ClientSession()
             await asyncio.sleep(sleep_seconds.rate_limit_seconds)
-
-    async def create_session_if_not_exists(self):
-        pass
 
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:

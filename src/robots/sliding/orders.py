@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -103,13 +104,13 @@ class OrderApi:
                         return order_log
                 return None
             except Exception as e:
-                msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}]"
+                msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
                 logger.info(msg)
                 log_pub.publish_error(message=msg)
                 return None
 
     @staticmethod
     def parse_order_id(order_log: dict):
-        if not order_log:
-            return None
-        return order_log.get("data", {}).get("id")
+        data = order_log.get("data", {})
+        if data:
+            return data.get("id")

@@ -103,7 +103,8 @@ class RobotRunner:
 
     async def cancel_all(self) -> list:
         stopped_shas = []
-        for sha in self.robots:
+        shas = list(self.robots.keys())
+        for sha in shas:
             await self.cancel_task(sha)
             stopped_shas.append(sha)
 
