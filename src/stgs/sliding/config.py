@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -27,14 +28,13 @@ class Credits(BaseModel):
 class SlidingWindowConfig(StrategyConfigBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
-    reference_price: Decimal = Decimal(0)
-
-    base_step_qty: Decimal = Decimal(0)
-
     credits: Credits = Credits()
 
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
+
+    base_step_qty: Decimal = Decimal(0)
+    base_step_qty_reference_price: Decimal = Decimal(0)
 
     input: SlidingWindowInput
 
@@ -51,12 +51,9 @@ class SlidingWindowConfig(StrategyConfigBase):
         self.credits.taker = taker_fee_bps + self.input.margin_bps
         self.credits.step = 2 * self.credits.taker / self.input.max_step
 
-        self.set_ticker_params()
-
-    def set_ticker_params(self):
-        self.base_step_qty = round_decimal(
-            self.input.quote_step_qty / self.reference_price
-        )
+    def set_base_step_qty(self, price: Decimal) -> Decimal:
+        self.base_step_qty_reference_price = price
+        return round_decimal(self.input.quote_step_qty / price)
 
     def is_valid_exchanges(self):
         if self.leader_exchange != ExchangeType.BINANCE:

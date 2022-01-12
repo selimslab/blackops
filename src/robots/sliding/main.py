@@ -87,12 +87,6 @@ class SlidingWindowTrader(RobotBase):
         async for book in gen:
             await self.decide(book)
 
-    async def decide(self, book) -> None:
-        async with self.fresh_price_task.refresh_task(self.clear_targets):
-            self.calculate_window(book)
-            self.leader_pub.last_updated = datetime.now()
-            await self.should_transact()
-
     async def consume_bridge_pub(self) -> None:
         if not self.bridge_pub:
             raise Exception("no bridge_pub")
@@ -104,6 +98,24 @@ class SlidingWindowTrader(RobotBase):
     async def clear_targets(self):
         await asyncio.sleep(SleepSeconds.clear_prices)
         self.targets = Targets()
+
+    async def decide(self, book) -> None:
+        async with self.fresh_price_task.refresh_task(self.clear_targets):
+            self.calculate_window(book)
+            await self.should_transact()
+
+    async def should_transact(self) -> None:
+        sell_price = self.get_short_price()
+        if sell_price:
+            await self.follower.short(sell_price)
+
+        if self.can_long():
+            buy_price = self.get_long_price()
+            if buy_price:
+                await self.follower.long(buy_price)
+
+    def update_step(self):
+        self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
     def calculate_window(self, book: dict) -> None:
         if not book:
@@ -139,21 +151,6 @@ class SlidingWindowTrader(RobotBase):
             msg = f"calculate_window: {e}"
             logger.error(msg)
             log_pub.publish_error(message=msg)
-
-    async def should_transact(self) -> None:
-        self.update_step()
-
-        sell_price = self.get_short_price()
-        if sell_price:
-            await self.follower.short(sell_price)
-
-        if self.can_long():
-            buy_price = self.get_long_price()
-            if buy_price:
-                await self.follower.long(buy_price)
-
-    def update_step(self):
-        self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
     def can_long(self) -> bool:
         prices_ok = bool(
