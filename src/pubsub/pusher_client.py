@@ -10,6 +10,6 @@ try:
         cluster="eu",
         ssl=True,
     )
-except ConnectionError as e:
+except Exception as e:
     # logger.info(f"pusher: {e}")
     pass
