@@ -110,7 +110,8 @@ class OrderApi:
                 return None
 
     @staticmethod
-    def parse_order_id(order_log: dict):
+    def parse_order_id(order_log: dict)->Optional[OrderId]:
         data = order_log.get("data", {})
         if data:
             return data.get("id")
+        return None

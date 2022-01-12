@@ -81,7 +81,7 @@ async def test_get_account_balance(api_client):
 
 async def test_bt_api():
     async with create_api_client() as api_client:
-        # await test_submit_limit_order(api_client)
+        await test_submit_limit_order(api_client)
 
         # await test_get_all_orders(api_client, "XRPUSDT")
 
@@ -98,10 +98,10 @@ async def test_bt_api():
 
         # await test_get_account_balance(api_client)
 
-        res = api_client.get_ticker(
-            pair=create_asset_pair("ETH", "USDT"),
-        )
-        print(res)
+        # res = api_client.get_ticker(
+        #     pair=create_asset_pair("ETH", "USDT"),
+        # )
+        # print(res)
 
 
 async def test_rate_limit():
