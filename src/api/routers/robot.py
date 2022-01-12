@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from src.api.auth import auth
 from src.robots import robot_api
+from src.robots.runner import robot_runner
 from src.stgs import strategy_api
 
 router = APIRouter(dependencies=[Depends(auth)])
@@ -23,6 +24,8 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
     5. View logs on the home page
     """
     stg = await strategy_api.get_stg(sha)
+    if robot_runner.is_running(stg.sha):
+        raise Exception(f"{stg.sha} already running")
     background_tasks.add_task(robot_api.run_task, stg)
     return JSONResponse(content={"message": f"started strategy {sha}"})
 

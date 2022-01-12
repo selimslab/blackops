@@ -73,6 +73,9 @@ class MarketWatcher:
     def clear_prices(self):
         self.prices = MarketPrices()
 
+    def clear_balance(self):
+        self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
+
     async def update_balances(self) -> None:
         try:
             res: Optional[dict] = self.balance_pub.balances
@@ -83,13 +86,16 @@ class MarketWatcher:
                 res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
-            base_balances: dict = balances[self.pair.base.symbol]
-            self.pair.base.free = Decimal(base_balances["free"])
-            self.pair.base.locked = Decimal(base_balances["locked"])
+            async with self.fresh_price_task.stopwatch(
+                self.clear_balance, sleep_seconds.clear_balance
+            ):
+                base_balances: dict = balances[self.pair.base.symbol]
+                self.pair.base.free = Decimal(base_balances["free"])
+                self.pair.base.locked = Decimal(base_balances["locked"])
 
-            quote_balances: dict = balances[self.pair.quote.symbol]
-            self.pair.quote.free = Decimal(quote_balances["free"])
-            self.pair.quote.locked = Decimal(quote_balances["locked"])
+                quote_balances: dict = balances[self.pair.quote.symbol]
+                self.pair.quote.free = Decimal(quote_balances["free"])
+                self.pair.quote.locked = Decimal(quote_balances["locked"])
 
             if not self.start_balances_saved:
                 self.start_pair = copy.deepcopy(self.pair)

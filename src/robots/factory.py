@@ -96,7 +96,7 @@ class RobotFactory:
 
         balance_coro = self.get_balance_coro(robot)
         if balance_coro:
-            balance_coro = self.get_balance_coro(robot)
+            coros.append(balance_coro)
 
         bridge_coro = self.get_bridge_coro(robot)
         if bridge_coro:
