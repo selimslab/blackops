@@ -6,7 +6,7 @@ from typing import Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import OrderType, create_asset_pair
-from src.environment import SleepSeconds
+from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.periodic import SingleTaskContext
 from src.pubsub import create_book_consumer_generator
@@ -66,7 +66,7 @@ class MarketWatcher:
             log_pub.publish_error(message=msg)
 
     async def clear_prices(self):
-        await asyncio.sleep(SleepSeconds.clear_prices)
+        await asyncio.sleep(sleep_seconds.clear_prices)
         self.prices = MarketPrices()
 
     async def update_balances(self) -> None:

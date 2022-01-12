@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from src.domain import Asset
-from src.environment import SleepSeconds
+from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 
@@ -22,13 +22,13 @@ class BtcturkBase(ExchangeAPIClientBase):
     async def timed_order_context(self):
         async with self.order_lock:
             yield
-            await asyncio.sleep(SleepSeconds.wait_between_orders)
+            await asyncio.sleep(sleep_seconds.wait_between_orders)
 
     async def activate_rate_limit(self) -> None:
         async with self.rate_limit_lock:
             await self._close_session()
             await self.create_session_if_not_exists()
-            await asyncio.sleep(SleepSeconds.rate_limit_seconds)
+            await asyncio.sleep(sleep_seconds.rate_limit_seconds)
 
     async def create_session_if_not_exists(self):
         pass
@@ -121,7 +121,7 @@ class BtcturkBase(ExchangeAPIClientBase):
         order_ids = [i for i in order_ids if i]
         for order_id in order_ids:
             await self.cancel_order(order_id)
-            await asyncio.sleep(SleepSeconds.wait_between_orders)
+            await asyncio.sleep(sleep_seconds.wait_between_orders)
 
     @staticmethod
     def parse_submit_order_response(res: dict):

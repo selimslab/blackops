@@ -65,9 +65,7 @@ class StrategyAPI:
 
         ticker = await self.get_ticker(pair)
 
-        stg_config = StrategyConfig(input=stg)
-
-        stg_config.set_base_step_qty(ticker)
+        stg_config = StrategyConfig(input=stg, base_step_qty_reference_price=ticker)
 
         if not await async_redis_client.hexists(self.STG_MAP, stg_config.sha):
             await async_redis_client.hset(

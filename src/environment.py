@@ -18,6 +18,8 @@ class SleepSeconds(BaseModel):
     rate_limit_seconds: float = 4
 
 
+sleep_seconds = SleepSeconds()
+
 @dataclass
 class Environment:
     pass

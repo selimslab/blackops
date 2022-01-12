@@ -11,7 +11,7 @@ import aiohttp
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair
-from src.environment import SleepSeconds
+from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
 from src.web import update_url_query_params
@@ -76,7 +76,7 @@ class BtcturkApiClient(BtcturkBase):
                 if res.status == 429:
                     await self.activate_rate_limit()
                     msg = f"""got 429 too many requests, 
-                    will wait {SleepSeconds.rate_limit_seconds} seconds before sending new requests"""
+                    will wait {sleep_seconds.rate_limit_seconds} seconds before sending new requests"""
                     raise Exception(msg)
                 else:
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"

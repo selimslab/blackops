@@ -8,7 +8,7 @@ import simplejson as json  # type: ignore
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
-from src.environment import SleepSeconds
+from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 from src.stgs.sliding.config import SlidingWindowConfig
@@ -43,7 +43,7 @@ class OrderApi:
     prev_order_count: int = 0
 
     @asynccontextmanager
-    async def timeout_lock(self, timeout=SleepSeconds.wait_between_orders):
+    async def timeout_lock(self, timeout=sleep_seconds.wait_between_orders):
         async with self.order_lock:
             yield
             await asyncio.sleep(timeout)

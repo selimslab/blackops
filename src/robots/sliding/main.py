@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import BPS
-from src.environment import SleepSeconds
+from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import one_bps_higher, one_bps_lower, round_decimal
 from src.periodic import SingleTaskContext, periodic
@@ -69,11 +69,11 @@ class SlidingWindowTrader(RobotBase):
             self.follower.consume_pub(),
             periodic(
                 self.follower.update_balances,
-                SleepSeconds.update_balances / 6,
+                sleep_seconds.update_balances / 6,
             ),
             periodic(
                 self.follower.order_api.cancel_all_open_orders,
-                SleepSeconds.cancel_all_open_orders,
+                sleep_seconds.cancel_all_open_orders,
             ),
         ]
 
@@ -96,7 +96,7 @@ class SlidingWindowTrader(RobotBase):
             self.targets.bridge = self.bridge_pub.api_client.get_mid(book)
 
     async def clear_targets(self):
-        await asyncio.sleep(SleepSeconds.clear_prices)
+        await asyncio.sleep(sleep_seconds.clear_prices)
         self.targets = Targets()
 
     async def decide(self, book) -> None:
@@ -123,9 +123,9 @@ class SlidingWindowTrader(RobotBase):
 
         try:
             mid = self.leader_pub.api_client.get_mid(book)
-
             if not mid:
                 return
+
 
             if self.config.input.use_bridge:
                 if self.targets.bridge:
@@ -133,11 +133,14 @@ class SlidingWindowTrader(RobotBase):
                 else:
                     return None
 
+            print(mid, self.targets)
+
             self.update_step()
 
             slide_down = self.config.credits.step * self.current_step * mid * BPS
 
             mid -= slide_down
+
 
             maker_credit = self.config.credits.maker * mid * BPS
             self.targets.maker.buy = mid - maker_credit

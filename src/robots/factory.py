@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Coroutine, List, Optional
 
 import src.pubsub.log_pub as log_pub
-from src.environment import SleepSeconds
+from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.periodic import periodic
 from src.pubsub.pubs import BalancePub, BookPub, StatsPub, stats_pub
@@ -40,7 +40,7 @@ class RobotFactory:
     def get_balance_coro(self, robot: SlidingWindowTrader) -> Optional[Coroutine]:
         task_coro = periodic(
             robot.balance_pub.ask_balance,
-            SleepSeconds.update_balances,
+            sleep_seconds.update_balances,
         )
         return radio.create_station_if_not_exists(robot.balance_pub, task_coro)
 
@@ -53,7 +53,7 @@ class RobotFactory:
         return radio.create_station_if_not_exists(robot.follower_pub, task_coro)
 
     def get_stats_coro(self, robot: SlidingWindowTrader) -> Optional[Coroutine]:
-        task_coro = periodic(robot_runner.broadcast_stats, SleepSeconds.broadcast_stats)
+        task_coro = periodic(robot_runner.broadcast_stats, sleep_seconds.broadcast_stats)
         return radio.create_station_if_not_exists(stats_pub, task_coro)
 
     def get_bridge_coro(self, robot: SlidingWindowTrader) -> Optional[Coroutine]:
