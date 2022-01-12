@@ -12,10 +12,10 @@ load_dotenv()
 class SleepSeconds(BaseModel):
     update_balances: float = 0.72
     cancel_all_open_orders: float = 0.8
-    broadcast_stats: float = 0.2
-    clear_prices: float = 0.4
+    broadcast_stats: float = 1
+    clear_prices: float = 0.45
     wait_between_orders: float = 0.16
-    wait_between_orders_for_robots: float = 0.12
+    wait_between_orders_for_robots: float = 0.11
     rate_limit_seconds: float = 4
 
 
