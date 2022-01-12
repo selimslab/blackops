@@ -16,7 +16,7 @@ async def get_all_tasks():
     return robot_api.get_tasks()
 
 
-@router.put("/{sha}")
+@router.post("/{sha}")
 async def run_task(sha: str, background_tasks: BackgroundTasks):
     """
     When you give a sha, this will run the given strategy
@@ -32,12 +32,13 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
     return JSONResponse(content={"message": f"started strategy {sha}"})
 
 
-@router.put("/")
+@router.post("/")
 async def run_multiple(shas: List[str], background_tasks: BackgroundTasks):
     for sha in shas:
         stg = await strategy_api.get_stg(sha)
         if robot_runner.is_running(stg.sha):
-            raise Exception(f"{stg.sha} already running")
+            # logger.info(f"{stg.sha} already running")
+            continue
         background_tasks.add_task(robot_api.run_task, stg)
 
     return JSONResponse(content={"message": f"started {shas}"})
