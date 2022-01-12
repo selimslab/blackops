@@ -9,7 +9,7 @@ from src.domain import BPS
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import one_bps_higher, one_bps_lower, round_decimal
-from src.periodic import SingleTaskContext, periodic
+from src.periodic import StopwatchContext, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
@@ -45,7 +45,7 @@ class SlidingWindowTrader(RobotBase):
 
     targets: Targets = field(default_factory=Targets)
 
-    fresh_price_task: SingleTaskContext = field(default_factory=SingleTaskContext)
+    fresh_price_task: StopwatchContext = field(default_factory=StopwatchContext)
 
     def __post_init__(self) -> None:
         self.follower = MarketWatcher(
@@ -87,11 +87,18 @@ class SlidingWindowTrader(RobotBase):
 
         gen = create_book_consumer_generator(self.bridge_pub)
         async for book in gen:
-            self.targets.bridge = self.bridge_pub.api_client.get_mid(book)
+            mid = self.bridge_pub.api_client.get_mid(book)
+            if mid:
+                async with self.fresh_price_task.stopwatch(
+                    self.clear_bridge, sleep_seconds.clear_prices
+                ):
+                    self.targets.bridge = mid
 
-    async def clear_targets(self):
-        await asyncio.sleep(sleep_seconds.clear_prices)
+    def clear_targets(self):
         self.targets = Targets()
+
+    def clear_bridge(self):
+        self.targets.bridge = None
 
     async def consume_leader_pub(self) -> None:
         gen = create_book_consumer_generator(self.leader_pub)
@@ -99,9 +106,13 @@ class SlidingWindowTrader(RobotBase):
             await self.decide(book)
 
     async def decide(self, book) -> None:
-        async with self.fresh_price_task.refresh_task(self.clear_targets):
-            self.calculate_window(book)
-            await self.should_transact()
+        mid = self.get_mid(book)
+        if mid:
+            async with self.fresh_price_task.stopwatch(
+                self.clear_targets, sleep_seconds.clear_prices
+            ):
+                self.update_window(mid)
+                await self.should_transact()
 
     async def should_transact(self) -> None:
         sell_price = self.get_short_price()
@@ -116,22 +127,30 @@ class SlidingWindowTrader(RobotBase):
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
-    def calculate_window(self, book: dict) -> None:
+    def get_mid(self, book: dict) -> Optional[Decimal]:
         if not book:
-            return
-
+            return None
         try:
             mid = self.leader_pub.api_client.get_mid(book)
             if not mid:
-                return
+                return None
 
             if self.config.input.use_bridge:
                 if self.targets.bridge:
                     mid *= self.targets.bridge
-                else:
-                    self.targets = Targets()
-                    return None
+                    return mid
 
+            return None
+
+        except Exception as e:
+            msg = f"get_mid: {e}"
+            logger.error(msg)
+            log_pub.publish_error(message=msg)
+            return None
+
+    def update_window(self, mid: Decimal) -> None:
+
+        try:
             self.update_step()
 
             slide_down = self.config.credits.step * self.current_step * mid * BPS

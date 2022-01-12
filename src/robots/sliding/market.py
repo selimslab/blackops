@@ -8,7 +8,7 @@ import src.pubsub.log_pub as log_pub
 from src.domain import OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.periodic import SingleTaskContext
+from src.periodic import StopwatchContext, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.sliding.orders import OrderApi
@@ -31,7 +31,7 @@ class MarketWatcher:
     prices: MarketPrices = field(default_factory=MarketPrices)
 
     start_balances_saved: bool = False
-    fresh_price_task: SingleTaskContext = field(default_factory=SingleTaskContext)
+    fresh_price_task: StopwatchContext = field(default_factory=StopwatchContext)
 
     def __post_init__(self):
 
@@ -54,9 +54,14 @@ class MarketWatcher:
 
     async def update_prices(self, book) -> None:
         try:
-            async with self.fresh_price_task.refresh_task(self.clear_prices):
-                self.prices.ask = self.book_pub.api_client.get_best_ask(book)
-                self.prices.bid = self.book_pub.api_client.get_best_bid(book)
+            ask = self.book_pub.api_client.get_best_ask(book)
+            bid = self.book_pub.api_client.get_best_bid(book)
+            if ask and bid:
+                async with self.fresh_price_task.stopwatch(
+                    self.clear_prices, sleep_seconds.clear_prices
+                ):
+                    self.prices.ask = ask
+                    self.prices.bid = bid
 
             await asyncio.sleep(0)
 
@@ -65,8 +70,7 @@ class MarketWatcher:
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
-    async def clear_prices(self):
-        await asyncio.sleep(sleep_seconds.clear_prices)
+    def clear_prices(self):
         self.prices = MarketPrices()
 
     async def update_balances(self) -> None:

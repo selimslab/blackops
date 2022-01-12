@@ -18,8 +18,8 @@ class SlidingWindowInput(StrategyInputBase):
     bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
 
     use_bridge = False
-    testnet = True
-    use_real_money = False
+    testnet = False
+    use_real_money = True
 
     max_step: Decimal = Decimal(10)
 

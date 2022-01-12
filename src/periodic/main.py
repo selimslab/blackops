@@ -18,14 +18,16 @@ async def periodic(func: Callable, sleep_seconds: float) -> None:
 
 
 @dataclass
-class SingleTaskContext:
+class StopwatchContext:
     task: Optional[asyncio.Task] = None
 
+    async def call_after(self, func: Callable, seconds: float) -> None:
+        await asyncio.sleep(seconds)
+        func()
+
     @asynccontextmanager
-    async def refresh_task(self, func):
-        try:
-            if self.task:
-                self.task.cancel()
-            yield
-        finally:
-            self.task = asyncio.create_task(func())
+    async def stopwatch(self, func: Callable, seconds: float):
+        if self.task:
+            self.task.cancel()
+        self.task = asyncio.create_task(self.call_after(func, seconds))
+        yield
