@@ -42,7 +42,7 @@ class OrderApi:
     prev_order_count: int = 0
 
     @asynccontextmanager
-    async def timeout_lock(self, timeout=0.1):
+    async def timeout_lock(self, timeout=0.12):
         async with self.order_lock:
             yield
             await asyncio.sleep(timeout)
