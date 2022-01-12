@@ -82,7 +82,6 @@ class SlidingWindowTrader(RobotBase):
 
         await asyncio.gather(*aws)
 
-
     async def consume_bridge_pub(self) -> None:
         if not self.bridge_pub:
             raise Exception("no bridge_pub")
