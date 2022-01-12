@@ -126,7 +126,6 @@ class SlidingWindowTrader(RobotBase):
             if not mid:
                 return
 
-
             if self.config.input.use_bridge:
                 if self.targets.bridge:
                     mid *= self.targets.bridge
@@ -140,7 +139,6 @@ class SlidingWindowTrader(RobotBase):
             slide_down = self.config.credits.step * self.current_step * mid * BPS
 
             mid -= slide_down
-
 
             maker_credit = self.config.credits.maker * mid * BPS
             self.targets.maker.buy = mid - maker_credit

@@ -34,7 +34,7 @@ class SlidingWindowConfig(StrategyConfigBase):
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
     base_step_qty: Decimal = Decimal(0)
-    base_step_qty_reference_price: Decimal 
+    base_step_qty_reference_price: Decimal
 
     input: SlidingWindowInput
 
@@ -55,7 +55,9 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     def set_base_step_qty(self, price: Decimal) -> None:
         self.base_step_qty_reference_price = price
-        self.base_step_qty = round_decimal(self.input.quote_step_qty / self.base_step_qty_reference_price )
+        self.base_step_qty = round_decimal(
+            self.input.quote_step_qty / self.base_step_qty_reference_price
+        )
 
     def is_valid_exchanges(self):
         if self.leader_exchange != ExchangeType.BINANCE:
@@ -67,7 +69,7 @@ class SlidingWindowConfig(StrategyConfigBase):
     def is_valid_params(self):
         if self.base_step_qty <= 0:
             raise Exception("base_step_qty must be greater than 0")
-            
+
     def is_valid(self):
         self.is_valid_exchanges()
         return self.input.is_valid()

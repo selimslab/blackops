@@ -53,7 +53,9 @@ class RobotFactory:
         return radio.create_station_if_not_exists(robot.follower_pub, task_coro)
 
     def get_stats_coro(self, robot: SlidingWindowTrader) -> Optional[Coroutine]:
-        task_coro = periodic(robot_runner.broadcast_stats, sleep_seconds.broadcast_stats)
+        task_coro = periodic(
+            robot_runner.broadcast_stats, sleep_seconds.broadcast_stats
+        )
         return radio.create_station_if_not_exists(stats_pub, task_coro)
 
     def get_bridge_coro(self, robot: SlidingWindowTrader) -> Optional[Coroutine]:

@@ -20,6 +20,7 @@ class SleepSeconds(BaseModel):
 
 sleep_seconds = SleepSeconds()
 
+
 @dataclass
 class Environment:
     pass

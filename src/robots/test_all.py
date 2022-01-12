@@ -14,11 +14,13 @@ from src.robots.sliding.market import MarketPrices
 from src.robots.sliding.orders import OrdersDelivered
 from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
+
 async def create_config_w_bridge():
     stg_in = StrategyInput(base="ATOM", quote="TRY", bridge="USDT", use_bridge=True)
     config = await strategy_api.create_stg(stg_in)
     return config
-    
+
+
 async def create_config():
     stg_in = StrategyInput(base="ETH", quote="USDT")
     config = await strategy_api.create_stg(stg_in)

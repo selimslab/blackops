@@ -16,7 +16,7 @@ class SlidingWindowInput(StrategyInputBase):
 
     bridge: Optional[str] = Field(default=None, example="USDT")
     bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
-    
+
     use_bridge = False
     testnet = True
     use_real_money = False
