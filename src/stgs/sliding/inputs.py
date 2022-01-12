@@ -33,7 +33,7 @@ class SlidingWindowInput(StrategyInputBase):
 
     def is_valid_mode(self):
         if self.testnet == self.use_real_money:
-            return Exception("test or real money?")
+            raise Exception("test or real money?")
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:

@@ -32,6 +32,8 @@ class BtcturkApiClient(BtcturkBase):
 
     name: str = "btcturk_real"
 
+    session: Optional[aiohttp.ClientSession] = None
+
     def __post_init__(self):
         self.headers = self._get_headers()
 
@@ -97,7 +99,8 @@ class BtcturkApiClient(BtcturkBase):
          'requestFund': '0'},
         """
         try:
-            await self.create_session_if_not_exists()
+            if not self.session:
+                self.session = aiohttp.ClientSession()
             return await self._http(self.balance_url, self.session.get)
         except Exception as e:
             raise e
@@ -132,7 +135,8 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if self.order_lock.locked():
                 return None
-            await self.create_session_if_not_exists()
+            if not self.session:
+                self.session = aiohttp.ClientSession()
             async with self.timed_order_context():
                 async with self.session.post(
                     self.order_url, headers=self._get_headers(), json=params
@@ -196,7 +200,8 @@ class BtcturkApiClient(BtcturkBase):
             if self.order_lock.locked():
                 return None
 
-            await self.create_session_if_not_exists()
+            if not self.session:
+                self.session = aiohttp.ClientSession()
             async with self.timed_order_context():
                 uri = update_url_query_params(self.order_url, {"id": order_id})
                 return await self._http(uri, self.session.delete)
@@ -232,4 +237,5 @@ class BtcturkApiClient(BtcturkBase):
     #     get_data(orderbook_url)
 
     async def _close_session(self):
-        await self.session.close()
+        if self.session:
+            await self.session.close()
