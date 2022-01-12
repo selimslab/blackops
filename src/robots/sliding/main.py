@@ -82,10 +82,6 @@ class SlidingWindowTrader(RobotBase):
 
         await asyncio.gather(*aws)
 
-    async def consume_leader_pub(self) -> None:
-        gen = create_book_consumer_generator(self.leader_pub)
-        async for book in gen:
-            await self.decide(book)
 
     async def consume_bridge_pub(self) -> None:
         if not self.bridge_pub:
@@ -98,6 +94,11 @@ class SlidingWindowTrader(RobotBase):
     async def clear_targets(self):
         await asyncio.sleep(sleep_seconds.clear_prices)
         self.targets = Targets()
+
+    async def consume_leader_pub(self) -> None:
+        gen = create_book_consumer_generator(self.leader_pub)
+        async for book in gen:
+            await self.decide(book)
 
     async def decide(self, book) -> None:
         async with self.fresh_price_task.refresh_task(self.clear_targets):
@@ -130,9 +131,8 @@ class SlidingWindowTrader(RobotBase):
                 if self.targets.bridge:
                     mid *= self.targets.bridge
                 else:
+                    self.targets = Targets()
                     return None
-
-            print(mid, self.targets)
 
             self.update_step()
 
