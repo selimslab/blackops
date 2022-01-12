@@ -8,6 +8,7 @@ import simplejson as json  # type: ignore
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
+from src.environment import SleepSeconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 from src.stgs.sliding.config import SlidingWindowConfig
@@ -42,7 +43,7 @@ class OrderApi:
     prev_order_count: int = 0
 
     @asynccontextmanager
-    async def timeout_lock(self, timeout=0.12):
+    async def timeout_lock(self, timeout=SleepSeconds.wait_between_orders):
         async with self.order_lock:
             yield
             await asyncio.sleep(timeout)
@@ -81,11 +82,11 @@ class OrderApi:
 
         async with self.timeout_lock():
             try:
-                # if side == OrderType.BUY and self.open_orders.buy:
-                #     await self.exchange.cancel_order(self.open_orders.buy.pop())
+                if side == OrderType.BUY and self.open_orders.buy:
+                    await self.exchange.cancel_order(self.open_orders.buy.pop())
 
-                # if side == OrderType.SELL and self.open_orders.sell:
-                #     await self.exchange.cancel_order(self.open_orders.sell.pop())
+                if side == OrderType.SELL and self.open_orders.sell:
+                    await self.exchange.cancel_order(self.open_orders.sell.pop())
 
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
                     self.pair, side.value, float(price), float(qty)
@@ -95,10 +96,10 @@ class OrderApi:
                     if order_id:
                         if side == OrderType.BUY:
                             self.orders_delivered.buy += 1
-                            # self.open_orders.buy.append(order_id)
+                            self.open_orders.buy.append(order_id)
                         else:
                             self.orders_delivered.sell += 1
-                            # self.open_orders.sell.append(order_id)
+                            self.open_orders.sell.append(order_id)
                         return order_log
                 return None
             except Exception as e:

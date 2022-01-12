@@ -16,6 +16,6 @@ class StrategyInputBase(BaseModel):
 
 
 class StrategyConfigBase(BaseModel):
-    input: StrategyInputBase
-    type: StrategyType
     sha: str = ""
+    type: StrategyType
+    input: StrategyInputBase

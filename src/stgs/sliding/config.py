@@ -18,13 +18,6 @@ from src.stgs.base import StrategyConfigBase, StrategyType
 from .inputs import SlidingWindowInput
 
 
-class SleepSeconds(BaseModel):
-    update_balances: float = 0.72
-    cancel_all_open_orders: float = 1.2
-    broadcast_stats: float = 0.4
-    clear_prices: float = 0.4
-
-
 class Credits(BaseModel):
     maker: Decimal = Decimal(0)
     taker: Decimal = Decimal(0)
@@ -32,8 +25,6 @@ class Credits(BaseModel):
 
 
 class SlidingWindowConfig(StrategyConfigBase):
-    input: SlidingWindowInput
-
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     reference_price: Decimal = Decimal(0)
@@ -42,10 +33,10 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     credits: Credits = Credits()
 
-    sleep_seconds: SleepSeconds = Field(default_factory=SleepSeconds)
-
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
+
+    input: SlidingWindowInput
 
     def __init__(self, **data):
         super().__init__(**data)

@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import BPS
+from src.environment import SleepSeconds
 from src.monitoring import logger
 from src.numberops import one_bps_higher, one_bps_lower, round_decimal
 from src.periodic import SingleTaskContext, periodic
@@ -68,11 +69,11 @@ class SlidingWindowTrader(RobotBase):
             self.follower.consume_pub(),
             periodic(
                 self.follower.update_balances,
-                self.config.sleep_seconds.update_balances / 6,
+                SleepSeconds.update_balances / 6,
             ),
             periodic(
                 self.follower.order_api.cancel_all_open_orders,
-                self.config.sleep_seconds.cancel_all_open_orders,
+                SleepSeconds.cancel_all_open_orders,
             ),
         ]
 

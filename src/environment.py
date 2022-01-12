@@ -1,10 +1,27 @@
 import os
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 from src.monitoring import logger
 
 load_dotenv()
+
+
+class SleepSeconds(BaseModel):
+    update_balances: float = 0.72
+    cancel_all_open_orders: float = 1.2
+    broadcast_stats: float = 1
+    clear_prices: float = 0.4
+    wait_between_orders: float = 0.12
+    rate_limit_seconds: float = 4
+
+
+@dataclass
+class Environment:
+    pass
+
 
 debug = os.getenv("DEBUG", "true").lower() in ("true", "1", "t")
 

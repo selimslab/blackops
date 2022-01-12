@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from src.domain import Asset
+from src.environment import SleepSeconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 
@@ -14,7 +15,6 @@ from src.monitoring import logger
 class BtcturkBase(ExchangeAPIClientBase):
 
     rate_limit_lock = asyncio.Lock()
-    rate_limit_seconds: int = 4
 
     order_lock = asyncio.Lock()
 
@@ -22,13 +22,13 @@ class BtcturkBase(ExchangeAPIClientBase):
     async def timed_order_context(self):
         async with self.order_lock:
             yield
-            await asyncio.sleep(0.16)
+            await asyncio.sleep(SleepSeconds.wait_between_orders)
 
     async def activate_rate_limit(self) -> None:
         async with self.rate_limit_lock:
             await self._close_session()
             await self.create_session_if_not_exists()
-            await asyncio.sleep(self.rate_limit_seconds)
+            await asyncio.sleep(SleepSeconds.rate_limit_seconds)
 
     async def create_session_if_not_exists(self):
         pass
@@ -121,7 +121,7 @@ class BtcturkBase(ExchangeAPIClientBase):
         order_ids = [i for i in order_ids if i]
         for order_id in order_ids:
             await self.cancel_order(order_id)
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(SleepSeconds.wait_between_orders)
 
     @staticmethod
     def parse_submit_order_response(res: dict):
@@ -136,32 +136,3 @@ class BtcturkBase(ExchangeAPIClientBase):
 
     async def _close_session(self):
         pass
-
-
-def test_btc_base():
-
-    book = {
-        "AO": [
-            {"P": "15.3"},
-            {"P": "14.9"},
-            {"P": "15.5"},
-            {"P": "15.7"},
-        ],
-        "BO": [
-            {"P": "15.3"},
-            {"P": "14.9"},
-            {"P": "15.5"},
-            {"P": "15.7"},
-        ],
-    }
-    client = BtcturkBase()
-
-    ask = client.get_best_ask(book)
-    assert ask == Decimal("14.9")
-
-    bid = client.get_best_bid(book)
-    assert bid == Decimal("15.7")
-
-
-if __name__ == "__main__":
-    test_btc_base()
