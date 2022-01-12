@@ -16,9 +16,11 @@ from src.monitoring import logger
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
-    rate_limit_lock : asyncio.Lock = field(default_factory=asyncio.Lock) 
+    rate_limit_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-    order_lock : asyncio.Lock = field(default_factory=asyncio.Lock) 
+    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    session: Optional[aiohttp.ClientSession] = None
 
     @asynccontextmanager
     async def timed_order_context(self):

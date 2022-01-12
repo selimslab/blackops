@@ -37,7 +37,7 @@ class OrderApi:
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 
-    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock) 
+    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     open_orders: OpenOrders = field(default_factory=OpenOrders)
 
     orders_delivered: OrdersDelivered = field(default_factory=OrdersDelivered)

@@ -9,9 +9,9 @@ import simplejson as json  # type: ignore
 
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
+from src.pubsub.pubs import pub_factory
 from src.pubsub.radio import Radio, radio
 from src.robots.sliding.main import SlidingWindowTrader
-from src.pubsub.pubs import pub_factory
 from src.streams.factory import stream_factory
 
 

@@ -27,8 +27,8 @@ class TargetPrices:
 
 @dataclass
 class Targets:
-    maker: TargetPrices = field(default_factory= TargetPrices)
-    taker: TargetPrices = field(default_factory= TargetPrices)
+    maker: TargetPrices = field(default_factory=TargetPrices)
+    taker: TargetPrices = field(default_factory=TargetPrices)
     bridge: Optional[Decimal] = None
 
 
@@ -43,7 +43,7 @@ class SlidingWindowTrader(RobotBase):
 
     current_step: Decimal = Decimal("0")
 
-    targets: Targets = field(default_factory= Targets)
+    targets: Targets = field(default_factory=Targets)
 
     fresh_price_task: SingleTaskContext = field(default_factory=SingleTaskContext)
 

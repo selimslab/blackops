@@ -4,10 +4,9 @@ from datetime import datetime
 from typing import AsyncGenerator, Dict, Optional, Union
 
 import src.pubsub.log_pub as log_pub
-from src.monitoring import logger
-
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
+from src.monitoring import logger
 from src.streams.factory import stream_factory
 
 
