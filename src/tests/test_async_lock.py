@@ -12,7 +12,7 @@ class Test:
     async def timed_order_context(self, lock):
         async with lock:
             yield
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.16)
 
     async def order(self, i):
         lock = self.order_lock
@@ -26,11 +26,11 @@ async def robot(name, t, sleep):
     await asyncio.sleep(sleep)
     name = f"r-{name}"
     ok = 0
-    for i in range(20):
+    for i in range(5):
         res = await t.order(i)
         if res == i:
             ok += 1
-        await asyncio.sleep(random.randint(1, 3) * 0.1)
+        await asyncio.sleep(0.1) # random.randint(1, 2) * 0.1
     print(name, ok)
 
 

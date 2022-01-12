@@ -43,7 +43,7 @@ class OrderApi:
     prev_order_count: int = 0
 
     @asynccontextmanager
-    async def timeout_lock(self, timeout=sleep_seconds.wait_between_orders):
+    async def timeout_lock(self, timeout=sleep_seconds.wait_between_orders_for_robots):
         async with self.order_lock:
             yield
             await asyncio.sleep(timeout)
@@ -56,7 +56,8 @@ class OrderApi:
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if not res:
                 return None
-
+            
+            
             (
                 sell_ids,
                 buy_ids,
