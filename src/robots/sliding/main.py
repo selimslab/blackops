@@ -102,7 +102,7 @@ class SlidingWindowTrader(RobotBase):
             self.targets.bridge = self.bridge_pub.api_client.get_mid(book)
 
     async def clear_targets(self):
-        await asyncio.sleep(self.config.sleep_seconds.clear_prices)
+        await asyncio.sleep(SleepSeconds.clear_prices)
         self.targets = Targets()
 
     def calculate_window(self, book: dict) -> None:
@@ -115,8 +115,11 @@ class SlidingWindowTrader(RobotBase):
             if not mid:
                 return
 
-            if self.targets.bridge:
-                mid *= self.targets.bridge
+            if self.config.input.use_bridge:
+                if self.targets.bridge:
+                    mid *= self.targets.bridge
+                else:
+                    return None
 
             self.update_step()
 
