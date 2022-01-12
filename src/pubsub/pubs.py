@@ -35,6 +35,7 @@ class BalancePub(PublisherBase):
             self.balances = res
             self.last_updated = datetime.now()
 
+
 @dataclass
 class BookPub(PublisherBase):
 
