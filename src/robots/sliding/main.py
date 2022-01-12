@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import Decimal, getcontext
 from typing import Any, Optional
@@ -27,8 +27,8 @@ class TargetPrices:
 
 @dataclass
 class Targets:
-    maker: TargetPrices = TargetPrices()
-    taker: TargetPrices = TargetPrices()
+    maker: TargetPrices = field(default_factory= TargetPrices)
+    taker: TargetPrices = field(default_factory= TargetPrices)
     bridge: Optional[Decimal] = None
 
 
@@ -43,10 +43,9 @@ class SlidingWindowTrader(RobotBase):
 
     current_step: Decimal = Decimal("0")
 
-    market_prices: Targets = Targets()
-    targets: Targets = Targets()
+    targets: Targets = field(default_factory= Targets)
 
-    fresh_price_task: SingleTaskContext = SingleTaskContext()
+    fresh_price_task: SingleTaskContext = field(default_factory=SingleTaskContext)
 
     def __post_init__(self) -> None:
         self.follower = MarketWatcher(

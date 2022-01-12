@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import AsyncGenerator, Dict, Optional, Union
 
 import src.pubsub.log_pub as log_pub
+from src.monitoring import logger
+
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
-from src.monitoring import logger
 from src.streams.factory import stream_factory
 
 
@@ -79,17 +80,17 @@ class PubFactory:
             log_pub.publish_message(msg)
             return self.PUBS[key]  # type: ignore
 
-        stream = stream_factory.create_stream_if_not_exists(ex_type, symbol)
+        stream = stream_factory.create_stream_if_not_exists(ex_type, network, symbol)
 
         api_client = api_client_factory.create_api_client_if_not_exists(
             ex_type, network
         )
 
-        watcher = BookPub(pubsub_key=key, api_client=api_client, stream=stream)
+        pub = BookPub(pubsub_key=key, api_client=api_client, stream=stream)
 
-        self.PUBS[key] = watcher
+        self.PUBS[key] = pub
 
-        return watcher
+        return pub
 
     def create_balance_pub_if_not_exists(
         self, ex_type: ExchangeType, network: NetworkType
@@ -106,11 +107,11 @@ class PubFactory:
             ex_type, network
         )
 
-        watcher = BalancePub(pubsub_key=key, exchange=api_client)
+        pub = BalancePub(pubsub_key=key, exchange=api_client)
 
-        self.PUBS[key] = watcher
+        self.PUBS[key] = pub
 
-        return watcher
+        return pub
 
 
 pub_factory = PubFactory()

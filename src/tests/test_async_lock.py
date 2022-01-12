@@ -1,12 +1,12 @@
 import asyncio
 import random
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class Test:
-    order_lock = asyncio.Lock()
+    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock) 
 
     @asynccontextmanager
     async def timed_order_context(self, lock):

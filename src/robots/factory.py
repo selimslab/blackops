@@ -52,7 +52,7 @@ class RobotFactory:
         task_coro = robot.follower_pub.consume_stream()
         return radio.create_station_if_not_exists(robot.follower_pub, task_coro)
 
-    def get_stats_coro(self, robot: SlidingWindowTrader) -> Optional[Coroutine]:
+    def get_stats_coro(self) -> Optional[Coroutine]:
         task_coro = periodic(
             robot_runner.broadcast_stats, sleep_seconds.broadcast_stats
         )
@@ -64,10 +64,10 @@ class RobotFactory:
             return radio.create_station_if_not_exists(robot.bridge_pub, task_coro)
         return None
 
-    def get_robot_coro(self, sha: str, robot: SlidingWindowTrader) -> Coroutine:
+    def get_robot_coro(self, robot: SlidingWindowTrader) -> Coroutine:
         robotrun = RobotRun(
-            sha=sha,
-            log_channel=sha,
+            sha=robot.config.sha,
+            log_channel=robot.config.sha,
             robot=robot,
             status=TaskStatus.PENDING,
             aiotask=None,
@@ -83,7 +83,7 @@ class RobotFactory:
 
         coros = []
 
-        trader_coro = self.get_robot_coro(robot.config.sha, robot)
+        trader_coro = self.get_robot_coro(robot)
         coros.append(trader_coro)
 
         leader_pub_coro = self.get_leader_coro(robot)
@@ -102,7 +102,7 @@ class RobotFactory:
         if bridge_coro:
             coros.append(bridge_coro)
 
-        stats_coro = self.get_stats_coro(robot)
+        stats_coro = self.get_stats_coro()
         if stats_coro:
             coros.append(stats_coro)
 

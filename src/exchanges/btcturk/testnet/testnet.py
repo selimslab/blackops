@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from src.domain import Asset, AssetPair
@@ -11,7 +11,7 @@ from src.monitoring import logger
 class BtcturkApiClientTestnet(BtcturkBase):
     name: str = "btcturk_testnet"
 
-    dummy_exchange: BtcturkDummy = BtcturkDummy()
+    dummy_exchange: BtcturkDummy = field(default_factory=BtcturkDummy)
 
     async def submit_limit_order(
         self, pair: AssetPair, order_type: str, price: float, quantity: float

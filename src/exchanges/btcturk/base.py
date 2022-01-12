@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Tuple
@@ -16,9 +16,9 @@ from src.monitoring import logger
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
-    rate_limit_lock = asyncio.Lock()
+    rate_limit_lock : asyncio.Lock = field(default_factory=asyncio.Lock) 
 
-    order_lock = asyncio.Lock()
+    order_lock : asyncio.Lock = field(default_factory=asyncio.Lock) 
 
     @asynccontextmanager
     async def timed_order_context(self):

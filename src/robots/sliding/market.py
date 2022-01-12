@@ -1,6 +1,6 @@
 import asyncio
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
@@ -28,10 +28,10 @@ class MarketWatcher:
     book_pub: BookPub
     balance_pub: BalancePub
 
-    prices: MarketPrices = MarketPrices()
+    prices: MarketPrices = field(default_factory=MarketPrices)
 
     start_balances_saved: bool = False
-    fresh_price_task: SingleTaskContext = SingleTaskContext()
+    fresh_price_task: SingleTaskContext = field(default_factory=SingleTaskContext)
 
     def __post_init__(self):
 

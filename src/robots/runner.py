@@ -11,6 +11,8 @@ import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 from src.pubsub.radio import Radio, radio
 from src.robots.sliding.main import SlidingWindowTrader
+from src.pubsub.pubs import pub_factory
+from src.streams.factory import stream_factory
 
 
 class TaskStatus(Enum):
@@ -123,6 +125,10 @@ class RobotRunner:
             stats[robotrun.sha] = stat_dict
 
         if stats:
+            stats["stations"] = {
+                "streams": list(stream_factory.STREAMS.keys()),
+                "pubs": list(pub_factory.PUBS.keys()),
+            }
             stats_msg = json.dumps(stats, default=str)
             log_pub.publish_stats(message=stats_msg)
 

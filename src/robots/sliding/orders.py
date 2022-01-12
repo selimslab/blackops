@@ -37,10 +37,10 @@ class OrderApi:
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 
-    order_lock: asyncio.Lock = asyncio.Lock()
-    open_orders: OpenOrders = OpenOrders()
+    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock) 
+    open_orders: OpenOrders = field(default_factory=OpenOrders)
 
-    orders_delivered: OrdersDelivered = OrdersDelivered()
+    orders_delivered: OrdersDelivered = field(default_factory=OrdersDelivered)
     prev_order_count: int = 0
 
     @asynccontextmanager

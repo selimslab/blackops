@@ -13,6 +13,7 @@ from src.pubsub.pubs import PublisherBase
 class Station:
     pubsub_channel: str
     log_channel: str
+    coro: Coroutine
     listeners: int = 0
     aiotask: Optional[asyncio.Task] = None
 
@@ -25,13 +26,15 @@ class Radio:
     async def station_context(self, station: Station):
         try:
             if not station.aiotask:
-                raise Exception(f"no aiotask set for station")
+                station.aiotask = asyncio.create_task(station.coro)
             self.stations[station.pubsub_channel] = station
             yield station.aiotask
         finally:
             self.clean_station(station)
 
     def clean_station(self, station: Station):
+        if station.aiotask:
+            station.aiotask.cancel()
         del self.stations[station.pubsub_channel]
 
     async def run_until_cancelled(self, station: Station):
@@ -74,7 +77,7 @@ class Radio:
                 pubsub_channel=producer.pubsub_key,
                 log_channel=log_pub.DEFAULT_CHANNEL,
                 listeners=1,
-                aiotask=asyncio.create_task(coro),
+                coro=coro,
             )
             return self.run_until_cancelled(station)
 
