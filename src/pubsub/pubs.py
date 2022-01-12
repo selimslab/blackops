@@ -74,7 +74,9 @@ class PubFactory:
 
         key = "_".join((ex_type.value, network.value, symbol))
         if key in self.PUBS:
-            logger.info(f"Reusing book watcher for {ex_type}")
+            msg = f"Reusing book pub for {ex_type, network, symbol}"
+            logger.info(msg)
+            log_pub.publish_message(msg)
             return self.PUBS[key]  # type: ignore
 
         stream = stream_factory.create_stream_if_not_exists(ex_type, symbol)
@@ -95,7 +97,9 @@ class PubFactory:
         key = "_".join((ex_type.value, network.value, "balance"))
 
         if key in self.PUBS:
-            logger.info(f"Reusing balance watcher for {ex_type}")
+            msg = f"Reusing balance pub for {ex_type, network}"
+            logger.info(msg)
+            log_pub.publish_message(msg)
             return self.PUBS[key]  # type: ignore
 
         api_client = api_client_factory.create_api_client_if_not_exists(
