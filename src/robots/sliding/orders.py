@@ -56,8 +56,7 @@ class OrderApi:
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if not res:
                 return None
-            
-            
+
             (
                 sell_ids,
                 buy_ids,

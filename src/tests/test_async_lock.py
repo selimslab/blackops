@@ -30,7 +30,7 @@ async def robot(name, t, sleep):
         res = await t.order(i)
         if res == i:
             ok += 1
-        await asyncio.sleep(0.1) # random.randint(1, 2) * 0.1
+        await asyncio.sleep(0.1)  # random.randint(1, 2) * 0.1
     print(name, ok)
 
 
