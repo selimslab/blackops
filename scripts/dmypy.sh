@@ -1,2 +1,2 @@
-dmypy run blackops/*.py
+dmypy run src/*.py
  

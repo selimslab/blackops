@@ -5,8 +5,8 @@ RUN apt-get update && apt-get -y install curl
 # ENV POETRY_VERSION 1.1.11
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py  | python - 
 
-COPY poetry.lock pyproject.toml /blackops/
-WORKDIR /blackops
+COPY poetry.lock pyproject.toml /src/
+WORKDIR /src
 
 ENV PATH="/root/.local/bin/poetry:${PATH}"
 
@@ -17,12 +17,12 @@ RUN /root/.local/bin/poetry install --no-dev
 
 # RUN source .venv/bin/activate
 
-COPY . /blackops/
-WORKDIR /blackops
+COPY . /src/
+WORKDIR /src
 
 EXPOSE 80
 
 ENV REDIS_URL=redis://redis_server:6379
 
-ENTRYPOINT [ "bash","/blackops/docker-entrypoint.sh" ]
-CMD ["python", "-m", "uvicorn", "blackops.api.main:app", "--host", "0.0.0.0", "--port", "80", "--workers", "1"]
+ENTRYPOINT [ "bash","/src/docker-entrypoint.sh" ]
+CMD ["python", "-m", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "80", "--workers", "1"]
