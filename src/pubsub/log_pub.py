@@ -18,15 +18,24 @@ def add_time(message):
 
 
 def publish_error(message, channel: str = DEFAULT_CHANNEL):
-    pusher_client.trigger(channel, ERROR, add_time(message))
+    try:
+        pusher_client.trigger(channel, ERROR, add_time(message))
+    except Exception as e:
+        pass
 
 
 def publish_message(message, channel: str = DEFAULT_CHANNEL):
-    pusher_client.trigger(channel, MESSAGE, add_time(message))
+    try:
+        pusher_client.trigger(channel, MESSAGE, add_time(message))
+    except Exception as e:
+        pass
 
 
 def publish_stats(message, channel: str = DEFAULT_CHANNEL):
-    pusher_client.trigger(channel, STATS, add_time(message))
+    try:
+        pusher_client.trigger(channel, STATS, add_time(message))
+    except Exception as e:
+        pass
 
 
 if __name__ == "__main__":

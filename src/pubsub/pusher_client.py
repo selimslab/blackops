@@ -11,5 +11,4 @@ try:
         ssl=True,
     )
 except Exception as e:
-    # logger.info(f"pusher: {e}")
-    pass
+    logger.info(f"pusher: {e}")
