@@ -30,26 +30,20 @@ class OrdersDelivered:
 
 
 @dataclass
-class OrderLocks:
-    buy: asyncio.Lock = asyncio.Lock()
-    sell: asyncio.Lock = asyncio.Lock()
-
-
-@dataclass
 class OrderApi:
     config: SlidingWindowConfig
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 
-    order_locks: OrderLocks = OrderLocks()
+    order_lock: asyncio.Lock = asyncio.Lock()
     open_orders: OpenOrders = OpenOrders()
 
     orders_delivered: OrdersDelivered = OrdersDelivered()
     prev_order_count: int = 0
 
     @asynccontextmanager
-    async def timeout_lock(self, lock, timeout=0.1):
-        async with lock:
+    async def timeout_lock(self, timeout=0.1):
+        async with self.order_lock:
             yield
             await asyncio.sleep(timeout)
 
@@ -60,17 +54,17 @@ class OrderApi:
 
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if not res:
-                res = {}
+                return None
 
             (
-                self.open_orders.sell,
-                self.open_orders.buy,
+                sell_ids,
+                buy_ids,
             ) = self.exchange.parse_open_orders(res)
 
-            if self.open_orders.buy:
-                await self.exchange.cancel_multiple_orders(self.open_orders.buy)
-            if self.open_orders.sell:
-                await self.exchange.cancel_multiple_orders(self.open_orders.sell)
+            if buy_ids:
+                await self.exchange.cancel_multiple_orders(buy_ids)
+            if sell_ids:
+                await self.exchange.cancel_multiple_orders(sell_ids)
 
             self.prev_order_count = self.orders_delivered.total
 
@@ -82,28 +76,30 @@ class OrderApi:
     async def send_order(
         self, side: OrderType, price: Decimal, qty: Decimal
     ) -> Optional[dict]:
-        if side == OrderType.BUY:
-            lock = self.order_locks.buy
-        else:
-            lock = self.order_locks.sell
-
-        if lock.locked():
+        if self.order_lock.locked():
             return None
 
-        async with self.timeout_lock(lock):
+        async with self.timeout_lock():
             try:
+                # if side == OrderType.BUY and self.open_orders.buy:
+                #     await self.exchange.cancel_order(self.open_orders.buy.pop())
+
+                # if side == OrderType.SELL and self.open_orders.sell:
+                #     await self.exchange.cancel_order(self.open_orders.sell.pop())
+
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
                     self.pair, side.value, float(price), float(qty)
                 )
-                if not order_log:
-                    return None
-                order_id = self.parse_order_id(order_log)
-                if order_id:
-                    if side == OrderType.BUY:
-                        self.orders_delivered.buy += 1
-                    else:
-                        self.orders_delivered.sell += 1
-                    return order_log
+                if order_log:
+                    order_id = self.parse_order_id(order_log)
+                    if order_id:
+                        if side == OrderType.BUY:
+                            self.orders_delivered.buy += 1
+                            # self.open_orders.buy.append(order_id)
+                        else:
+                            self.orders_delivered.sell += 1
+                            # self.open_orders.sell.append(order_id)
+                        return order_log
                 return None
             except Exception as e:
                 msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}]"

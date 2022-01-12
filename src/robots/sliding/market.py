@@ -1,7 +1,6 @@
 import asyncio
 import copy
 from dataclasses import dataclass
-from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -9,6 +8,7 @@ import src.pubsub.log_pub as log_pub
 from src.domain import OrderType, create_asset_pair
 from src.monitoring import logger
 from src.periodic import SingleTaskContext
+from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import SlidingWindowConfig
@@ -46,18 +46,16 @@ class MarketWatcher:
             self.config.input.base, self.config.input.quote
         )
 
-    async def watch_books(self) -> None:
-        async for book in self.book_pub.stream:
+    async def consume_pub(self) -> None:
+        gen = create_book_consumer_generator(self.book_pub)
+        async for book in gen:
             await self.update_prices(book)
 
     async def update_prices(self, book) -> None:
         try:
             async with self.fresh_price_task.refresh_task(self.clear_prices):
                 self.prices.ask = self.book_pub.api_client.get_best_ask(book)
-
                 self.prices.bid = self.book_pub.api_client.get_best_bid(book)
-
-                self.book_pub.last_updated = datetime.now()
 
             await asyncio.sleep(0)
 

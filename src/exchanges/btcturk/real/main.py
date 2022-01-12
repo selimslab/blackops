@@ -1,10 +1,8 @@
-import asyncio
 import base64
 import hashlib
 import hmac
 import time
 import urllib.parse
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Callable, Optional
@@ -33,23 +31,12 @@ class BtcturkApiClient(BtcturkBase):
 
     name: str = "btcturk_real"
 
-    rate_limit_lock = asyncio.Lock()
-    rate_limit_seconds: int = 4
-
-    order_lock = asyncio.Lock()
-
     def __post_init__(self):
         self.headers = self._get_headers()
 
     async def create_session_if_not_exists(self):
         if not self.session:
             self.session = aiohttp.ClientSession()
-
-    @asynccontextmanager
-    async def timed_order_context(self):
-        async with self.order_lock:
-            yield
-            await asyncio.sleep(0.16)
 
     def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
@@ -69,12 +56,6 @@ class BtcturkApiClient(BtcturkBase):
         }
 
         return headers
-
-    async def activate_rate_limit(self) -> None:
-        async with self.rate_limit_lock:
-            await self._close_session()
-            await self.create_session_if_not_exists()
-            await asyncio.sleep(self.rate_limit_seconds)
 
     async def _get(self, uri: str):
         try:

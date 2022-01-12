@@ -5,9 +5,11 @@ from decimal import Decimal, getcontext
 from typing import Any, Optional
 
 import src.pubsub.log_pub as log_pub
+from src.domain import BPS
 from src.monitoring import logger
 from src.numberops import one_bps_higher, one_bps_lower, round_decimal
 from src.periodic import SingleTaskContext, periodic
+from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
 from src.robots.sliding.market import MarketWatcher
@@ -46,8 +48,6 @@ class SlidingWindowTrader(RobotBase):
     fresh_price_task: SingleTaskContext = SingleTaskContext()
 
     def __post_init__(self) -> None:
-        self.config_dict = self.config.dict()
-
         self.follower = MarketWatcher(
             config=self.config,
             book_pub=self.follower_pub,
@@ -64,8 +64,8 @@ class SlidingWindowTrader(RobotBase):
         )
 
         aws: Any = [
-            self.watch_leader_books(),
-            self.follower.watch_books(),
+            self.consume_leader_pub(),
+            self.follower.consume_pub(),
             periodic(
                 self.follower.update_balances,
                 self.config.sleep_seconds.update_balances / 6,
@@ -77,12 +77,13 @@ class SlidingWindowTrader(RobotBase):
         ]
 
         if self.bridge_pub:
-            aws.append(self.watch_bridge_books())
+            aws.append(self.consume_bridge_pub())
 
         await asyncio.gather(*aws)
 
-    async def watch_leader_books(self) -> None:
-        async for book in self.leader_pub.stream:
+    async def consume_leader_pub(self) -> None:
+        gen = create_book_consumer_generator(self.leader_pub)
+        async for book in gen:
             await self.decide(book)
 
     async def decide(self, book) -> None:
@@ -91,14 +92,13 @@ class SlidingWindowTrader(RobotBase):
             self.leader_pub.last_updated = datetime.now()
             await self.should_transact()
 
-    async def watch_bridge_books(self) -> None:
+    async def consume_bridge_pub(self) -> None:
         if not self.bridge_pub:
             raise Exception("no bridge_pub")
 
-        async for book in self.bridge_pub.stream:
-            if book:
-                self.bridge_pub.last_updated = datetime.now()
-                self.targets.bridge = self.bridge_pub.api_client.get_mid(book)
+        gen = create_book_consumer_generator(self.bridge_pub)
+        async for book in gen:
+            self.targets.bridge = self.bridge_pub.api_client.get_mid(book)
 
     async def clear_targets(self):
         await asyncio.sleep(self.config.sleep_seconds.clear_prices)
@@ -119,15 +119,15 @@ class SlidingWindowTrader(RobotBase):
 
             self.update_step()
 
-            step_size = self.config.credits.step * mid * self.current_step
+            slide_down = self.config.credits.step * self.current_step * mid * BPS
 
-            mid -= step_size
+            mid -= slide_down
 
-            maker_credit = self.config.credits.maker * mid
+            maker_credit = self.config.credits.maker * mid * BPS
             self.targets.maker.buy = mid - maker_credit
             self.targets.maker.sell = mid + maker_credit
 
-            taker_credit = self.config.credits.taker * mid
+            taker_credit = self.config.credits.taker * mid * BPS
             self.targets.taker.buy = mid - taker_credit
             self.targets.taker.sell = mid + taker_credit
 
@@ -262,7 +262,5 @@ class SlidingWindowTrader(RobotBase):
                 "quote": self.targets.bridge,
                 "last update": self.bridge_pub.last_updated,
             }
-
-        stats["config"] = self.config_dict
 
         return stats

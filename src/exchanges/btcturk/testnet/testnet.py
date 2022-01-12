@@ -17,13 +17,16 @@ class BtcturkApiClientTestnet(BtcturkBase):
         self, pair: AssetPair, order_type: str, price: float, quantity: float
     ) -> Optional[dict]:
         try:
-            res = await self.dummy_exchange.mock_submit_limit_order(
-                pair=pair,
-                order_type=order_type,
-                price=price,
-                quantity=quantity,
-            )
-            return res.dict()
+            if self.order_lock.locked():
+                return None
+            async with self.timed_order_context():
+                res = await self.dummy_exchange.mock_submit_limit_order(
+                    pair=pair,
+                    order_type=order_type,
+                    price=price,
+                    quantity=quantity,
+                )
+                return res.dict()
         except Exception as e:
             logger.error(f"submit_limit_order: {e}")
             raise e

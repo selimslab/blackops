@@ -16,19 +16,14 @@ class SlidingWindowInput(StrategyInputBase):
 
     bridge: Optional[str] = Field(default=None, example="USDT")
     bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
-    use_bridge = True
+    use_bridge = False
 
     testnet = True
     use_real_money = False
 
-    leader_exchange: ExchangeType = ExchangeType.BINANCE
-    follower_exchange: ExchangeType = ExchangeType.BTCTURK
-
     max_step: Decimal = Decimal(10)
 
     quote_step_qty: Decimal = Decimal(1500)
-
-    step_bps: Decimal = Decimal("2.5")
 
     margin_bps: Decimal = Decimal("1")
 
@@ -39,13 +34,6 @@ class SlidingWindowInput(StrategyInputBase):
     def is_valid_mode(self):
         if self.testnet == self.use_real_money:
             return Exception("test or real money?")
-
-    def is_valid_exchanges(self):
-        if self.leader_exchange != ExchangeType.BINANCE:
-            raise ValueError(f"{self.leader_exchange} is not supported")
-
-        if self.follower_exchange != ExchangeType.BTCTURK:
-            raise ValueError(f"{self.follower_exchange} is not supported")
 
     def is_valid_symbols(self):
         if self.base not in ALL_SYMBOLS:
@@ -58,7 +46,7 @@ class SlidingWindowInput(StrategyInputBase):
             raise ValueError(f"{self.base} and {self.quote} cannot be the same")
 
         if self.base not in BTCTURK_TRY_BASES:
-            raise ValueError(f"{self.follower_exchange} has no {self.base} / TRY pair ")
+            raise ValueError(f"{ExchangeType.BTCTURK} has no {self.base} / TRY pair ")
 
     def is_valid_bridge(self):
         if self.use_bridge is False and self.bridge:
@@ -96,20 +84,14 @@ class SlidingWindowInput(StrategyInputBase):
         if self.margin_bps > 3:
             raise Exception("margin_bps must be less than 3")
 
-        if self.step_bps < 1:
-            raise Exception("step_bps must be greater than 1")
-        if self.step_bps > 10:
-            raise Exception("step_bps must be less than 3")
-
         if self.max_step < 1:
             raise Exception("max_step must be greater than 1")
-        if self.max_step > 10:
-            raise Exception("max_step must be less than 10")
+        if self.max_step > 12:
+            raise Exception("max_step must be less than 12")
 
     def is_valid(self):
         self.is_valid_type()
         self.is_valid_mode()
-        self.is_valid_exchanges()
         self.is_valid_symbols()
         self.is_valid_bridge()
         self.is_valid_params()

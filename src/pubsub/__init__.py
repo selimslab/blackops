@@ -1,0 +1,1 @@
+from .consumer import create_book_consumer_generator

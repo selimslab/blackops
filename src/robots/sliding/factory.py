@@ -17,38 +17,37 @@ def sliding_window_factory(config: SlidingWindowConfig):
     network = NetworkType.TESTNET if stg.testnet else NetworkType.REAL
 
     balance_pub = pub_factory.create_balance_pub_if_not_exists(
-        ex_type=ExchangeType(stg.follower_exchange), network=network
+        ex_type=ExchangeType(config.follower_exchange), network=network
     )
+
+    pair = create_asset_pair(stg.base, stg.quote)
+
+    follower_pub = pub_factory.create_book_pub_if_not_exists(
+        ex_type=ExchangeType(config.follower_exchange),
+        network=network,
+        symbol=pair.symbol,  # eth try
+    )
+    if network == NetworkType.TESTNET:
+        follower_pub.api_client.dummy_exchange.add_balance(  # type:ignore
+            Asset(symbol=stg.quote), stg.max_step * stg.quote_step_qty * 2
+        )
 
     bridge_pub = None
     if stg.bridge:
         bridge_pub = pub_factory.create_book_pub_if_not_exists(
             ex_type=ExchangeType(stg.bridge_exchange),
             network=network,
-            symbol=stg.bridge + stg.quote,
+            symbol=stg.bridge + stg.quote,  # usd try
         )
 
-    pair = create_asset_pair(stg.base, stg.quote)
-
-    follower_pub = pub_factory.create_book_pub_if_not_exists(
-        ex_type=ExchangeType(stg.follower_exchange), network=network, symbol=pair.symbol
-    )
-
-    if network == NetworkType.TESTNET:
-        follower_pub.api_client.dummy_exchange.add_balance(  # type:ignore
-            Asset(symbol=stg.quote), stg.max_step * stg.quote_step_qty * 2
-        )
-
-    if stg.bridge:
         leader_pub = pub_factory.create_book_pub_if_not_exists(
-            ex_type=ExchangeType(stg.leader_exchange),
+            ex_type=ExchangeType(config.leader_exchange),
             network=network,
-            symbol=stg.base + stg.quote,
+            symbol=stg.base + stg.bridge,  # btc usd
         )
-
     else:
         leader_pub = pub_factory.create_book_pub_if_not_exists(
-            ex_type=ExchangeType(stg.leader_exchange),
+            ex_type=ExchangeType(config.leader_exchange),
             network=network,
             symbol=pair.symbol,
         )

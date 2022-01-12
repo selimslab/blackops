@@ -62,6 +62,7 @@ async def reconnecting_binance_generator(generator_factory: Callable):
             TimeoutError,
             BinanceWebSocketException,
             BinanceOverflowException,
+            asyncio.TimeoutError,
         ) as e:
             # recover from network errors,
             # for example connection lost

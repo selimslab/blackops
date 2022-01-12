@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -11,6 +12,27 @@ from src.monitoring import logger
 
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
+
+    rate_limit_lock = asyncio.Lock()
+    rate_limit_seconds: int = 4
+
+    order_lock = asyncio.Lock()
+
+    @asynccontextmanager
+    async def timed_order_context(self):
+        async with self.order_lock:
+            yield
+            await asyncio.sleep(0.16)
+
+    async def activate_rate_limit(self) -> None:
+        async with self.rate_limit_lock:
+            await self._close_session()
+            await self.create_session_if_not_exists()
+            await asyncio.sleep(self.rate_limit_seconds)
+
+    async def create_session_if_not_exists(self):
+        pass
+
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:
         if not orders:

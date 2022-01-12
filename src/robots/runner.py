@@ -40,7 +40,7 @@ class RobotRunner:
     async def robot_context(self, robotrun: RobotRun):
         try:
             if not robotrun.aiotask:
-                raise Exception(f"no aiotask for robotrun")
+                robotrun.aiotask = asyncio.create_task(robotrun.robot.run())
             self.robots[robotrun.sha] = robotrun
             robotrun.status = TaskStatus.RUNNING
             yield robotrun.aiotask
@@ -67,9 +67,8 @@ class RobotRunner:
         try:
             robotrun = self.robots.get(sha)
             if not robotrun:
-                msg = f"clean_task: {sha} not found"
+                msg = f"clean_task: {sha} already cancelled"
                 logger.error(msg)
-                log_pub.publish_error(msg)
                 return
 
             if robotrun.aiotask:

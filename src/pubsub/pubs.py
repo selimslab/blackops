@@ -71,7 +71,7 @@ class PubFactory:
         self, ex_type: ExchangeType, network: NetworkType, symbol: str
     ) -> BookPub:
 
-        key = "_".join((ex_type.value, network.value, "book"))
+        key = "_".join((ex_type.value, network.value, symbol))
         if key in self.PUBS:
             logger.info(f"Reusing book watcher for {ex_type}")
             return self.PUBS[key]  # type: ignore
