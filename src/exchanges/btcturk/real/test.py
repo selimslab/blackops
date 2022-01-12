@@ -81,16 +81,14 @@ async def test_get_account_balance(api_client):
 
 async def test_bt_api():
     async with create_api_client() as api_client:
-        await test_submit_limit_order(api_client)
+        # await test_submit_limit_order(api_client)
 
         # await test_get_all_orders(api_client, "XRPUSDT")
 
         # # await test_get_orders_after_an_id(api_client, order_id=5980501563)
 
         # await test_cancel_order(api_client, order_id=5353)
-        # await test_get_open_orders(
-        #     api_client, AssetPair(Asset(symbol="XRP"), Asset(symbol="USDT"))
-        # )
+        await test_get_open_orders(api_client, create_asset_pair("FTM", "TRY"))
 
         # await test_cancel_open_orders(api_client, "USDTTRY")
 

@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -41,7 +42,6 @@ class OrderApi:
     open_orders: OpenOrders = field(default_factory=OpenOrders)
 
     orders_delivered: OrdersDelivered = field(default_factory=OrdersDelivered)
-    prev_order_count: int = 0
 
     @asynccontextmanager
     async def timeout_lock(self, timeout=sleep_seconds.wait_between_orders_for_robots):
@@ -51,24 +51,23 @@ class OrderApi:
 
     async def cancel_all_open_orders(self) -> None:
         try:
-            if self.orders_delivered.total in (0, self.prev_order_count):
-                return
-
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if not res:
                 return None
 
             (
-                sell_ids,
-                buy_ids,
+                sell_orders,
+                buy_orders,
             ) = self.exchange.parse_open_orders(res)
 
-            if buy_ids:
-                await self.exchange.cancel_multiple_orders(buy_ids)
-            if sell_ids:
-                await self.exchange.cancel_multiple_orders(sell_ids)
-
-            self.prev_order_count = self.orders_delivered.total
+            if sell_orders or buy_orders:
+                order_ids = [
+                    x
+                    for lst in itertools.zip_longest(buy_orders, sell_orders)
+                    for x in lst
+                    if x
+                ]
+                await self.exchange.cancel_multiple_orders(order_ids)
 
         except Exception as e:
             msg = f"watch_open_orders: {e}"
@@ -93,6 +92,7 @@ class OrderApi:
                     self.pair, side.value, float(price), float(qty)
                 )
                 if order_log:
+                    # only send result if order delivered
                     order_id = self.parse_order_id(order_log)
                     if order_id:
                         if side == OrderType.BUY:

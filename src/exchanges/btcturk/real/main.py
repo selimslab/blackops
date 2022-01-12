@@ -71,11 +71,14 @@ class BtcturkApiClient(BtcturkBase):
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
                     return await res.json()
-                if res.status == 429:
+                elif res.status == 429:
                     await self.activate_rate_limit()
                     msg = f"""got 429 too many requests, 
                     will wait {sleep_seconds.rate_limit_seconds} seconds before sending new requests"""
                     raise Exception(msg)
+                elif res.status == 400:
+                    msg = f"got 400 bad request, {uri}"
+                    logger.info(msg)
                 else:
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"
                     raise Exception(msg)
