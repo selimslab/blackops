@@ -128,10 +128,10 @@ class RobotRunner:
             stats[robotrun.sha] = stat_dict
 
         if stats:
-            stats["stations"] = {
-                "streams": list(stream_factory.STREAMS.keys()),
-                "pubs": list(pub_factory.PUBS.keys()),
+            stats["radio listeners"] = {
+                key: st.listeners for key, st in radio.stations.items()
             }
+
             stats_msg = json.dumps(stats, default=str)
             log_pub.publish_stats(message=stats_msg)
 
