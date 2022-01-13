@@ -1,5 +1,6 @@
 from typing import List
 
+import starlette.background as bg
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
 
@@ -39,7 +40,8 @@ async def run_multiple(shas: List[str], background_tasks: BackgroundTasks):
         if robot_runner.is_running(stg.sha):
             # logger.info(f"{stg.sha} already running")
             continue
-        background_tasks.add_task(robot_api.run_task, stg)
+        tasks = bg.BackgroundTasks()
+        tasks.add_task(robot_api.run_task, stg)
 
     return JSONResponse(content={"message": f"started {shas}"})
 
