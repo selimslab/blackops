@@ -15,7 +15,7 @@ class Test:
         lock = self.order_lock
         if lock.locked():
             return f"order_in_progress", i
-        async with timer_lock(lock, 0.18):
+        async with timer_lock(lock, 5):
             return i
 
 
@@ -23,7 +23,7 @@ async def robot(name, t, sleep):
     await asyncio.sleep(sleep)
     name = f"r-{name}"
     ok = 0
-    for i in range(20):
+    for i in range(10):
         res = await t.order(i)
         if res == i:
             ok += 1
