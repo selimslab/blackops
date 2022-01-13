@@ -27,6 +27,7 @@ class OpenOrders:
 class OrdersDelivered:
     buy: int = 0
     sell: int = 0
+    prev_total: int = 0
 
     @property
     def total(self):
@@ -55,6 +56,8 @@ class OrderApi:
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
     async def cancel_all_open_orders(self) -> None:
+        if self.orders_delivered.total in (0, self.orders_delivered.prev_total):
+            return None
         try:
             async with async_timeout.timeout(sleep_seconds.cancel_all_open_orders):
                 await self.exchange.cancel_all_open_orders(self.pair)
@@ -64,6 +67,8 @@ class OrderApi:
             msg = f"watch_open_orders: {e}"
             logger.error(msg)
             log_pub.publish_error(message=msg)
+        finally:
+            self.orders_delivered.prev_total = self.orders_delivered.total
 
     async def cancel_previous_order(self, side: OrderType) -> None:
         try:
@@ -109,7 +114,7 @@ class OrderApi:
         self, side: OrderType, price: Decimal, qty: Decimal
     ) -> Optional[dict]:
 
-        await self.cancel_previous_order(side)
+        # await self.cancel_previous_order(side)
 
         if side == OrderType.BUY:
             lock = self.locks.buy

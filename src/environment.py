@@ -21,11 +21,11 @@ class SleepSeconds(BaseModel):
 
     # 300/min total, 10/s
     # 0.2 on average, sell is a priority
-    ex_sell: float = 0.18
-    ex_buy: float = 0.2
+    ex_sell: float = 0.16
+    ex_buy: float = 0.24
 
     update_balances: float = 0.72  # 90/min
-    cancel_all_open_orders: float = 1
+    cancel_all_open_orders: float = 0.6
 
     robot_cancel: float = 0.04
     robot_sell: float = 0.04
