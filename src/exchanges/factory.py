@@ -39,7 +39,6 @@ class ApiClientFactory:
     ) -> ExchangeAPIClientBase:
         key = (ex_type, network)
         if key in self.API_CLIENTS:
-            logger.info(f"reusing api client for {(ex_type, network)}")
             return self.API_CLIENTS[key]
 
         factory_func = self.API_CLIENT_FACTORIES.get(ex_type, {}).get(network)  # type: ignore

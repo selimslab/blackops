@@ -18,9 +18,6 @@ class StreamFactory:
         key = "_".join((ex_type.value, network.value, symbol))
 
         if key in self.STREAMS:
-            msg = f"Reusing stream for {ex_type, network, symbol}"
-            logger.info(msg)
-            log_pub.publish_message(msg)
             return self.STREAMS[key]
 
         if ex_type == ExchangeType.BINANCE:
