@@ -16,12 +16,12 @@ class SleepSeconds(BaseModel):
 
     rate_limit: float = 4
 
-    ex_read: float = 0.18  # 300/min
-    ex_cancel: float = 0.18  # 300/min
+    ex_read: float = 0.19  # 300/min
+    ex_cancel: float = 0.19  # 300/min
 
     # 300/min total, 10/s
     # 0.2 on average, sell is a priority
-    ex_sell: float = 0.16
+    ex_sell: float = 0.19
     ex_buy: float = 0.24
 
     update_balances: float = 0.72  # 90/min
