@@ -112,9 +112,9 @@ class SlidingWindowTrader(RobotBase):
                 await self.should_transact()
 
     async def should_transact(self) -> None:
-        maker_sell = self.get_short_price_maker()
-        if maker_sell:
-            await self.follower.short(maker_sell)
+        # maker_sell = self.get_short_price_maker()
+        # if maker_sell:
+        #     await self.follower.short(maker_sell)
 
         taker_sell = self.get_short_price_taker()
         if taker_sell:
@@ -185,20 +185,6 @@ class SlidingWindowTrader(RobotBase):
 
         return prices_ok and step_ok
 
-    def get_long_price_maker(self) -> Optional[Decimal]:
-
-        ask = self.follower.prices.ask
-
-        if (
-            ask
-            and self.targets.taker.buy
-            and self.targets.maker.buy
-            and self.targets.taker.buy < ask <= self.targets.maker.buy
-        ):
-            return one_bps_lower(ask)
-
-        return None
-
     def get_long_price_taker(self) -> Optional[Decimal]:
         """
         if targets.taker.buy < ask <= targets.maker.buy
@@ -210,19 +196,6 @@ class SlidingWindowTrader(RobotBase):
 
         if ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
             return self.targets.taker.buy
-
-        return None
-
-    def get_short_price_maker(self) -> Optional[Decimal]:
-        bid = self.follower.prices.bid
-
-        if (
-            bid
-            and self.targets.taker.sell
-            and self.targets.maker.sell
-            and self.targets.maker.sell <= bid < self.targets.taker.sell
-        ):
-            return one_bps_higher(bid)
 
         return None
 
@@ -259,3 +232,30 @@ class SlidingWindowTrader(RobotBase):
                 "books seen": self.leader_pub.books_seen,
             },
         }
+
+    # def get_long_price_maker(self) -> Optional[Decimal]:
+
+    #     ask = self.follower.prices.ask
+
+    #     if (
+    #         ask
+    #         and self.targets.taker.buy
+    #         and self.targets.maker.buy
+    #         and self.targets.taker.buy < ask <= self.targets.maker.buy
+    #     ):
+    #         return one_bps_lower(ask)
+
+    #     return None
+
+    # def get_short_price_maker(self) -> Optional[Decimal]:
+    #     bid = self.follower.prices.bid
+
+    #     if (
+    #         bid
+    #         and self.targets.taker.sell
+    #         and self.targets.maker.sell
+    #         and self.targets.maker.sell <= bid < self.targets.taker.sell
+    #     ):
+    #         return one_bps_higher(bid)
+
+    #     return None
