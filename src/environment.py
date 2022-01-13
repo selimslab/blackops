@@ -14,9 +14,9 @@ class SleepSeconds(BaseModel):
     cancel_all_open_orders: float = 1
     broadcast_stats: float = 1
     clear_prices: float = 0.42
-    clear_balance: float = 2.2
+    clear_balance: float = 2.1
     wait_between_orders: float = 0.19
-    wait_between_orders_for_robots: float = 0.05
+    wait_between_orders_for_robots: float = 0.01
     rate_limit_seconds: float = 4
 
 

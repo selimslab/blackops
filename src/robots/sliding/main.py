@@ -106,7 +106,7 @@ class SlidingWindowTrader(RobotBase):
             await self.decide(book)
 
     async def decide(self, book) -> None:
-        mid = self.get_mid(book)
+        mid = self.get_window_mid(book)
         if mid:
             async with self.fresh_price_task.stopwatch(
                 self.clear_targets, sleep_seconds.clear_prices
@@ -127,7 +127,7 @@ class SlidingWindowTrader(RobotBase):
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
-    def get_mid(self, book: dict) -> Optional[Decimal]:
+    def get_window_mid(self, book: dict) -> Optional[Decimal]:
         if not book:
             return None
         try:
@@ -143,7 +143,7 @@ class SlidingWindowTrader(RobotBase):
             return None
 
         except Exception as e:
-            msg = f"get_mid: {e}"
+            msg = f"get_window_mid: {e}"
             logger.error(msg)
             log_pub.publish_error(message=msg)
             return None
@@ -228,28 +228,8 @@ class SlidingWindowTrader(RobotBase):
     async def close(self) -> None:
         await self.follower.order_api.cancel_all_open_orders()
 
-    def create_stats_message(self) -> dict:
-        stats = {
-            "pair": self.follower.pair.base.symbol + self.follower.pair.quote.symbol,
-            "current time": datetime.now(),
-            "start time": self.task_start_time,
-            "orders delivered": {
-                "buy": self.follower.order_api.orders_delivered.buy,
-                "sell": self.follower.order_api.orders_delivered.sell,
-            },
-            "prices": {
-                "binance": {
-                    "targets": asdict(self.targets),
-                    "last update": self.leader_pub.last_updated.time(),
-                    "books seen": self.leader_pub.books_seen,
-                },
-                "btcturk": {
-                    "bid": self.follower.prices.bid,
-                    "ask": self.follower.prices.ask,
-                    "last update": self.follower_pub.last_updated.time(),
-                    "books seen": self.follower_pub.books_seen,
-                },
-            },
+    def create_balance_msg(self):
+        return {
             "balances": {
                 "step": self.current_step,
                 "start": {
@@ -275,11 +255,20 @@ class SlidingWindowTrader(RobotBase):
             },
         }
 
-        if self.bridge_pub:
-            stats["bridge"] = {
-                "exchange": self.config.input.bridge_exchange,
-                "quote": self.targets.bridge,
-                "last update": self.bridge_pub.last_updated,
-            }
-
-        return stats
+    def create_stats_message(self) -> dict:
+        return {
+            "start time": self.task_start_time,
+            "buy": self.follower.order_api.orders_delivered.buy,
+            "sell": self.follower.order_api.orders_delivered.sell,
+            "binance": {
+                "targets": asdict(self.targets),
+                "last update": self.leader_pub.last_updated.time(),
+                "books seen": self.leader_pub.books_seen,
+            },
+            "btc": {
+                "bid": self.follower.prices.bid,
+                "ask": self.follower.prices.ask,
+                "last update": self.follower_pub.last_updated.time(),
+                "books seen": self.follower_pub.books_seen,
+            },
+        }

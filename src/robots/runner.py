@@ -2,8 +2,9 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import simplejson as json  # type: ignore
 
@@ -117,7 +118,9 @@ class RobotRunner:
         return list(self.robots.keys())
 
     async def broadcast_stats(self) -> None:
-        stats = {}
+        stats: Dict[str, Any] = {}
+
+        stats["time"] = datetime.now()
         for robotrun in self.robots.values():
 
             stat_dict = robotrun.robot.create_stats_message()
