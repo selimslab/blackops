@@ -121,19 +121,17 @@ class RobotRunner:
         stats: Dict[str, Any] = {}
 
         stats["time"] = datetime.now()
+        stats["radio listeners"] = {
+            key: st.listeners for key, st in radio.stations.items()
+        }
         for robotrun in self.robots.values():
 
             stat_dict = robotrun.robot.create_stats_message()
 
             stats[robotrun.sha] = stat_dict
 
-        if stats:
-            stats["radio listeners"] = {
-                key: st.listeners for key, st in radio.stations.items()
-            }
-
-            stats_msg = json.dumps(stats, default=str)
-            log_pub.publish_stats(message=stats_msg)
+        stats_msg = json.dumps(stats, default=str)
+        log_pub.publish_stats(message=stats_msg)
 
 
 robot_runner = RobotRunner()
