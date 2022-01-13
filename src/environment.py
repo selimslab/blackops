@@ -16,7 +16,7 @@ class SleepSeconds(BaseModel):
     clear_prices: float = 0.36
     clear_balance: float = 1.6
     wait_between_orders: float = 0.16
-    wait_between_orders_for_robots: float = 0.08
+    wait_between_orders_for_robots: float = 0.12
     rate_limit_seconds: float = 4
 
 
