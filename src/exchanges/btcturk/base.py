@@ -31,7 +31,7 @@ class BtcturkBase(ExchangeAPIClientBase):
     async def activate_rate_limit(self) -> None:
         async with self.rate_limit_lock:
             await self._close_session()
-            if not self.session:
+            if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
             await asyncio.sleep(sleep_seconds.rate_limit_seconds)
 
@@ -137,4 +137,5 @@ class BtcturkBase(ExchangeAPIClientBase):
         return order_time
 
     async def _close_session(self):
-        pass
+        if self.session:
+            await self.session.close()
