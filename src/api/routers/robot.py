@@ -39,7 +39,7 @@ async def run_multiple(shas: List[str]):
     async with aiohttp.ClientSession() as session:
         for sha in shas:
             await session.post(
-                f"http://localhost:8000/robot/{sha}",
+                f"http://0.0.0.0:80/robot/{sha}",
                 headers={"Authorization": "Basic c2VyZW5pdHk6ZmVlbHBsYW5nbw=="},
             )
     return JSONResponse(content={"message": f"started {shas}"})
