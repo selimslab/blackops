@@ -55,14 +55,11 @@ class SlidingWindowTrader(RobotBase):
         )
 
     async def run(self) -> None:
+        logger.info(f"Starting {self.config.sha}..")
         self.task_start_time = datetime.now()
         await self.run_streams()
 
     async def run_streams(self) -> None:
-        logger.info(
-            f"Start streams for {self.config.type.name} with config {self.config}"
-        )
-
         aws: Any = [
             self.consume_leader_pub(),
             self.follower.consume_pub(),
