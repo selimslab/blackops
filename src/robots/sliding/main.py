@@ -112,14 +112,22 @@ class SlidingWindowTrader(RobotBase):
                 await self.should_transact()
 
     async def should_transact(self) -> None:
-        sell_price = self.get_short_price()
-        if sell_price:
-            await self.follower.short(sell_price)
+        maker_sell = self.get_short_price_maker()
+        if maker_sell:
+            await self.follower.short(maker_sell)
+
+        taker_sell = self.get_short_price_taker()
+        if taker_sell:
+            await self.follower.short(taker_sell)
 
         if self.can_long():
-            buy_price = self.get_long_price()
-            if buy_price:
-                await self.follower.long(buy_price)
+            taker_buy = self.get_long_price_taker()
+            if taker_buy:
+                await self.follower.long(taker_buy)
+
+            # maker_buy = self.get_long_price_maker()
+            # if maker_buy:
+            #     await self.follower.long(maker_buy)
 
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
@@ -177,17 +185,10 @@ class SlidingWindowTrader(RobotBase):
 
         return prices_ok and step_ok
 
-    def get_long_price(self) -> Optional[Decimal]:
-        """
-        if targets.taker.buy < ask <= targets.maker.buy
-            buy order at one_bps_lower(ask)
-        if ask <= targets.taker.buy:
-            buy order at taker.buy
-        """
-        if not self.can_long():
-            return None
+    def get_long_price_maker(self) -> Optional[Decimal]:
 
         ask = self.follower.prices.ask
+
         if (
             ask
             and self.targets.taker.buy
@@ -195,19 +196,24 @@ class SlidingWindowTrader(RobotBase):
             and self.targets.taker.buy < ask <= self.targets.maker.buy
         ):
             return one_bps_lower(ask)
-        elif ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
+
+        return None
+
+    def get_long_price_taker(self) -> Optional[Decimal]:
+        """
+        if targets.taker.buy < ask <= targets.maker.buy
+            buy order at one_bps_lower(ask)
+        if ask <= targets.taker.buy:
+            buy order at taker.buy
+        """
+        ask = self.follower.prices.ask
+
+        if ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
             return self.targets.taker.buy
-        else:
-            return None
 
-    def get_short_price(self) -> Optional[Decimal]:
-        """
-        if targets.maker.sell <= bid < targets.taker.sell
-            sell order at one_bps_higher(bid)
-        if bid >= targets.taker.sell:
-            sell order at bid
-        """
+        return None
 
+    def get_short_price_maker(self) -> Optional[Decimal]:
         bid = self.follower.prices.bid
 
         if (
@@ -217,40 +223,24 @@ class SlidingWindowTrader(RobotBase):
             and self.targets.maker.sell <= bid < self.targets.taker.sell
         ):
             return one_bps_higher(bid)
-        elif bid and self.targets.taker.sell and bid >= self.targets.taker.sell:
+
+        return None
+
+    def get_short_price_taker(self) -> Optional[Decimal]:
+        """
+        if targets.maker.sell <= bid < targets.taker.sell
+            sell order at one_bps_higher(bid)
+        if bid >= targets.taker.sell:
+            sell order at bid
+        """
+        bid = self.follower.prices.bid
+
+        if bid and self.targets.taker.sell and bid >= self.targets.taker.sell:
             return bid
-        else:
-            return None
+        return None
 
     async def close(self) -> None:
         await self.follower.order_api.cancel_all_open_orders()
-
-    def create_balance_msg(self):
-        return {
-            "balances": {
-                "step": self.current_step,
-                "start": {
-                    self.follower.pair.base.symbol: {
-                        "free": self.follower.start_pair.base.free,
-                        "locked": self.follower.start_pair.base.locked,
-                    },
-                    self.follower.pair.quote.symbol: {
-                        "free": self.follower.start_pair.quote.free,
-                        "locked": self.follower.start_pair.quote.locked,
-                    },
-                },
-                "current": {
-                    self.follower.pair.base.symbol: {
-                        "free": self.follower.pair.base.free,
-                        "locked": self.follower.pair.base.locked,
-                    },
-                    self.follower.pair.quote.symbol: {
-                        "free": self.follower.pair.quote.free,
-                        "locked": self.follower.pair.quote.locked,
-                    },
-                },
-            },
-        }
 
     def create_stats_message(self) -> dict:
         return {

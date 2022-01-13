@@ -1,24 +1,21 @@
 import asyncio
-import random
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+
+import async_timeout
+
+from src.periodic import StopwatchContext, timer_lock
 
 
 @dataclass
 class Test:
     order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-    @asynccontextmanager
-    async def timed_order_context(self, lock):
-        async with lock:
-            yield
-            await asyncio.sleep(0.19)
-
     async def order(self, i):
         lock = self.order_lock
         if lock.locked():
             return f"order_in_progress", i
-        async with self.timed_order_context(lock):
+        async with timer_lock(lock, 0.18):
             return i
 
 
@@ -35,6 +32,7 @@ async def robot(name, t, sleep):
 
 
 async def test_order_lock():
+
     t = Test()
     aws = [robot(i, t, 0.01) for i in range(9)]  # random.randint(0, 1))
     await asyncio.gather(*aws)

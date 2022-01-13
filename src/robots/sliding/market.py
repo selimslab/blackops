@@ -1,5 +1,4 @@
 import asyncio
-import copy
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional

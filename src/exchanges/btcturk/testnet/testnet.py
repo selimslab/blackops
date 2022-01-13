@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from src.domain import Asset, AssetPair
+from src.domain.models import OrderType
 from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.exchanges.btcturk.testnet.dummy import BtcturkDummy
@@ -16,15 +17,23 @@ class BtcturkApiClientTestnet(BtcturkBase):
     dummy_exchange: BtcturkDummy = field(default_factory=BtcturkDummy)
 
     async def submit_limit_order(
-        self, pair: AssetPair, order_type: str, price: float, quantity: float
+        self, pair: AssetPair, side: OrderType, price: float, quantity: float
     ) -> Optional[dict]:
         try:
-            if self.order_lock.locked():
+            if side == OrderType.BUY:
+                lock = self.locks.buy
+                wait = sleep_seconds.ex_buy
+            else:
+                lock = self.locks.sell
+                wait = sleep_seconds.ex_sell
+
+            if lock.locked():
                 return None
-            async with timer_lock(self.order_lock, sleep_seconds.wait_between_orders):
+
+            async with timer_lock(lock, wait):
                 res = await self.dummy_exchange.mock_submit_limit_order(
                     pair=pair,
-                    order_type=order_type,
+                    order_type=side.value,
                     price=price,
                     quantity=quantity,
                 )

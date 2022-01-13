@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from src.domain import Asset, AssetPair
+from src.domain.models import OrderType
 
 
 @dataclass
@@ -39,7 +40,7 @@ class ExchangeAPIClientBase(ABC):
         return (best_bid + best_ask) / Decimal("2")
 
     async def submit_limit_order(
-        self, pair: AssetPair, order_type: str, price: float, quantity: float
+        self, pair: AssetPair, order_type: OrderType, price: float, quantity: float
     ) -> Optional[dict]:
         pass
 

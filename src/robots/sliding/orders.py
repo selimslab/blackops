@@ -1,10 +1,9 @@
 import asyncio
 import itertools
 import traceback
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional
 
 import async_timeout
 import simplejson as json  # type: ignore
@@ -35,23 +34,25 @@ class OrdersDelivered:
 
 
 @dataclass
+class OrderLocks:
+    buy: asyncio.Lock = field(default_factory=asyncio.Lock)
+    sell: asyncio.Lock = field(default_factory=asyncio.Lock)
+    cancel: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+
+@dataclass
 class OrderApi:
     config: SlidingWindowConfig
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 
-    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    locks: OrderLocks = field(default_factory=OrderLocks)
+
     open_orders: OpenOrders = field(default_factory=OpenOrders)
 
     orders_delivered: OrdersDelivered = field(default_factory=OrdersDelivered)
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
-
-    @asynccontextmanager
-    async def timeout_lock(self, timeout=sleep_seconds.wait_between_orders_for_robots):
-        async with self.order_lock:
-            yield
-            await asyncio.sleep(timeout)
 
     async def cancel_all_open_orders(self) -> None:
         try:
@@ -64,42 +65,61 @@ class OrderApi:
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
-    async def send_order(
-        self, side: OrderType, price: Decimal, qty: Decimal
-    ) -> Optional[dict]:
-        if self.order_lock.locked():
-            return None
-
-        async with timer_lock(
-            lock=self.order_lock, sleep=sleep_seconds.wait_between_orders_for_robots
-        ):
-            try:
+    async def cancel_previous_order(self, side: OrderType) -> None:
+        try:
+            async with timer_lock(
+                lock=self.locks.cancel, sleep=sleep_seconds.robot_cancel
+            ):
                 if side == OrderType.BUY and self.open_orders.buy:
                     await self.exchange.cancel_order(self.open_orders.buy.pop())
 
                 if side == OrderType.SELL and self.open_orders.sell:
                     await self.exchange.cancel_order(self.open_orders.sell.pop())
 
-                order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                    self.pair, side.value, float(price), float(qty)
-                )
-                if order_log:
-                    # only send result if order delivered
-                    order_id = self.parse_order_id(order_log)
-                    if order_id:
-                        if side == OrderType.BUY:
-                            self.orders_delivered.buy += 1
-                            self.open_orders.buy.append(order_id)
-                        else:
-                            self.orders_delivered.sell += 1
-                            self.open_orders.sell.append(order_id)
-                        return order_log
-                return None
-            except Exception as e:
-                msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
-                logger.info(msg)
-                log_pub.publish_error(message=msg)
-                return None
+        except Exception as e:
+            pass
+
+    async def _send_order(
+        self, side: OrderType, price: Decimal, qty: Decimal
+    ) -> Optional[dict]:
+
+        try:
+            order_log: Optional[dict] = await self.exchange.submit_limit_order(
+                self.pair, side, float(price), float(qty)
+            )
+            if order_log:
+                # only send result if order delivered
+                order_id = self.parse_order_id(order_log)
+                if order_id:
+                    if side == OrderType.BUY:
+                        self.orders_delivered.buy += 1
+                        self.open_orders.buy.append(order_id)
+                    else:
+                        self.orders_delivered.sell += 1
+                        self.open_orders.sell.append(order_id)
+                    return order_log
+            return None
+        except Exception as e:
+            msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
+            logger.info(msg)
+            log_pub.publish_error(message=msg)
+            return None
+
+    async def send_order(
+        self, side: OrderType, price: Decimal, qty: Decimal
+    ) -> Optional[dict]:
+
+        await self.cancel_previous_order(side)
+
+        if side == OrderType.BUY:
+            lock = self.locks.buy
+            wait = sleep_seconds.robot_buy
+        else:
+            lock = self.locks.sell
+            wait = sleep_seconds.robot_sell
+
+        async with timer_lock(lock, wait):
+            return await self._send_order(side, price, qty)
 
     @staticmethod
     def parse_order_id(order_log: dict) -> Optional[OrderId]:

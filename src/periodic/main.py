@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-import src.pubsub.log_pub as log_pub
+import async_timeout
+
 from src.monitoring import logger
 
 
@@ -20,8 +21,23 @@ async def periodic(func: Callable, sleep_seconds: float) -> None:
 @asynccontextmanager
 async def timer_lock(lock: asyncio.Lock, sleep: float):
     async with lock:
-        yield
-        await asyncio.sleep(sleep)
+        try:
+            async with async_timeout.timeout(sleep):
+                yield
+                await asyncio.sleep(0)
+        except asyncio.TimeoutError:
+            pass
+
+    # async with lock:
+    #     yield
+    #     await asyncio.sleep(sleep)
+
+    # try:
+    #     async with async_timeout.timeout(sleep):
+    #         async with lock:
+    #             yield
+    # except asyncio.TimeoutError:
+    #     pass
 
 
 @dataclass
@@ -34,6 +50,7 @@ class StopwatchContext:
 
     @asynccontextmanager
     async def stopwatch(self, func: Callable, seconds: float):
+        """Cancel the old task when the new arrives"""
         if self.task:
             self.task.cancel()
         self.task = asyncio.create_task(self.call_after(func, seconds))

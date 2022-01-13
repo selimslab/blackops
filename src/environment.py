@@ -10,15 +10,28 @@ load_dotenv()
 
 
 class SleepSeconds(BaseModel):
-    update_balances: float = 0.72
-    cancel_all_open_orders: float = 0.8
+
+    clear_prices: float = 0.4
+    clear_balance: float = 2
+
+    rate_limit: float = 4
+
+    ex_read: float = 0.18  # 300/min
+    ex_cancel: float = 0.18  # 300/min
+
+    # 300/min total, 10/s
+    # 0.2 on average, sell is a priority
+    ex_sell: float = 0.16
+    ex_buy: float = 0.24
+
+    update_balances: float = 0.72  # 90/min
+    cancel_all_open_orders: float = 0.72
+
+    robot_cancel: float = 0.12
+    robot_sell: float = 0.12
+    robot_buy: float = 0.16
+
     broadcast_stats: float = 1
-    clear_prices: float = 0.42
-    clear_balance: float = 2.1
-    rate_limit_seconds: float = 4
-    wait_between_requests: float = 0.1
-    wait_between_orders: float = 0.18
-    wait_between_orders_for_robots: float = 0.01
 
 
 sleep_seconds = SleepSeconds()

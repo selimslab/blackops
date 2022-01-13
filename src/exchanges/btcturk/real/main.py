@@ -11,6 +11,7 @@ import aiohttp
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair
+from src.domain.models import OrderType
 from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
@@ -57,7 +58,7 @@ class BtcturkApiClient(BtcturkBase):
 
     async def _http(self, uri: str, method: Callable):
         try:
-            if self.rate_limit_lock.locked():
+            if self.locks.rate_limit.locked():
                 return
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
@@ -65,12 +66,11 @@ class BtcturkApiClient(BtcturkBase):
                 elif res.status == 429:
                     await self.activate_rate_limit()
                     msg = f"""got 429 too many requests, 
-                    will wait {sleep_seconds.rate_limit_seconds} seconds before sending new requests"""
+                    will wait {sleep_seconds.rate_limit} seconds before sending new requests"""
                     raise Exception(msg)
                 elif res.status == 400:
                     msg = f"got 400 bad request, {uri}"
                     # logger.info(msg)
-                    pass
                 else:
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"
                     raise Exception(msg)
@@ -93,13 +93,13 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with timer_lock(self.get_lock, sleep_seconds.wait_between_requests):
+            async with timer_lock(self.locks.read, sleep_seconds.ex_read):
                 return await self._http(self.urls.balance_url, self.session.get)
         except Exception as e:
             raise e
 
     async def submit_limit_order(
-        self, pair: AssetPair, order_type: str, price: float, quantity: float
+        self, pair: AssetPair, side: OrderType, price: float, quantity: float
     ) -> Optional[dict]:
         """
         {'code': 0,
@@ -122,17 +122,24 @@ class BtcturkApiClient(BtcturkBase):
             "price": price,
             "stopPrice": price,
             "orderMethod": "limit",
-            "orderType": order_type,
+            "orderType": side.value,
             "pairSymbol": pair.symbol,
         }
         try:
-            if self.order_lock.locked():
+            if side == OrderType.BUY:
+                lock = self.locks.buy
+                wait = sleep_seconds.ex_buy
+            else:
+                lock = self.locks.sell
+                wait = sleep_seconds.ex_sell
+
+            if lock.locked():
                 return None
 
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with timer_lock(self.order_lock, sleep_seconds.wait_between_orders):
+            async with timer_lock(lock, wait):
                 async with self.session.post(
                     self.urls.order_url, headers=self._get_headers(), json=params
                 ) as res:
@@ -189,14 +196,14 @@ class BtcturkApiClient(BtcturkBase):
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
 
-        async with timer_lock(self.get_lock, sleep_seconds.wait_between_requests):
+        async with timer_lock(self.locks.read, sleep_seconds.ex_read):
             return await self._http(uri, self.session.get)
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
         try:
             if not order_id:
                 return None
-            if self.order_lock.locked():
+            if self.locks.cancel.locked():
                 return None
 
             uri = update_url_query_params(self.urls.order_url, {"id": order_id})
@@ -204,7 +211,7 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with timer_lock(self.cancel_lock, sleep_seconds.wait_between_orders):
+            async with timer_lock(self.locks.cancel, sleep_seconds.ex_cancel):
                 return await self._http(uri, self.session.delete)
         except Exception as e:
             # we could not cancel the order, its normal

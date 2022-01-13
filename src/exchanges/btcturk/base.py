@@ -1,6 +1,5 @@
 import asyncio
 import itertools
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -13,6 +12,20 @@ from src.domain.models import AssetPair
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
+from src.periodic import timer_lock
+
+# @dataclass
+# class TimeoutLock:
+#     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+
+@dataclass
+class Locks:
+    buy: asyncio.Lock = field(default_factory=asyncio.Lock)
+    sell: asyncio.Lock = field(default_factory=asyncio.Lock)
+    cancel: asyncio.Lock = field(default_factory=asyncio.Lock)
+    rate_limit: asyncio.Lock = field(default_factory=asyncio.Lock)
+    read: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 @dataclass
@@ -21,22 +34,15 @@ class BtcturkBase(ExchangeAPIClientBase):
     api_key: str = "no key"
     api_secret: str = "no secret"
 
-    rate_limit_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-    cancel_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-    get_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    locks: Locks = field(default_factory=Locks)
 
     session: Optional[aiohttp.ClientSession] = None
 
     async def activate_rate_limit(self) -> None:
-        async with self.rate_limit_lock:
+        async with timer_lock(self.locks.rate_limit, sleep_seconds.rate_limit):
             await self._close_session()
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
-            await asyncio.sleep(sleep_seconds.rate_limit_seconds)
 
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:
@@ -158,7 +164,8 @@ class BtcturkBase(ExchangeAPIClientBase):
             ok = await self.cancel_order(order_id)
             if ok:
                 cancelled.append(order_id)
-            await asyncio.sleep(sleep_seconds.wait_between_orders)
+            await asyncio.sleep(sleep_seconds.ex_cancel)
+            await asyncio.sleep(0.01)  #  allow others to cancel too
         return cancelled
 
     @staticmethod
