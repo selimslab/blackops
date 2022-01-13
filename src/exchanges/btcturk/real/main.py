@@ -14,7 +14,18 @@ from src.domain import Asset, AssetPair
 from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
+from src.periodic import StopwatchContext, timer_lock
 from src.web import update_url_query_params
+
+
+@dataclass(frozen=True)
+class URLs:
+    api_base = "https://api.btcturk.com"
+    order_url = urllib.parse.urljoin(api_base, "/api/v1/order")
+    balance_url = urllib.parse.urljoin(api_base, "/api/v1/users/balances")
+    all_orders_url = urllib.parse.urljoin(api_base, "/api/v1/allOrders")
+    open_orders_url = urllib.parse.urljoin(api_base, "/api/v1/openOrders")
+    ticker_url = urllib.parse.urljoin(api_base, "/api/v2/ticker")
 
 
 @dataclass
@@ -23,17 +34,7 @@ class BtcturkApiClient(BtcturkBase):
     api_key: str = "no key"
     api_secret: str = "no secret"
 
-    api_base = "https://api.btcturk.com"
-    order_url = urllib.parse.urljoin(api_base, "/api/v1/order")
-    balance_url = urllib.parse.urljoin(api_base, "/api/v1/users/balances")
-    all_orders_url = urllib.parse.urljoin(api_base, "/api/v1/allOrders")
-    open_orders_url = urllib.parse.urljoin(api_base, "/api/v1/openOrders")
-    ticker_url = urllib.parse.urljoin(api_base, "/api/v2/ticker")
-
-    name: str = "btcturk_real"
-
-    def __post_init__(self):
-        self.headers = self._get_headers()
+    urls: URLs = URLs()
 
     def _get_headers(self) -> dict:
         decoded_api_secret = base64.b64decode(self.api_secret)  # type: ignore
@@ -53,14 +54,6 @@ class BtcturkApiClient(BtcturkBase):
         }
 
         return headers
-
-    async def _get(self, uri: str):
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(uri) as res:
-                    return await res.json()
-        except Exception as e:
-            logger.error(f"_get {e}")
 
     async def _http(self, uri: str, method: Callable):
         try:
@@ -99,7 +92,9 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
-            return await self._http(self.balance_url, self.session.get)
+
+            async with timer_lock(self.get_lock, sleep_seconds.wait_between_requests):
+                return await self._http(self.urls.balance_url, self.session.get)
         except Exception as e:
             raise e
 
@@ -133,11 +128,13 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if self.order_lock.locked():
                 return None
+
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
-            async with self.timed_order_context():
+
+            async with timer_lock(self.order_lock, sleep_seconds.wait_between_orders):
                 async with self.session.post(
-                    self.order_url, headers=self._get_headers(), json=params
+                    self.urls.order_url, headers=self._get_headers(), json=params
                 ) as res:
                     return await res.json()
         except Exception as e:
@@ -187,10 +184,13 @@ class BtcturkApiClient(BtcturkBase):
             raise Exception("pair is required")
 
         params = {"pairSymbol": pair.symbol}
-        uri = update_url_query_params(self.open_orders_url, params)
+        uri = update_url_query_params(self.urls.open_orders_url, params)
+
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
-        return await self._http(uri, self.session.get)
+
+        async with timer_lock(self.get_lock, sleep_seconds.wait_between_requests):
+            return await self._http(uri, self.session.get)
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
         try:
@@ -199,10 +199,12 @@ class BtcturkApiClient(BtcturkBase):
             if self.order_lock.locked():
                 return None
 
+            uri = update_url_query_params(self.urls.order_url, {"id": order_id})
+
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
-            async with self.timed_order_context():
-                uri = update_url_query_params(self.order_url, {"id": order_id})
+
+            async with timer_lock(self.cancel_lock, sleep_seconds.wait_between_orders):
                 return await self._http(uri, self.session.delete)
         except Exception as e:
             # we could not cancel the order, its normal
@@ -213,9 +215,17 @@ class BtcturkApiClient(BtcturkBase):
     #     uri = update_url_query_params(self.all_orders_url, params)
     #     return await self._http(uri, self.session.get)
 
+    async def _get(self, uri: str):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(uri) as res:
+                    return await res.json()
+        except Exception as e:
+            logger.error(f"_get {e}")
+
     async def get_ticker(self, pair: AssetPair) -> Optional[Decimal]:
         params = {"pairSymbol": pair.symbol}
-        uri = update_url_query_params(self.ticker_url, params)
+        uri = update_url_query_params(self.urls.ticker_url, params)
         res = await self._get(uri)
         if not res:
             return None
@@ -228,9 +238,3 @@ class BtcturkApiClient(BtcturkBase):
             logger.error(msg)
             log_pub.publish_error(msg)
             return None
-
-    # def get_orderbook(pair:str):
-    #     orderbook_path = "api/v2/orderbook"
-    #     orderbook_url = urllib.parse.urljoin(api_base, orderbook_path)
-    #     orderbook_url = f"{orderbook_url}?pairSymbol={pair}"
-    #     get_data(orderbook_url)

@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -8,6 +9,7 @@ from typing import List, Optional, Tuple
 import aiohttp
 
 from src.domain import Asset
+from src.domain.models import AssetPair
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
@@ -16,17 +18,18 @@ from src.monitoring import logger
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
+    api_key: str = "no key"
+    api_secret: str = "no secret"
+
     rate_limit_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-    session: Optional[aiohttp.ClientSession] = None
+    cancel_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-    @asynccontextmanager
-    async def timed_order_context(self):
-        async with self.order_lock:
-            yield
-            await asyncio.sleep(sleep_seconds.wait_between_orders)
+    get_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    session: Optional[aiohttp.ClientSession] = None
 
     async def activate_rate_limit(self) -> None:
         async with self.rate_limit_lock:
@@ -115,15 +118,48 @@ class BtcturkBase(ExchangeAPIClientBase):
 
         return (open_asks, open_bids)
 
-    async def cancel_multiple_orders(self, orders: list) -> None:
+    def get_sorted_order_list(self, order_res: dict):
+        if not order_res:
+            return []
+
+        (
+            sell_orders,
+            buy_orders,
+        ) = self.parse_open_orders(order_res)
+
+        if sell_orders or buy_orders:
+            orders = [
+                x
+                for lst in itertools.zip_longest(buy_orders, sell_orders)
+                for x in lst
+                if x
+            ]
+            return orders
+
+        return []
+
+    async def cancel_all_open_orders(self, pair: AssetPair) -> list:
+        res: Optional[dict] = await self.get_open_orders(pair)
+        if res:
+            orders = self.get_sorted_order_list(res)
+            await self.cancel_multiple_orders(orders)
+
+        return []
+
+    async def cancel_multiple_orders(self, orders: list) -> list:
         if not orders:
-            return None
+            return []
 
         order_ids = [order.get("id") for order in orders]
         order_ids = [i for i in order_ids if i]
+
+        cancelled = []
         for order_id in order_ids:
-            await self.cancel_order(order_id)
+            ok = await self.cancel_order(order_id)
+            if ok:
+                cancelled.append(order_id)
             await asyncio.sleep(sleep_seconds.wait_between_orders)
+        return cancelled
 
     @staticmethod
     def parse_submit_order_response(res: dict):

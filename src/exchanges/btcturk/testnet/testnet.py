@@ -2,9 +2,11 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from src.domain import Asset, AssetPair
+from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.exchanges.btcturk.testnet.dummy import BtcturkDummy
 from src.monitoring import logger
+from src.periodic import StopwatchContext, timer_lock
 
 
 @dataclass
@@ -19,7 +21,7 @@ class BtcturkApiClientTestnet(BtcturkBase):
         try:
             if self.order_lock.locked():
                 return None
-            async with self.timed_order_context():
+            async with timer_lock(self.order_lock, sleep_seconds.wait_between_orders):
                 res = await self.dummy_exchange.mock_submit_limit_order(
                     pair=pair,
                     order_type=order_type,

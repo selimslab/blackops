@@ -17,6 +17,13 @@ async def periodic(func: Callable, sleep_seconds: float) -> None:
             await asyncio.sleep(sleep_seconds)
 
 
+@asynccontextmanager
+async def timer_lock(lock: asyncio.Lock, sleep: float):
+    async with lock:
+        yield
+        await asyncio.sleep(sleep)
+
+
 @dataclass
 class StopwatchContext:
     task: Optional[asyncio.Task] = None

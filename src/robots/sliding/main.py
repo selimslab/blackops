@@ -45,7 +45,7 @@ class SlidingWindowTrader(RobotBase):
 
     targets: Targets = field(default_factory=Targets)
 
-    fresh_price_task: StopwatchContext = field(default_factory=StopwatchContext)
+    stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
     def __post_init__(self) -> None:
         self.follower = MarketWatcher(
@@ -65,7 +65,7 @@ class SlidingWindowTrader(RobotBase):
             self.follower.consume_pub(),
             periodic(
                 self.follower.update_balances,
-                sleep_seconds.update_balances / 6,
+                sleep_seconds.update_balances / 8,
             ),
             periodic(
                 self.follower.order_api.cancel_all_open_orders,
@@ -86,7 +86,7 @@ class SlidingWindowTrader(RobotBase):
         async for book in gen:
             mid = self.bridge_pub.api_client.get_mid(book)
             if mid:
-                async with self.fresh_price_task.stopwatch(
+                async with self.stopwatch_api.stopwatch(
                     self.clear_bridge, sleep_seconds.clear_prices
                 ):
                     self.targets.bridge = mid
@@ -105,7 +105,7 @@ class SlidingWindowTrader(RobotBase):
     async def decide(self, book) -> None:
         mid = self.get_window_mid(book)
         if mid:
-            async with self.fresh_price_task.stopwatch(
+            async with self.stopwatch_api.stopwatch(
                 self.clear_targets, sleep_seconds.clear_prices
             ):
                 self.update_window(mid)
@@ -257,15 +257,15 @@ class SlidingWindowTrader(RobotBase):
             "start time": self.task_start_time,
             "buy": self.follower.order_api.orders_delivered.buy,
             "sell": self.follower.order_api.orders_delivered.sell,
-            "binance": {
-                "targets": asdict(self.targets),
-                "last update": self.leader_pub.last_updated.time(),
-                "books seen": self.leader_pub.books_seen,
-            },
+            "targets": asdict(self.targets),
             "btc": {
                 "bid": self.follower.prices.bid,
                 "ask": self.follower.prices.ask,
                 "last update": self.follower_pub.last_updated.time(),
                 "books seen": self.follower_pub.books_seen,
+            },
+            "binance": {
+                "last update": self.leader_pub.last_updated.time(),
+                "books seen": self.leader_pub.books_seen,
             },
         }

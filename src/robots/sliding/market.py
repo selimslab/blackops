@@ -30,11 +30,9 @@ class MarketWatcher:
 
     prices: MarketPrices = field(default_factory=MarketPrices)
 
-    start_balances_saved: bool = False
-    fresh_price_task: StopwatchContext = field(default_factory=StopwatchContext)
+    stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
     def __post_init__(self):
-
         self.order_api = OrderApi(
             config=self.config,
             pair=create_asset_pair(self.config.input.base, self.config.input.quote),
@@ -42,10 +40,6 @@ class MarketWatcher:
         )
 
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
-
-        self.start_pair = create_asset_pair(
-            self.config.input.base, self.config.input.quote
-        )
 
     async def consume_pub(self) -> None:
         gen = create_book_consumer_generator(self.book_pub)
@@ -57,7 +51,7 @@ class MarketWatcher:
             ask = self.book_pub.api_client.get_best_ask(book)
             bid = self.book_pub.api_client.get_best_bid(book)
             if ask and bid:
-                async with self.fresh_price_task.stopwatch(
+                async with self.stopwatch_api.stopwatch(
                     self.clear_prices, sleep_seconds.clear_prices
                 ):
                     self.prices.ask = ask
@@ -86,7 +80,7 @@ class MarketWatcher:
                 res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
-            async with self.fresh_price_task.stopwatch(
+            async with self.stopwatch_api.stopwatch(
                 self.clear_balance, sleep_seconds.clear_balance
             ):
                 base_balances: dict = balances[self.pair.base.symbol]
@@ -96,10 +90,6 @@ class MarketWatcher:
                 quote_balances: dict = balances[self.pair.quote.symbol]
                 self.pair.quote.free = Decimal(quote_balances["free"])
                 self.pair.quote.locked = Decimal(quote_balances["locked"])
-
-            if not self.start_balances_saved:
-                self.start_pair = copy.deepcopy(self.pair)
-                self.start_balances_saved = True
 
         except Exception as e:
             msg = f"update_balances: {e}"

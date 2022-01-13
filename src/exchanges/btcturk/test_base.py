@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+import pytest
+
 from .base import BtcturkBase
 
 

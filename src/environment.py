@@ -15,9 +15,10 @@ class SleepSeconds(BaseModel):
     broadcast_stats: float = 1
     clear_prices: float = 0.42
     clear_balance: float = 2.1
+    rate_limit_seconds: float = 4
+    wait_between_requests: float = 0.1
     wait_between_orders: float = 0.19
     wait_between_orders_for_robots: float = 0.01
-    rate_limit_seconds: float = 4
 
 
 sleep_seconds = SleepSeconds()

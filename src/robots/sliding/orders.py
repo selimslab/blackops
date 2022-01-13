@@ -4,8 +4,9 @@ import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
+import async_timeout
 import simplejson as json  # type: ignore
 
 import src.pubsub.log_pub as log_pub
@@ -13,6 +14,7 @@ from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
+from src.periodic import StopwatchContext, timer_lock
 from src.stgs.sliding.config import SlidingWindowConfig
 
 
@@ -43,6 +45,8 @@ class OrderApi:
 
     orders_delivered: OrdersDelivered = field(default_factory=OrdersDelivered)
 
+    stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
+
     @asynccontextmanager
     async def timeout_lock(self, timeout=sleep_seconds.wait_between_orders_for_robots):
         async with self.order_lock:
@@ -51,24 +55,10 @@ class OrderApi:
 
     async def cancel_all_open_orders(self) -> None:
         try:
-            res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
-            if not res:
-                return None
-
-            (
-                sell_orders,
-                buy_orders,
-            ) = self.exchange.parse_open_orders(res)
-
-            if sell_orders or buy_orders:
-                order_ids = [
-                    x
-                    for lst in itertools.zip_longest(buy_orders, sell_orders)
-                    for x in lst
-                    if x
-                ]
-                await self.exchange.cancel_multiple_orders(order_ids)
-
+            async with async_timeout.timeout(sleep_seconds.cancel_all_open_orders):
+                await self.exchange.cancel_all_open_orders(self.pair)
+        except asyncio.TimeoutError:
+            pass
         except Exception as e:
             msg = f"watch_open_orders: {e}"
             logger.error(msg)
@@ -80,7 +70,9 @@ class OrderApi:
         if self.order_lock.locked():
             return None
 
-        async with self.timeout_lock():
+        async with timer_lock(
+            lock=self.order_lock, sleep=sleep_seconds.wait_between_orders_for_robots
+        ):
             try:
                 if side == OrderType.BUY and self.open_orders.buy:
                     await self.exchange.cancel_order(self.open_orders.buy.pop())
