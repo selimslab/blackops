@@ -1,5 +1,6 @@
 from typing import List
 
+import aiohttp
 import starlette.background as bg
 from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
@@ -34,14 +35,13 @@ async def run_task(sha: str, background_tasks: BackgroundTasks):
 
 
 @router.post("/")
-async def run_multiple(shas: List[str], background_tasks: BackgroundTasks):
-    for sha in shas:
-        stg = await strategy_api.get_stg(sha)
-        if robot_runner.is_running(stg.sha):
-            # logger.info(f"{stg.sha} already running")
-            continue
-        background_tasks.add_task(robot_api.run_task, stg)
-
+async def run_multiple(shas: List[str]):
+    async with aiohttp.ClientSession() as session:
+        for sha in shas:
+            await session.post(
+                f"http://localhost:8000/robot/{sha}",
+                headers={"Authorization": "Basic c2VyZW5pdHk6ZmVlbHBsYW5nbw=="},
+            )
     return JSONResponse(content={"message": f"started {shas}"})
 
 

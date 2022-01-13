@@ -76,7 +76,8 @@ class BtcturkApiClient(BtcturkBase):
                     raise Exception(msg)
                 elif res.status == 400:
                     msg = f"got 400 bad request, {uri}"
-                    logger.info(msg)
+                    # logger.info(msg)
+                    pass
                 else:
                     msg = f"_http: {str(res.status)} {res.reason} {uri}"
                     raise Exception(msg)

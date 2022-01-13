@@ -22,6 +22,10 @@ class RobotApi:
         try:
             # coros are self-healing so if we have an error here, it means a problem
             await asyncio.gather(*coros)
+        except asyncio.CancelledError:
+            msg = f"{stg.sha} cancelled"
+            logger.error(msg)
+            log_pub.publish_message(message=msg)
         except Exception as e:
             msg = f"{stg.sha} failed: {e}, along with the radios"
             logger.error(msg)

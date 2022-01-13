@@ -43,7 +43,8 @@ class SlidingWindowConfig(StrategyConfigBase):
         self.is_valid()
 
         sha = dict_to_hash(self.input.dict())[:7]
-        self.sha = sha
+        mode = "testnet" if self.input.testnet else "real"
+        self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}"
 
         self.credits.maker = maker_fee_bps + self.input.margin_bps
 

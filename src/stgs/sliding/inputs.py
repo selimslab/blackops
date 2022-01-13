@@ -17,7 +17,7 @@ class SlidingWindowInput(StrategyInputBase):
     bridge: Optional[str] = Field(default=None, example="USDT")
     bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
 
-    use_bridge = False
+    use_bridge = True
     testnet = False
     use_real_money = True
 
@@ -84,7 +84,7 @@ class SlidingWindowInput(StrategyInputBase):
         if self.margin_bps > 3:
             raise Exception("margin_bps must be less than 3")
 
-        if self.max_step < 1:
+        if self.max_step < 2:
             raise Exception("max_step must be greater than 1")
         if self.max_step > 12:
             raise Exception("max_step must be less than 12")

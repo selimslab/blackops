@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+import src.sentry
 from src.api.routers.home import router as home_router
 from src.api.routers.robot import router as robot_router
 from src.api.routers.stg import router as stg_router
