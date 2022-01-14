@@ -12,7 +12,7 @@ import src.pubsub.log_pub as log_pub
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.periodic import periodic
-from src.pubsub.pubs import stats_pub
+from src.pubsub.pubs import PublisherBase, pub_factory
 from src.pubsub.radio import radio
 from src.robots import robot_factory
 from src.robots.factory import Robot  # type: ignore
@@ -131,6 +131,28 @@ class FlowRunner:
     def get_tasks(self) -> list:
         return list(self.flowruns.keys())
 
+    def start_balance_station(self, robot: SlidingWindowTrader):
+        return radio.create_station_if_not_exists(robot.balance_pub)
+
+    def start_leader_station(self, robot: SlidingWindowTrader):
+        return radio.create_station_if_not_exists(robot.leader_pub)
+
+    def start_follower_station(self, robot: SlidingWindowTrader):
+        return radio.create_station_if_not_exists(robot.follower_pub)
+
+    def start_stats_station(self):
+        return radio.create_station_if_not_exists(stats_pub)
+
+    def start_bridge_station(self, robot: SlidingWindowTrader):
+        if robot.bridge_pub:
+            return radio.create_station_if_not_exists(robot.bridge_pub)
+
+
+flow_runner = FlowRunner()
+
+
+@dataclass
+class StatsPub(PublisherBase):
     async def broadcast_stats(self):
         stats: Dict[str, Any] = {}
 
@@ -138,7 +160,7 @@ class FlowRunner:
         stats["radio listeners"] = {
             key: st.listeners for key, st in radio.stations.items()
         }
-        for flowrun in self.flowruns.values():
+        for flowrun in flow_runner.flowruns.values():
 
             stat_dict = flowrun.robot.create_stats_message()
 
@@ -147,39 +169,9 @@ class FlowRunner:
         stats_msg = simplejson.dumps(stats, default=str)
         log_pub.publish_stats(message=stats_msg)
 
-    def start_balance_station(self, robot: SlidingWindowTrader):
-        producer_coro = periodic(
-            robot.balance_pub.ask_balance,
-            sleep_seconds.update_balances,
-        )
-        return radio.create_station_if_not_exists(
-            robot.balance_pub.pubsub_key, producer_coro
-        )
+    async def run(self):
 
-    def start_leader_station(self, robot: SlidingWindowTrader):
-        producer_coro = robot.leader_pub.consume_stream()
-        return radio.create_station_if_not_exists(
-            robot.leader_pub.pubsub_key, producer_coro
-        )
-
-    def start_follower_station(self, robot: SlidingWindowTrader):
-        producer_coro = robot.follower_pub.consume_stream()
-        return radio.create_station_if_not_exists(
-            robot.follower_pub.pubsub_key, producer_coro
-        )
-
-    def start_stats_station(self):
-        producer_coro = periodic(
-            flow_runner.broadcast_stats, sleep_seconds.broadcast_stats
-        )
-        return radio.create_station_if_not_exists(stats_pub.pubsub_key, producer_coro)
-
-    def start_bridge_station(self, robot: SlidingWindowTrader):
-        if robot.bridge_pub:
-            producer_coro = robot.bridge_pub.consume_stream()
-            return radio.create_station_if_not_exists(
-                robot.bridge_pub.pubsub_key, producer_coro
-            )
+        await periodic(self.broadcast_stats, sleep_seconds.broadcast_stats)
 
 
-flow_runner = FlowRunner()
+stats_pub = StatsPub(pubsub_key=log_pub.DEFAULT_CHANNEL)

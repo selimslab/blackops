@@ -32,4 +32,4 @@ async def shutdown_event():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, workers=1)
+    uvicorn.run(app="src.api.main:app", workers=1)

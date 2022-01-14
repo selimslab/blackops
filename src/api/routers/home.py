@@ -13,10 +13,10 @@ async def root():
     return FileResponse("static/index.html")
 
 
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        # data = await websocket.receive_text()
-        await websocket.send_json({"hello": "world"})
-        await asyncio.sleep(1)
+# @router.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     while True:
+#         # data = await websocket.receive_text()
+#         await websocket.send_json({"hello": "world"})
+#         await asyncio.sleep(1)

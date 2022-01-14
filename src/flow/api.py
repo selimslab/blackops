@@ -20,6 +20,8 @@ class FlowApi:
         await flow_runner.start_flow(stg)
 
     async def stop_task(self, sha: str):
+        if sha not in flow_runner.flowruns:
+            raise Exception(f"{sha} not running")
         await flow_runner.clean_task(sha)
         msg = f"{sha} stopped"
         logger.info(msg)

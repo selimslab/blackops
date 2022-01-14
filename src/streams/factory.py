@@ -12,20 +12,23 @@ from src.monitoring import logger
 class StreamFactory:
     STREAMS: dict = field(default_factory=dict)
 
-    def create_stream_if_not_exists(
-        self, ex_type: ExchangeType, network: NetworkType, symbol: str
-    ) -> AsyncGenerator:
-        key = "_".join((ex_type.value, network.value, symbol))
+    def remove_stream(self, pubsub_key):
+        if pubsub_key in self.STREAMS:
+            del self.STREAMS[pubsub_key]
 
-        if key in self.STREAMS:
-            return self.STREAMS[key]
+    def create_stream_if_not_exists(
+        self, ex_type: ExchangeType, symbol: str, pubsub_key: str
+    ) -> AsyncGenerator:
+
+        if pubsub_key in self.STREAMS:
+            return self.STREAMS[pubsub_key]
 
         if ex_type == ExchangeType.BINANCE:
             stream = bn_streams.create_book_stream(symbol)
         elif ex_type == ExchangeType.BTCTURK:
             stream = btc_streams.create_book_stream(symbol)
 
-        self.STREAMS[key] = stream
+        self.STREAMS[pubsub_key] = stream
 
         return stream
 
