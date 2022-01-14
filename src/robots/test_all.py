@@ -5,9 +5,9 @@ import pytest
 import pytest_asyncio
 
 from src.domain import Asset, AssetPair, create_asset_pair
+from src.flow import flow_api
 from src.monitoring import logger
 from src.pubsub.radio import radio
-from src.robots import robot_api
 from src.robots.factory import Robot, robot_factory
 from src.robots.sliding.main import TargetPrices, Targets
 from src.robots.sliding.market import MarketPrices
@@ -39,7 +39,7 @@ async def test_end_to_end():
     res = await strategy_api.get_stg(config.sha)
     assert res.input == config.input
 
-    assert robot_api.get_tasks() == []
+    assert flow_api.get_tasks() == []
 
     assert radio.get_stations() == []
 

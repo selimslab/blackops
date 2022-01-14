@@ -66,20 +66,21 @@ class Radio:
         if station.listeners == 0 and station.aiotask:
             station.aiotask.cancel()
 
-    def create_station_if_not_exists(
-        self, producer: PublisherBase, coro: Coroutine
-    ) -> Optional[Coroutine]:
-        if producer.pubsub_key in self.stations:
-            self.add_listener(producer.pubsub_key)
+    def create_station_if_not_exists(self, pubsub_key: str, coro: Coroutine):
+        if pubsub_key in self.stations:
+            self.add_listener(pubsub_key)
             return None
         else:
             station = Station(
-                pubsub_channel=producer.pubsub_key,
+                pubsub_channel=pubsub_key,
                 log_channel=log_pub.DEFAULT_CHANNEL,
                 listeners=1,
                 coro=coro,
             )
             return self.run_until_cancelled(station)
+
+    async def start_station_if_not_running(self, station: Station):
+        await self.run_until_cancelled(station)
 
     def get_stations(self) -> List[Station]:
         return list(self.stations.values())

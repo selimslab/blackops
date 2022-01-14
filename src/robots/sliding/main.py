@@ -47,6 +47,8 @@ class SlidingWindowTrader(RobotBase):
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
+    start_time: datetime = field(default_factory=lambda: datetime.now())
+
     def __post_init__(self) -> None:
         self.follower = MarketWatcher(
             config=self.config,
@@ -56,7 +58,6 @@ class SlidingWindowTrader(RobotBase):
 
     async def run(self) -> None:
         logger.info(f"Starting {self.config.sha}..")
-        self.task_start_time = datetime.now()
         await self.run_streams()
 
     async def run_streams(self) -> None:
@@ -217,7 +218,7 @@ class SlidingWindowTrader(RobotBase):
 
     def create_stats_message(self) -> dict:
         return {
-            "start time": self.task_start_time,
+            "start time": self.start_time,
             "buy": self.follower.order_api.orders_delivered.buy,
             "sell": self.follower.order_api.orders_delivered.sell,
             "targets": asdict(self.targets),

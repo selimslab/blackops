@@ -7,7 +7,7 @@ import src.sentry
 from src.api.routers.home import router as home_router
 from src.api.routers.robot import router as robot_router
 from src.api.routers.stg import router as stg_router
-from src.robots import robot_api
+from src.flow import flow_api
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 
@@ -28,8 +28,8 @@ async def validation_exception_handler(request, exc: Exception):
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await robot_api.stop_all_tasks()
+    await flow_api.stop_all_tasks()
 
 
 if __name__ == "__main__":
-    uvicorn.run(app)
+    uvicorn.run(app, workers=1)
