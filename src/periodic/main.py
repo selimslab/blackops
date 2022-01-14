@@ -55,3 +55,4 @@ class StopwatchContext:
             self.task.cancel()
         self.task = asyncio.create_task(self.call_after(func, seconds))
         yield
+        await asyncio.sleep(0)

@@ -110,7 +110,8 @@ class SlidingWindowTrader(RobotBase):
                 self.clear_targets, sleep_seconds.clear_prices
             ):
                 self.update_window(mid)
-                await self.should_transact()
+
+            await self.should_transact()
 
     async def should_transact(self) -> None:
         # maker_sell = self.get_short_price_maker()
@@ -122,7 +123,7 @@ class SlidingWindowTrader(RobotBase):
             await self.follower.short(taker_sell)
 
         taker_buy = self.get_long_price_taker()
-        if taker_buy and self.can_long():
+        if taker_buy and self.current_step <= self.config.input.max_step:
             await self.follower.long(taker_buy)
 
             # maker_buy = self.get_long_price_maker()
@@ -174,16 +175,6 @@ class SlidingWindowTrader(RobotBase):
             msg = f"calculate_window: {e}"
             logger.error(msg)
             log_pub.publish_error(message=msg)
-
-    def can_long(self) -> bool:
-        prices_ok = bool(
-            self.follower.prices.ask
-            and self.targets.taker.buy
-            # and self.targets.maker.buy
-        )
-        step_ok = self.current_step <= self.config.input.max_step
-
-        return prices_ok and step_ok
 
     def get_long_price_taker(self) -> Optional[Decimal]:
         """
