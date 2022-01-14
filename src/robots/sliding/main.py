@@ -121,10 +121,9 @@ class SlidingWindowTrader(RobotBase):
         if taker_sell:
             await self.follower.short(taker_sell)
 
-        if self.can_long():
-            taker_buy = self.get_long_price_taker()
-            if taker_buy:
-                await self.follower.long(taker_buy)
+        taker_buy = self.get_long_price_taker()
+        if taker_buy and self.can_long():
+            await self.follower.long(taker_buy)
 
             # maker_buy = self.get_long_price_maker()
             # if maker_buy:
@@ -163,9 +162,9 @@ class SlidingWindowTrader(RobotBase):
 
             mid -= slide_down
 
-            maker_credit = self.config.credits.maker * mid * BPS
-            self.targets.maker.buy = mid - maker_credit
-            self.targets.maker.sell = mid + maker_credit
+            # maker_credit = self.config.credits.maker * mid * BPS
+            # self.targets.maker.buy = mid - maker_credit
+            # self.targets.maker.sell = mid + maker_credit
 
             taker_credit = self.config.credits.taker * mid * BPS
             self.targets.taker.buy = mid - taker_credit
@@ -180,7 +179,7 @@ class SlidingWindowTrader(RobotBase):
         prices_ok = bool(
             self.follower.prices.ask
             and self.targets.taker.buy
-            and self.targets.maker.buy
+            # and self.targets.maker.buy
         )
         step_ok = self.current_step <= self.config.input.max_step
 
