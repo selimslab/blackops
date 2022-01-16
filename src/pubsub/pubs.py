@@ -1,7 +1,7 @@
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Optional, Union
+from typing import AsyncGenerator, Optional, Union
 
 import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams

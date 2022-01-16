@@ -2,7 +2,7 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Coroutine, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
