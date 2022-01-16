@@ -3,12 +3,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import AsyncGenerator, Dict, Optional, Union
 
+import src.streams.bn as bn_streams
+import src.streams.btcturk as btc_streams
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.monitoring import logger
 from src.periodic import periodic
-from src.streams.factory import stream_factory
 
 
 @dataclass
@@ -65,55 +66,3 @@ class BookPub(PublisherBase):
 
 
 PubsubProducer = Union[BalancePub, BookPub]
-
-
-@dataclass
-class PubFactory:
-
-    PUBS: Dict[str, PubsubProducer] = field(default_factory=dict)
-
-    def remove_pub(self, pubsub_key: str):
-        if pubsub_key in self.PUBS:
-            del self.PUBS[pubsub_key]  # type: ignore
-            stream_factory.remove_stream(pubsub_key)
-
-    def create_book_pub_if_not_exists(
-        self, ex_type: ExchangeType, network: NetworkType, symbol: str
-    ) -> BookPub:
-
-        pubsub_key = "_".join((ex_type.value, network.value, symbol))
-        if pubsub_key in self.PUBS:
-            return self.PUBS[pubsub_key]  # type: ignore
-
-        stream = stream_factory.create_stream_if_not_exists(ex_type, symbol, pubsub_key)
-
-        api_client = api_client_factory.create_api_client_if_not_exists(
-            ex_type, network
-        )
-
-        pub = BookPub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
-
-        self.PUBS[pubsub_key] = pub
-
-        return pub
-
-    def create_balance_pub_if_not_exists(
-        self, ex_type: ExchangeType, network: NetworkType
-    ) -> BalancePub:
-        pubsub_key = "_".join((ex_type.value, network.value, "balance"))
-
-        if pubsub_key in self.PUBS:
-            return self.PUBS[pubsub_key]  # type: ignore
-
-        api_client = api_client_factory.create_api_client_if_not_exists(
-            ex_type, network
-        )
-
-        pub = BalancePub(pubsub_key=pubsub_key, exchange=api_client)
-
-        self.PUBS[pubsub_key] = pub
-
-        return pub
-
-
-pub_factory = PubFactory()

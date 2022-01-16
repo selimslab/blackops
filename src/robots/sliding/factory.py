@@ -3,10 +3,9 @@ from src.domain.models import create_asset_pair
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.monitoring import logger
-from src.pubsub.pubs import pub_factory
+from src.pubsub import pub_factory
 from src.robots.sliding.main import SlidingWindowTrader
 from src.stgs.sliding import SlidingWindowConfig
-from src.streams.factory import stream_factory
 
 
 def sliding_window_factory(config: SlidingWindowConfig):
@@ -34,16 +33,16 @@ def sliding_window_factory(config: SlidingWindowConfig):
 
     bridge_pub = None
     if stg.bridge:
-        bridge_pub = pub_factory.create_book_pub_if_not_exists(
-            ex_type=ExchangeType(stg.bridge_exchange),
-            network=network,
-            symbol=stg.bridge + stg.quote,  # usd try
-        )
-
         leader_pub = pub_factory.create_book_pub_if_not_exists(
             ex_type=ExchangeType(config.leader_exchange),
             network=network,
             symbol=stg.base + stg.bridge,  # btc usd
+        )
+
+        bridge_pub = pub_factory.create_book_pub_if_not_exists(
+            ex_type=ExchangeType(stg.bridge_exchange),
+            network=network,
+            symbol=stg.bridge + stg.quote,  # usd try
         )
     else:
         leader_pub = pub_factory.create_book_pub_if_not_exists(

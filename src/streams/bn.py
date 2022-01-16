@@ -85,7 +85,7 @@ async def reconnecting_binance_generator(generator_factory: Callable):
             raise e
 
 
-def create_book_stream(symbol: str, channel: str = "default"):
+def create_book_stream(symbol: str):
     def create_new_socket_conn():
         return binance_stream_generator(symbol, "@bookTicker")
 

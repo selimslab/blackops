@@ -12,7 +12,7 @@ import src.pubsub.log_pub as log_pub
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.periodic import periodic
-from src.pubsub.pubs import PublisherBase, pub_factory
+from src.pubsub.pubs import PublisherBase
 from src.pubsub.radio import radio
 from src.robots import robot_factory
 from src.robots.factory import Robot  # type: ignore
