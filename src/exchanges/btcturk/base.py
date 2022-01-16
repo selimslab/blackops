@@ -161,7 +161,7 @@ class BtcturkBase(ExchangeAPIClientBase):
 
         cancelled = []
         if len(order_ids) == 1:
-            await asyncio.sleep(0.1)  # allow 100 ms for order to be filled
+            await asyncio.sleep(0.05)  # allow 50 ms for order to be filled
         for order_id in order_ids:
             ok = await self.cancel_order(order_id)
             if ok:
