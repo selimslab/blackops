@@ -56,6 +56,8 @@ class OrderApi:
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
+    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
     async def cancel_all_open_orders(self) -> None:
         if self.orders_delivered.total in (0, self.orders_delivered.prev_total):
             return None
@@ -86,7 +88,6 @@ class OrderApi:
     ) -> Optional[dict]:
 
         try:
-
             if side == OrderType.BUY and self.exchange.locks.buy.locked():
                 self.orders_tried.buy_locked += 1
                 return None
@@ -96,9 +97,13 @@ class OrderApi:
 
             float_qty = round(float(qty))
 
-            order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                self.pair, side, float(price), float_qty
-            )
+            if self.order_lock.locked():
+                return None
+
+            async with self.order_lock:
+                order_log: Optional[dict] = await self.exchange.submit_limit_order(
+                    self.pair, side, float(price), float_qty
+                )
             if order_log:
                 # only send result if order delivered
                 order_id = self.parse_order_id(order_log)
