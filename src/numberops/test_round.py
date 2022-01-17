@@ -16,6 +16,7 @@ def test_round():
     print("shib step", step_try / shib)
     print("btc step", step_try / btc)
 
+    assert Decimal("43.0033757").quantize(Decimal("43.4356")) == Decimal("43.003")
     assert round_decimal_floor(Decimal("553.5")) == Decimal("500")
     assert round_decimal_floor(Decimal("5063291.139240")) == Decimal("5000000")
 
