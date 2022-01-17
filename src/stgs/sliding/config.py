@@ -28,7 +28,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
         sha = dict_to_hash(self.input.dict())[:7]
         mode = "testnet" if self.input.testnet else "real"
-        self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}"
+        self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}_{self.input.quote_step_qty}"
 
         self.set_base_step_qty(self.base_step_qty_reference_price)
 
