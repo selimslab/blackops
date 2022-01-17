@@ -145,7 +145,8 @@ class SlidingWindowTrader(RobotBase):
 
             if self.config.input.use_bridge:
                 if self.targets.bridge:
-                    leader_mid *= self.targets.bridge
+                    bridged_mid = leader_mid * self.targets.bridge
+                    leader_mid = bridged_mid.quantize(leader_mid)
                     return leader_mid
                 return None
             else:
