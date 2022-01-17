@@ -17,7 +17,6 @@ from src.stgs.sliding.config import SlidingWindowConfig
 
 @dataclass
 class OrderStats:
-    tried: int = 0
     delivered: int = 0
 
 
@@ -90,12 +89,15 @@ class OrderApi:
             if self.order_lock.locked():
                 return None
 
-            float_qty = round(float(qty))
+            order_log: Optional[dict] = None
 
-            async with self.order_lock:
-                order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                    self.pair, side, float(price), float_qty
-                )
+            async with lock_with_timeout(self.order_lock, 0.12) as ok:
+                if ok:
+                    float_qty = round(float(qty))
+                    order_log = await self.exchange.submit_limit_order(
+                        self.pair, side, float(price), float_qty
+                    )
+
             if order_log:
                 # only send result if order delivered
                 order_id = self.parse_order_id(order_log)
@@ -106,10 +108,10 @@ class OrderApi:
                     self.open_order_ids.append(order_id)
                     return order_log
 
-            self.stats.tried += 1
-            logger.info(
-                f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price}, {order_log}"
-            )
+            # self.stats.tried += 1
+            # logger.info(
+            #     f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price}, {order_log}"
+            # )
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
