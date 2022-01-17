@@ -38,6 +38,8 @@ class OrdersDelivered:
 class OrdersTried:
     buy: int = 0
     sell: int = 0
+    buy_locked: int = 0
+    sell_locked: int = 0
 
 
 @dataclass
@@ -86,8 +88,10 @@ class OrderApi:
         try:
 
             if side == OrderType.BUY and self.exchange.locks.buy.locked():
+                self.orders_tried.buy_locked += 1
                 return None
             elif side == OrderType.SELL and self.exchange.locks.sell.locked():
+                self.orders_tried.sell_locked += 1
                 return None
 
             float_qty = round(float(qty), get_precision(qty))
