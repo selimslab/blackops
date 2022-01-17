@@ -73,7 +73,7 @@ class StopwatchContext:
     @asynccontextmanager
     async def stopwatch(self, func: Callable, seconds: float):
         """Cancel the old task when the new arrives"""
-        if self.task:
+        if self.task and not self.task.cancelled():
             self.task.cancel()
         self.task = asyncio.create_task(self.call_after(func, seconds))
         yield

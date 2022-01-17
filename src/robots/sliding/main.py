@@ -25,10 +25,11 @@ class TargetPrices:
 
 
 @dataclass
-class Targets:
+class Window:
+    mid: Optional[Decimal] = None
+    bridge: Optional[Decimal] = None
     maker: TargetPrices = field(default_factory=TargetPrices)
     taker: TargetPrices = field(default_factory=TargetPrices)
-    bridge: Optional[Decimal] = None
 
 
 @dataclass
@@ -42,7 +43,7 @@ class SlidingWindowTrader(RobotBase):
 
     current_step: Decimal = Decimal("0")
 
-    targets: Targets = field(default_factory=Targets)
+    targets: Window = field(default_factory=Window)
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
@@ -92,7 +93,7 @@ class SlidingWindowTrader(RobotBase):
                     self.targets.bridge = mid
 
     def clear_targets(self):
-        self.targets = Targets()
+        self.targets = Window()
 
     def clear_bridge(self):
         self.targets.bridge = None
@@ -104,6 +105,7 @@ class SlidingWindowTrader(RobotBase):
 
     async def decide(self, book) -> None:
         mid = self.get_window_mid(book)
+        self.targets.mid = mid
         if mid:
             async with self.stopwatch_api.stopwatch(
                 self.clear_targets, sleep_seconds.clear_prices

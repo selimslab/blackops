@@ -9,7 +9,7 @@ from src.flow import flow_api
 from src.monitoring import logger
 from src.pubsub.radio import radio
 from src.robots.factory import Robot, robot_factory
-from src.robots.sliding.main import TargetPrices, Targets
+from src.robots.sliding.main import TargetPrices, Window
 from src.robots.sliding.market import MarketPrices
 from src.robots.sliding.orders import OrdersDelivered
 from src.stgs import StrategyConfig, StrategyInput, strategy_api
@@ -121,17 +121,17 @@ async def test_end_to_end():
     ]
 
     expected = [
-        Targets(
+        Window(
             maker=TargetPrices(buy=Decimal("2952.66154"), sell=Decimal("2960.34846")),
             taker=TargetPrices(buy=Decimal("2949.11374"), sell=Decimal("2963.89626")),
             bridge=None,
         ),
-        Targets(
+        Window(
             maker=TargetPrices(buy=Decimal("2953.67522"), sell=Decimal("2961.36478")),
             taker=TargetPrices(buy=Decimal("2950.12620"), sell=Decimal("2964.91380")),
             bridge=None,
         ),
-        Targets(
+        Window(
             maker=TargetPrices(buy=Decimal("2953.63028"), sell=Decimal("2961.31972")),
             taker=TargetPrices(buy=Decimal("2950.08131"), sell=Decimal("2964.86869")),
             bridge=None,
