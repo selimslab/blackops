@@ -13,6 +13,11 @@ def round_decimal(d: Decimal) -> Decimal:
     return d.normalize(rounding_context)
 
 
+def get_precision(d: Decimal):
+    sign, digit, exponent = d.as_tuple()
+    return exponent
+
+
 def get_bps(d: Decimal) -> Decimal:
     sign, digit, exponent = d.as_tuple()
     return Decimal(str(10 ** exponent))

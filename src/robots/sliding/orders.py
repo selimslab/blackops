@@ -11,7 +11,7 @@ from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
-from src.numberops.main import round_decimal  # type: ignore
+from src.numberops.main import get_precision, round_decimal  # type: ignore
 from src.periodic import StopwatchContext, lock_with_timeout
 from src.stgs.sliding.config import SlidingWindowConfig
 
@@ -96,8 +96,11 @@ class OrderApi:
     ) -> Optional[dict]:
 
         try:
+            qty = round_decimal(qty)
+            prec = get_precision(qty)
+            float_qty = round(float(qty), prec)
             order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                self.pair, side, float(price), float(round_decimal(qty))
+                self.pair, side, float(price), float_qty
             )
             if order_log:
                 # only send result if order delivered
@@ -117,6 +120,8 @@ class OrderApi:
                     self.orders_tried.buy += 1
                 else:
                     self.orders_tried.sell += 1
+
+                logger.info(f"cannot {side.value} {qty} {self.pair.symbol}  @ {price} ")
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
