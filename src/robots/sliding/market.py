@@ -127,10 +127,10 @@ class MarketWatcher:
                     OrderType.BUY, precise_price, self.config.base_step_qty
                 )
 
-        if order_log:
-            # If we deliver order, we reflect it in balance until we read the current balance
-            self.pair.base.free += self.config.base_step_qty
-            return order_log
+                if order_log:
+                    # If we deliver order, we reflect it in balance until we read the current balance
+                    self.pair.base.free += self.config.base_step_qty
+                    return order_log
 
         return None
 
@@ -164,10 +164,8 @@ class MarketWatcher:
                     OrderType.SELL, precise_price, qty
                 )
 
-        order_log = await self.order_api.send_order(OrderType.SELL, precise_price, qty)
-
-        if order_log:
-            # If we deliver order, we reflect it in balance until we read the current balance
-            self.pair.base.free -= qty
-            return order_log
+                if order_log:
+                    # If we deliver order, we reflect it in balance until we read the current balance
+                    self.pair.base.free -= qty
+                    return order_log
         return None
