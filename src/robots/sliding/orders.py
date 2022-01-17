@@ -90,9 +90,7 @@ class OrderApi:
             elif side == OrderType.SELL and self.exchange.locks.sell.locked():
                 return None
 
-            qty = round_decimal_half_down(qty)
-            prec = get_precision(qty)
-            float_qty = round(float(qty), prec)
+            float_qty = round(float(qty), get_precision(qty))
 
             order_log: Optional[dict] = await self.exchange.submit_limit_order(
                 self.pair, side, float(price), float_qty

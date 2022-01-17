@@ -7,7 +7,7 @@ import src.pubsub.log_pub as log_pub
 from src.domain import OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.numberops.main import one_bps_lower
+from src.numberops.main import one_bps_lower, round_decimal_half_down  # type: ignore
 from src.periodic import StopwatchContext, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
@@ -125,7 +125,7 @@ class MarketWatcher:
             if self.pair.base.free < qty * Decimal("0.1"):
                 return None
             else:
-                qty = one_bps_lower(self.pair.base.free)
+                qty = round_decimal_half_down(self.pair.base.free)
 
         order_log = await self.order_api.send_order(OrderType.SELL, price, qty)
 
