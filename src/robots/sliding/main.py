@@ -8,7 +8,6 @@ import src.pubsub.log_pub as log_pub
 from src.domain import BPS
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.numberops import one_bps_higher, one_bps_lower, round_decimal_half_up
 from src.periodic import StopwatchContext, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
@@ -209,18 +208,20 @@ class SlidingWindowTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.start_time,
-            "orders_delivered": asdict(self.follower.order_api.orders_delivered),
-            "orders_tried": asdict(self.follower.order_api.orders_tried),
-            "targets": asdict(self.targets),
-            "btc": {
-                "bid": self.follower.prices.bid,
-                "ask": self.follower.prices.ask,
-                "last update": self.follower_pub.last_updated.time(),
-                "books seen": self.follower_pub.books_seen,
+            "orders": {
+                "tried": asdict(self.follower.order_api.orders_tried),
+                "delivered": asdict(self.follower.order_api.orders_delivered),
+                "filled": "¯\\_(ツ)_/¯",
             },
+            "targets": asdict(self.targets),
+            "market": asdict(self.follower.prices),
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),
                 "books seen": self.leader_pub.books_seen,
+            },
+            "btc": {
+                "last update": self.follower_pub.last_updated.time(),
+                "books seen": self.follower_pub.books_seen,
             },
         }
 
