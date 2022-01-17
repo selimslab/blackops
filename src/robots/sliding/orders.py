@@ -11,7 +11,7 @@ from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
-from src.numberops.main import get_precision, round_decimal  # type: ignore
+from src.numberops.main import get_precision, round_decimal_half_down  # type: ignore
 from src.periodic import StopwatchContext, lock_with_timeout
 from src.stgs.sliding.config import SlidingWindowConfig
 
@@ -96,7 +96,7 @@ class OrderApi:
     ) -> Optional[dict]:
 
         try:
-            qty = round_decimal(qty)
+            qty = round_decimal_half_down(qty)
             prec = get_precision(qty)
             float_qty = round(float(qty), prec)
             order_log: Optional[dict] = await self.exchange.submit_limit_order(

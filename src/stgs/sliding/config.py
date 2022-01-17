@@ -12,7 +12,7 @@ from src.domain import (
 )
 from src.exchanges.factory import ExchangeType
 from src.idgen import dict_to_hash
-from src.numberops import round_decimal
+from src.numberops import round_decimal_half_up
 from src.stgs.base import StrategyConfigBase, StrategyType
 
 from .inputs import SlidingWindowInput
@@ -55,7 +55,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     def set_base_step_qty(self, price: Decimal) -> None:
         self.base_step_qty_reference_price = price
-        self.base_step_qty = round_decimal(
+        self.base_step_qty = round_decimal_half_up(
             self.input.quote_step_qty / self.base_step_qty_reference_price
         )
 

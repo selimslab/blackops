@@ -7,7 +7,7 @@ from src.domain import Asset, AssetPair, create_asset_pair
 from src.domain.models import OrderType
 from src.environment import apiKey, apiSecret
 from src.exchanges.btcturk.real.main import BtcturkApiClient
-from src.numberops import round_decimal
+from src.numberops import round_decimal_half_up
 
 
 @asynccontextmanager
@@ -62,7 +62,7 @@ async def test_cancel_open_orders(api_client, symbol):
 async def test_submit_limit_order(api_client):
 
     res = await api_client.submit_limit_order(
-        quantity=float(round_decimal(3.32608957)),
+        quantity=3.32,
         price=571.65,
         side=OrderType.SELL,
         pair=create_asset_pair("AVAX", "TRY"),

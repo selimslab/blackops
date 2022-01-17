@@ -8,7 +8,7 @@ import src.pubsub.log_pub as log_pub
 from src.domain import BPS
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.numberops import one_bps_higher, one_bps_lower, round_decimal
+from src.numberops import one_bps_higher, one_bps_lower, round_decimal_half_up
 from src.periodic import StopwatchContext, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
