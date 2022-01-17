@@ -121,7 +121,7 @@ class OrderApi:
                 if order_id:
                     logger.info(order_log)
                     self.stats.delivered += 1
-                    await asyncio.sleep(0.07)  # allow 70 ms for order to be filled
+                    await asyncio.sleep(0.09)  # allow 90 ms for order to be filled
                     self.open_order_ids.append(order_id)
                     return order_log
 
