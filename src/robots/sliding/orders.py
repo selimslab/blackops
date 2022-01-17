@@ -55,15 +55,12 @@ class OrderApi:
 
         async with self.read_lock:
             while self.exchange.locks.read.locked():
-                await asyncio.sleep(0.07)
+                await asyncio.sleep(0.06)
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
                 self.stats.refreshed += 1
                 orders = self.exchange.get_sorted_order_list(res)
                 order_ids = [order.get("id") for order in orders]
-
-                # clear queue
-                self.open_order_ids.clear()
 
                 for order_id in order_ids:
                     if order_id and order_id not in self.cancelled:
