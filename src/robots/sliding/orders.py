@@ -94,7 +94,7 @@ class OrderApi:
                 self.orders_tried.sell_locked += 1
                 return None
 
-            float_qty = round(float(qty), get_precision(qty))
+            float_qty = round(float(qty))
 
             order_log: Optional[dict] = await self.exchange.submit_limit_order(
                 self.pair, side, float(price), float_qty

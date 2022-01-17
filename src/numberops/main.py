@@ -3,7 +3,7 @@ from decimal import Decimal
 
 half_up_rounding_context = decimal.Context(prec=1, rounding=decimal.ROUND_HALF_UP)
 
-floor_rounding_context = decimal.Context(prec=2, rounding=decimal.ROUND_FLOOR)
+floor_rounding_context = decimal.Context(prec=1, rounding=decimal.ROUND_FLOOR)
 
 
 def round_decimal_half_up(d: Decimal) -> Decimal:
