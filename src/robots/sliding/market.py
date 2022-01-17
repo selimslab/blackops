@@ -151,7 +151,9 @@ class MarketWatcher:
 
         precise_price = self.get_precise_price(price, self.prices.bid)
 
+        self.pair.base.free -= qty
         order_log = await self.order_api.send_order(OrderType.SELL, precise_price, qty)
+        self.pair.base.free += qty
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance
