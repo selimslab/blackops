@@ -209,10 +209,8 @@ class SlidingWindowTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.start_time,
-            "buy": self.follower.order_api.orders_delivered.buy,
-            "sell": self.follower.order_api.orders_delivered.sell,
-            "buy_tried": self.follower.order_api.orders_tried.buy,
-            "sell_tried": self.follower.order_api.orders_tried.sell,
+            "orders_delivered": self.follower.order_api.orders_delivered,
+            "orders_tried": self.follower.order_api.orders_tried,
             "targets": asdict(self.targets),
             "btc": {
                 "bid": self.follower.prices.bid,

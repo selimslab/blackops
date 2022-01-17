@@ -121,7 +121,7 @@ class OrderApi:
                 else:
                     self.orders_tried.sell += 1
 
-                logger.info(f"cannot {side.value} {qty} {self.pair.symbol}  @ {price} ")
+                # logger.info(f"cannot {side.value} {qty} {self.pair.symbol}  @ {price} ")
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"

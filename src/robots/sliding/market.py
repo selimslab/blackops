@@ -122,7 +122,10 @@ class MarketWatcher:
         qty = self.config.base_step_qty
 
         if self.pair.base.free < qty:
-            qty = one_bps_lower(self.pair.base.free)
+            if self.pair.base.free < qty * Decimal("0.05"):
+                return None
+            else:
+                qty = self.pair.base.free
 
         order_log = await self.order_api.send_order(OrderType.SELL, price, qty)
 
