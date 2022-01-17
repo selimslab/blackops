@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from .main import one_bps_lower, round_decimal_half_up
+from .main import one_bps_lower, round_decimal_half_down, round_decimal_half_up
 
 
 def test_round():
@@ -9,6 +9,8 @@ def test_round():
     step_try = Decimal("3000")
     print("shib step", step_try / shib)
     print("btc step", step_try / btc)
+
+    assert round_decimal_half_down(Decimal("24.5456")) == Decimal("20")
 
     assert round_decimal_half_up(Decimal("3.32608957")) == Decimal("3")
 
