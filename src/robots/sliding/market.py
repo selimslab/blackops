@@ -148,8 +148,10 @@ class MarketWatcher:
 
         if not self.prices.bid:
             return None
-
         precise_price = self.get_precise_price(price, self.prices.bid)
+
+        if not self.can_sell():
+            return None
 
         self.pair.base.free -= qty
         order_log = await self.order_api.send_order(OrderType.SELL, precise_price, qty)
