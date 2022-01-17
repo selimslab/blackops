@@ -112,15 +112,15 @@ class OrderApi:
 
                     logger.info(order_log)
                     return order_log
-            else:
-                if side == OrderType.BUY:
-                    self.orders_tried.buy += 1
-                else:
-                    self.orders_tried.sell += 1
 
-                logger.info(
-                    f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price} "
-                )
+            if side == OrderType.BUY:
+                self.orders_tried.buy += 1
+            else:
+                self.orders_tried.sell += 1
+
+            logger.info(
+                f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price}, {order_log}"
+            )
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
