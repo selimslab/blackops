@@ -1,16 +1,13 @@
 import asyncio
-import queue
+import collections
 import traceback
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
-import async_timeout
-
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
-from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
 from src.numberops.main import get_precision, round_decimal_floor  # type: ignore
@@ -30,7 +27,7 @@ class OrderApi:
     pair: AssetPair
     exchange: BtcturkBase
 
-    open_order_ids: queue.Queue = field(default_factory=queue.Queue)
+    open_order_ids: collections.deque = field(default_factory=collections.deque)
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
@@ -56,12 +53,11 @@ class OrderApi:
                 order_ids = [order.get("id") for order in orders]
 
                 # clear queue
-                while self.open_order_ids:
-                    self.open_order_ids.get_nowait()
+                self.open_order_ids.clear()
 
                 for order_id in order_ids:
                     if order_id and order_id not in self.cancelled:
-                        self.open_order_ids.put_nowait(order_id)
+                        self.open_order_ids.append(order_id)
 
                 self.cancelled = set()
 
@@ -70,12 +66,12 @@ class OrderApi:
             if self.cancel_lock.locked():
                 return None
 
-            if self.open_order_ids.empty():
+            if not self.open_order_ids:
                 return None
 
             async with self.cancel_lock:
                 while self.open_order_ids:
-                    order_id = self.open_order_ids.get_nowait()
+                    order_id = self.open_order_ids.popleft()
                     while self.exchange.locks.cancel.locked():
                         await asyncio.sleep(0.02)
                     ok = await self.exchange.cancel_order(order_id)
@@ -107,7 +103,7 @@ class OrderApi:
                     logger.info(order_log)
                     self.stats.delivered += 1
                     await asyncio.sleep(0.07)  # allow 70 ms for order to be filled
-                    self.open_order_ids.put_nowait(order_id)
+                    self.open_order_ids.append(order_id)
                     return order_log
 
             self.stats.tried += 1
