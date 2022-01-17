@@ -16,7 +16,9 @@ async def robot():
 
 
 async def test_timer_lock():
-    await asyncio.gather(robot(), robot(), robot())
+    await asyncio.gather(robot(), robot())
+    await asyncio.sleep(0.1)
+    await robot()
 
 
 if __name__ == "__main__":

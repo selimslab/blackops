@@ -3,13 +3,8 @@ from dataclasses import dataclass
 from typing import Callable
 
 import websockets
-from websockets.exceptions import (
-    ConnectionClosed,
-    ConnectionClosedError,
-    WebSocketException,
-)
+from websockets.exceptions import ConnectionClosedError, WebSocketException
 
-import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 
 

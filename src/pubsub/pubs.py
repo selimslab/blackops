@@ -3,11 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import AsyncGenerator, Optional, Union
 
-import src.streams.bn as bn_streams
-import src.streams.btcturk as btc_streams
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
-from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 from src.monitoring import logger
 from src.periodic import periodic
 
