@@ -22,10 +22,10 @@ class BtcturkApiClientTestnet(BtcturkBase):
         try:
             if side == OrderType.BUY:
                 lock = self.locks.buy
-                wait = sleep_seconds.ex_buy
+                wait = sleep_seconds.buy_wait
             else:
                 lock = self.locks.sell
-                wait = sleep_seconds.ex_sell
+                wait = sleep_seconds.sell_wait
 
             async with lock_with_timeout(lock, wait) as ok:
                 if ok:

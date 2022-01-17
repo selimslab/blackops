@@ -93,7 +93,9 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with lock_with_timeout(self.locks.read, sleep_seconds.ex_read) as ok:
+            async with lock_with_timeout(
+                self.locks.read, sleep_seconds.read_wait
+            ) as ok:
                 if ok:
                     return await self._http(self.urls.balance_url, self.session.get)
 
@@ -131,10 +133,10 @@ class BtcturkApiClient(BtcturkBase):
         try:
             if side == OrderType.BUY:
                 lock = self.locks.buy
-                wait = sleep_seconds.ex_buy
+                wait = sleep_seconds.buy_wait
             else:
                 lock = self.locks.sell
-                wait = sleep_seconds.ex_sell
+                wait = sleep_seconds.sell_wait
 
             if lock.locked():
                 return None
@@ -203,7 +205,7 @@ class BtcturkApiClient(BtcturkBase):
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
 
-        async with lock_with_timeout(self.locks.read, sleep_seconds.ex_read) as ok:
+        async with lock_with_timeout(self.locks.read, sleep_seconds.read_wait) as ok:
             if ok:
                 return await self._http(uri, self.session.get)
 
@@ -222,7 +224,7 @@ class BtcturkApiClient(BtcturkBase):
                 self.session = aiohttp.ClientSession()
 
             async with lock_with_timeout(
-                self.locks.cancel, sleep_seconds.ex_cancel
+                self.locks.cancel, sleep_seconds.cancel_wait
             ) as ok:
                 if ok:
                     return await self._http(uri, self.session.delete)

@@ -41,19 +41,10 @@ class OrdersTried:
 
 
 @dataclass
-class OrderLocks:
-    buy: asyncio.Lock = field(default_factory=asyncio.Lock)
-    sell: asyncio.Lock = field(default_factory=asyncio.Lock)
-    cancel: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-
-@dataclass
 class OrderApi:
     config: SlidingWindowConfig
     pair: AssetPair
     exchange: BtcturkBase
-
-    locks: OrderLocks = field(default_factory=OrderLocks)
 
     open_orders: OpenOrders = field(default_factory=OpenOrders)
 
@@ -78,32 +69,30 @@ class OrderApi:
         finally:
             self.orders_delivered.prev_total = self.orders_delivered.total
 
-    async def cancel_previous_order(self, side: OrderType) -> None:
-        try:
-            async with lock_with_timeout(
-                lock=self.locks.cancel, sleep=sleep_seconds.robot_cancel
-            ):
-                if side == OrderType.BUY and self.open_orders.buy:
-                    await self.exchange.cancel_order(self.open_orders.buy.pop())
+    # async def cancel_previous_order(self, side: OrderType) -> None:
+    #     try:
+    #         if side == OrderType.BUY and self.open_orders.buy:
+    #             await self.exchange.cancel_order(self.open_orders.buy.pop())
 
-                if side == OrderType.SELL and self.open_orders.sell:
-                    await self.exchange.cancel_order(self.open_orders.sell.pop())
+    #         if side == OrderType.SELL and self.open_orders.sell:
+    #             await self.exchange.cancel_order(self.open_orders.sell.pop())
+    #     except Exception as e:
+    #         pass
 
-        except Exception as e:
-            pass
-
-    async def _send_order(
+    async def send_order(
         self, side: OrderType, price: Decimal, qty: Decimal
     ) -> Optional[dict]:
 
         try:
-            qty = round_decimal_half_down(qty)
-            prec = get_precision(qty)
-            float_qty = round(float(qty), prec)
+
             if side == OrderType.BUY and self.exchange.locks.buy.locked():
                 return None
             elif side == OrderType.SELL and self.exchange.locks.sell.locked():
                 return None
+
+            qty = round_decimal_half_down(qty)
+            prec = get_precision(qty)
+            float_qty = round(float(qty), prec)
 
             order_log: Optional[dict] = await self.exchange.submit_limit_order(
                 self.pair, side, float(price), float_qty
@@ -136,24 +125,6 @@ class OrderApi:
             logger.info(msg)
             log_pub.publish_error(message=msg)
             return None
-
-    async def send_order(
-        self, side: OrderType, price: Decimal, qty: Decimal
-    ) -> Optional[dict]:
-
-        # await self.cancel_previous_order(side)
-
-        if side == OrderType.BUY:
-            lock = self.locks.buy
-            wait = sleep_seconds.robot_buy
-        else:
-            lock = self.locks.sell
-            wait = sleep_seconds.robot_sell
-
-        async with lock_with_timeout(lock, wait) as ok:
-            if ok:
-                return await self._send_order(side, price, qty)
-        return None
 
     @staticmethod
     def parse_order_id(order_log: dict) -> Optional[OrderId]:
