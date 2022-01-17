@@ -16,8 +16,6 @@ from src.robots.base import RobotBase
 from src.robots.sliding.market import MarketWatcher
 from src.stgs.sliding.config import SlidingWindowConfig
 
-# getcontext().prec = 9
-
 
 @dataclass
 class TargetPrices:

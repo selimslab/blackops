@@ -1,3 +1,4 @@
+import decimal
 import os
 from dataclasses import dataclass
 
@@ -7,6 +8,8 @@ from pydantic import BaseModel
 from src.monitoring import logger
 
 load_dotenv()
+
+decimal.getcontext().prec = 9
 
 
 class SleepSeconds(BaseModel):
