@@ -237,8 +237,8 @@ class SlidingWindowTrader(RobotBase):
             "start time": self.start_time,
             "credits": asdict(self.credits),
             "orders": asdict(self.follower.order_api.stats),
-            "open orders": str(self.follower.order_api.open_order_ids),
-            "cancelled orders": str(self.follower.order_api.cancelled),
+            "open orders": list(self.follower.order_api.open_order_ids),
+            "cancelled orders": list(self.follower.order_api.cancelled),
             "targets": asdict(self.targets),
             "market": asdict(self.follower.prices),
             "binance": {
