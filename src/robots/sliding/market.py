@@ -132,7 +132,7 @@ class MarketWatcher:
     def can_sell(self) -> bool:
         return bool(
             self.pair.base.free
-        ) and self.pair.base.free >= self.config.base_step_qty / Decimal(10)
+        ) and self.pair.base.free >= self.config.base_step_qty * Decimal("0.65")
 
     async def short(self, price: Decimal) -> Optional[dict]:
         if not self.can_sell():
