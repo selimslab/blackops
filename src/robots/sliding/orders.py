@@ -1,12 +1,10 @@
 import asyncio
-import itertools
 import traceback
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
 import async_timeout
-import simplejson as json
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
@@ -36,6 +34,12 @@ class OrdersDelivered:
 
 
 @dataclass
+class OrdersTried:
+    buy: int = 0
+    sell: int = 0
+
+
+@dataclass
 class OrderLocks:
     buy: asyncio.Lock = field(default_factory=asyncio.Lock)
     sell: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -53,6 +57,8 @@ class OrderApi:
     open_orders: OpenOrders = field(default_factory=OpenOrders)
 
     orders_delivered: OrdersDelivered = field(default_factory=OrdersDelivered)
+
+    orders_tried: OrdersTried = field(default_factory=OrdersTried)
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
@@ -107,9 +113,10 @@ class OrderApi:
                     logger.info(order_log)
                     return order_log
             else:
-                logger.info(
-                    f"couldn't send order: {self.pair.symbol, side, price, qty}"
-                )
+                if side == OrderType.BUY:
+                    self.orders_tried.buy += 1
+                else:
+                    self.orders_tried.sell += 1
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
