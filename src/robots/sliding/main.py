@@ -105,7 +105,6 @@ class SlidingWindowTrader(RobotBase):
 
     async def decide(self, book) -> None:
         mid = self.get_window_mid(book)
-        self.targets.mid = mid
         if mid:
             async with self.stopwatch_api.stopwatch(
                 self.clear_targets, sleep_seconds.clear_prices
@@ -138,16 +137,19 @@ class SlidingWindowTrader(RobotBase):
         if not book:
             return None
         try:
-            mid = self.leader_pub.api_client.get_mid(book)
-            if not mid:
+            leader_mid = self.leader_pub.api_client.get_mid(book)
+
+            self.targets.mid = leader_mid
+            if not leader_mid:
                 return None
 
             if self.config.input.use_bridge:
                 if self.targets.bridge:
-                    mid *= self.targets.bridge
-                    return mid
-
-            return None
+                    leader_mid *= self.targets.bridge
+                    return leader_mid
+                return None
+            else:
+                return leader_mid
 
         except Exception as e:
             msg = f"get_window_mid: {e}"
@@ -213,7 +215,6 @@ class SlidingWindowTrader(RobotBase):
             "orders": {
                 "tried": asdict(self.follower.order_api.orders_tried),
                 "delivered": asdict(self.follower.order_api.orders_delivered),
-                "filled": "¯\\_(ツ)_/¯",
             },
             "targets": asdict(self.targets),
             "market": asdict(self.follower.prices),
