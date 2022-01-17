@@ -10,8 +10,8 @@ def test_round():
     print("shib step", step_try / shib)
     print("btc step", step_try / btc)
 
-    assert round_decimal_floor(Decimal("553.5")) == Decimal("553")
-    assert round_decimal_floor(Decimal("5063291.139240")) == Decimal("5060000")
+    assert round_decimal_floor(Decimal("553.5")) == Decimal("550")
+    assert round_decimal_floor(Decimal("5063291.139240")) == Decimal("5000000")
 
     assert round_decimal_half_up(Decimal("3.32608957")) == Decimal("3")
 
