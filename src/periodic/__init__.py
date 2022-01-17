@@ -1,1 +1,1 @@
-from .main import StopwatchContext, periodic, timer_lock
+from .main import StopwatchContext, lock_with_timeout, periodic

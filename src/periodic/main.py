@@ -19,7 +19,10 @@ async def periodic(func: Callable, sleep_seconds: float) -> None:
 
 
 @asynccontextmanager
-async def timer_lock(lock: asyncio.Lock, sleep: float):
+async def lock_with_timeout(lock: asyncio.Lock, sleep: float):
+
+    # if lock.locked():
+    #     yield None
     # try:
     #     async with async_timeout.timeout(sleep):
     #         async with lock:
@@ -36,9 +39,12 @@ async def timer_lock(lock: asyncio.Lock, sleep: float):
     #     except asyncio.TimeoutError:
     #         pass
 
-    async with lock:
-        yield
-        await asyncio.sleep(sleep)
+    if lock.locked():
+        yield None
+    else:
+        async with lock:
+            yield lock
+            await asyncio.sleep(sleep)
 
     # async with lock:
     #     try:

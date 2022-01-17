@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import async_timeout
 
-from src.periodic import StopwatchContext, timer_lock
+from src.periodic import StopwatchContext, lock_with_timeout
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Test:
         lock = self.order_lock
         if lock.locked():
             return f"order_in_progress", i
-        async with timer_lock(lock, 5):
+        async with lock_with_timeout(lock, 0.2):
             return i
 
 

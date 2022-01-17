@@ -13,7 +13,7 @@ from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
-from src.periodic import StopwatchContext, timer_lock
+from src.periodic import StopwatchContext, lock_with_timeout
 from src.stgs.sliding.config import SlidingWindowConfig
 
 
@@ -72,7 +72,7 @@ class OrderApi:
 
     async def cancel_previous_order(self, side: OrderType) -> None:
         try:
-            async with timer_lock(
+            async with lock_with_timeout(
                 lock=self.locks.cancel, sleep=sleep_seconds.robot_cancel
             ):
                 if side == OrderType.BUY and self.open_orders.buy:
@@ -102,7 +102,13 @@ class OrderApi:
                     else:
                         self.orders_delivered.sell += 1
                         self.open_orders.sell.append(order_id)
+
+                    logger.info(order_log)
                     return order_log
+            else:
+                logger.info(
+                    f"couldn't send order: {self.pair.symbol, side, price, qty}"
+                )
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
@@ -123,8 +129,10 @@ class OrderApi:
             lock = self.locks.sell
             wait = sleep_seconds.robot_sell
 
-        async with timer_lock(lock, wait):
-            return await self._send_order(side, price, qty)
+        async with lock_with_timeout(lock, wait) as ok:
+            if ok:
+                return await self._send_order(side, price, qty)
+        return None
 
     @staticmethod
     def parse_order_id(order_log: dict) -> Optional[OrderId]:

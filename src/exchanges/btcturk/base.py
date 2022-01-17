@@ -12,7 +12,7 @@ from src.domain.models import AssetPair
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
-from src.periodic import timer_lock
+from src.periodic import lock_with_timeout
 
 # @dataclass
 # class TimeoutLock:
@@ -39,10 +39,13 @@ class BtcturkBase(ExchangeAPIClientBase):
     session: Optional[aiohttp.ClientSession] = None
 
     async def activate_rate_limit(self) -> None:
-        async with timer_lock(self.locks.rate_limit, sleep_seconds.rate_limit):
-            await self._close_session()
-            if not self.session or self.session.closed:
-                self.session = aiohttp.ClientSession()
+        async with lock_with_timeout(
+            self.locks.rate_limit, sleep_seconds.rate_limit
+        ) as ok:
+            if ok:
+                await self._close_session()
+                if not self.session or self.session.closed:
+                    self.session = aiohttp.ClientSession()
 
     @staticmethod
     def parse_prices(orders: List[dict]) -> list:

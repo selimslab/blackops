@@ -7,7 +7,7 @@ from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.exchanges.btcturk.testnet.dummy import BtcturkDummy
 from src.monitoring import logger
-from src.periodic import StopwatchContext, timer_lock
+from src.periodic import StopwatchContext, lock_with_timeout
 
 
 @dataclass
@@ -27,17 +27,18 @@ class BtcturkApiClientTestnet(BtcturkBase):
                 lock = self.locks.sell
                 wait = sleep_seconds.ex_sell
 
-            if lock.locked():
-                return None
+            async with lock_with_timeout(lock, wait) as ok:
+                if ok:
+                    res = await self.dummy_exchange.mock_submit_limit_order(
+                        pair=pair,
+                        order_type=side.value,
+                        price=price,
+                        quantity=quantity,
+                    )
+                    return res.dict()
 
-            async with timer_lock(lock, wait):
-                res = await self.dummy_exchange.mock_submit_limit_order(
-                    pair=pair,
-                    order_type=side.value,
-                    price=price,
-                    quantity=quantity,
-                )
-                return res.dict()
+            return None
+
         except Exception as e:
             logger.error(f"submit_limit_order: {e}")
             raise e

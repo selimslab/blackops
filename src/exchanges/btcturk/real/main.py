@@ -15,7 +15,7 @@ from src.domain.models import OrderType
 from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
-from src.periodic import StopwatchContext, timer_lock
+from src.periodic import StopwatchContext, lock_with_timeout
 from src.web import update_url_query_params
 
 
@@ -93,8 +93,11 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with timer_lock(self.locks.read, sleep_seconds.ex_read):
-                return await self._http(self.urls.balance_url, self.session.get)
+            async with lock_with_timeout(self.locks.read, sleep_seconds.ex_read) as ok:
+                if ok:
+                    return await self._http(self.urls.balance_url, self.session.get)
+
+            return None
         except Exception as e:
             raise e
 
@@ -139,11 +142,15 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with timer_lock(lock, wait):
-                async with self.session.post(
-                    self.urls.order_url, headers=self._get_headers(), json=params
-                ) as res:
-                    return await res.json(content_type=None)
+            async with lock_with_timeout(lock, wait) as ok:
+                if ok:
+                    async with self.session.post(
+                        self.urls.order_url, headers=self._get_headers(), json=params
+                    ) as res:
+                        return await res.json(content_type=None)
+
+            return None
+
         except Exception as e:
             msg = f"submit_limit_order: {e}"
             logger.error(msg)
@@ -196,8 +203,11 @@ class BtcturkApiClient(BtcturkBase):
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
 
-        async with timer_lock(self.locks.read, sleep_seconds.ex_read):
-            return await self._http(uri, self.session.get)
+        async with lock_with_timeout(self.locks.read, sleep_seconds.ex_read) as ok:
+            if ok:
+                return await self._http(uri, self.session.get)
+
+        return None
 
     async def cancel_order(self, order_id: int) -> Optional[dict]:
         try:
@@ -211,8 +221,13 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with timer_lock(self.locks.cancel, sleep_seconds.ex_cancel):
-                return await self._http(uri, self.session.delete)
+            async with lock_with_timeout(
+                self.locks.cancel, sleep_seconds.ex_cancel
+            ) as ok:
+                if ok:
+                    return await self._http(uri, self.session.delete)
+
+            return None
         except Exception as e:
             # we could not cancel the order, its normal
             logger.info(f"cancel_order: {e}")
