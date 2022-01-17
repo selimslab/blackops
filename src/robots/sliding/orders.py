@@ -105,7 +105,7 @@ class OrderApi:
 
             order_log: Optional[dict] = None
 
-            async with lock_with_timeout(self.order_lock, 0.14) as ok:
+            async with lock_with_timeout(self.order_lock, sleep_seconds.buy_wait) as ok:
                 if ok:
                     float_qty = round(float(qty))
                     order_log = await self.exchange.submit_limit_order(
