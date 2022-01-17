@@ -26,7 +26,7 @@ class SleepSeconds(BaseModel):
 
     update_balances: float = 0.72  # 90/min
     cancel_open_orders: float = 0.4
-    refresh_open_orders: float = 0.6  # try every 200ms, 6 robots 1.2 secs
+    refresh_open_orders: float = 0.4  # try every 200ms, 6 robots 1.2 secs
 
     broadcast_stats: float = 0.8
 
