@@ -92,10 +92,6 @@ class SlidingWindowTrader(RobotBase):
                 self.follower.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
             ),
-            periodic(
-                self.follower.order_api.cancel_open_orders,
-                sleep_seconds.cancel_open_orders,
-            ),
         ]
 
         if self.bridge_pub:
@@ -239,7 +235,7 @@ class SlidingWindowTrader(RobotBase):
             "order stats": asdict(self.follower.order_api.stats),
             "open orders": list(self.follower.order_api.open_order_ids),
             "cancelled orders": list(self.follower.order_api.cancelled),
-            "open clear": self.follower.order_api.open_clear,
+            "open_orders_fresh": self.follower.order_api.open_orders_fresh,
             "targets": asdict(self.targets),
             "market": asdict(self.follower.prices),
             "binance": {
