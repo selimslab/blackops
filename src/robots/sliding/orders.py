@@ -95,10 +95,10 @@ class OrderApi:
                 self.orders_tried.sell_locked += 1
                 return None
 
-            float_qty = round(float(qty))
-
             if self.order_lock.locked():
                 return None
+
+            float_qty = round(float(qty))
 
             async with self.order_lock:
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
