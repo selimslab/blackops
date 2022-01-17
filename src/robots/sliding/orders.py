@@ -10,6 +10,7 @@ import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
+from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
 from src.numberops.main import get_precision, round_decimal_half_down  # type: ignore
 from src.periodic import StopwatchContext, lock_with_timeout
@@ -50,7 +51,7 @@ class OrderLocks:
 class OrderApi:
     config: SlidingWindowConfig
     pair: AssetPair
-    exchange: ExchangeAPIClientBase
+    exchange: BtcturkBase
 
     locks: OrderLocks = field(default_factory=OrderLocks)
 
@@ -99,6 +100,11 @@ class OrderApi:
             qty = round_decimal_half_down(qty)
             prec = get_precision(qty)
             float_qty = round(float(qty), prec)
+            if side == OrderType.BUY and self.exchange.locks.buy.locked():
+                return None
+            elif side == OrderType.SELL and self.exchange.locks.sell.locked():
+                return None
+
             order_log: Optional[dict] = await self.exchange.submit_limit_order(
                 self.pair, side, float(price), float_qty
             )
