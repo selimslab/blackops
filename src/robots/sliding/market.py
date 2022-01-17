@@ -8,7 +8,7 @@ from src.domain import OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops.main import one_bps_lower, round_decimal_floor  # type: ignore
-from src.periodic import StopwatchContext, periodic
+from src.periodic import StopwatchContext, lock_with_timeout, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.sliding.orders import OrderApi
@@ -31,6 +31,9 @@ class MarketWatcher:
     prices: MarketPrices = field(default_factory=MarketPrices)
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
+
+    sell_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    buy_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def __post_init__(self):
         self.order_api = OrderApi(
@@ -118,9 +121,11 @@ class MarketWatcher:
 
         precise_price = self.get_precise_price(price, self.prices.ask)
 
-        order_log = await self.order_api.send_order(
-            OrderType.BUY, precise_price, self.config.base_step_qty
-        )
+        async with lock_with_timeout(self.buy_lock, 0.05) as ok:
+            if ok:
+                order_log = await self.order_api.send_order(
+                    OrderType.BUY, precise_price, self.config.base_step_qty
+                )
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance
@@ -132,7 +137,7 @@ class MarketWatcher:
     def can_sell(self) -> bool:
         return bool(
             self.pair.base.free
-        ) and self.pair.base.free >= self.config.base_step_qty * Decimal("0.07")
+        ) and self.pair.base.free >= self.config.base_step_qty * Decimal("0.08")
 
     async def short(self, price: Decimal) -> Optional[dict]:
         if not self.can_sell():
@@ -141,7 +146,7 @@ class MarketWatcher:
         qty = self.config.base_step_qty
 
         if self.pair.base.free < qty:
-            if self.pair.base.free < qty * Decimal("0.07"):
+            if self.pair.base.free < qty * Decimal("0.08"):
                 return None
             else:
                 qty = round_decimal_floor(self.pair.base.free)
@@ -153,9 +158,13 @@ class MarketWatcher:
         if not self.can_sell():
             return None
 
-        self.pair.base.free -= qty
+        async with lock_with_timeout(self.sell_lock, 0.05) as ok:
+            if ok:
+                order_log = await self.order_api.send_order(
+                    OrderType.SELL, precise_price, qty
+                )
+
         order_log = await self.order_api.send_order(OrderType.SELL, precise_price, qty)
-        self.pair.base.free += qty
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance
