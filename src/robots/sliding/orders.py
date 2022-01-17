@@ -18,6 +18,11 @@ from src.stgs.sliding.config import SlidingWindowConfig
 @dataclass
 class OrderStats:
     delivered: int = 0
+    deliver_fail: int = 0
+    cancelled: int = 0
+    cancel_fail: int = 0
+    refreshed: int = 0
+    refresh_fail: int = 0
 
 
 @dataclass
@@ -53,6 +58,7 @@ class OrderApi:
                 await asyncio.sleep(0.02)
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
+                self.stats.refreshed += 1
                 orders = self.exchange.get_sorted_order_list(res)
                 order_ids = [order.get("id") for order in orders]
 
@@ -62,8 +68,9 @@ class OrderApi:
                 for order_id in order_ids:
                     if order_id and order_id not in self.cancelled:
                         self.open_order_ids.append(order_id)
-
                 self.cancelled = set()
+            else:
+                self.stats.refresh_fail += 1
 
     async def cancel_open_orders(self) -> None:
         try:
@@ -82,8 +89,10 @@ class OrderApi:
                     ok = await self.exchange.cancel_order(order_id)
                     if ok:
                         self.cancelled.add(order_id)
+                        self.stats.cancelled += 1
                     else:
                         self.open_clear = False
+                        self.stats.cancel_fail += 1
         except Exception as e:
             msg = f"watch_open_orders: {e}"
             logger.error(msg)
@@ -99,7 +108,7 @@ class OrderApi:
 
             order_log: Optional[dict] = None
 
-            async with lock_with_timeout(self.order_lock, 0.12) as ok:
+            async with lock_with_timeout(self.order_lock, 0.1) as ok:
                 if ok:
                     float_qty = round(float(qty))
                     order_log = await self.exchange.submit_limit_order(
@@ -116,6 +125,7 @@ class OrderApi:
                     self.open_order_ids.append(order_id)
                     return order_log
 
+            self.stats.deliver_fail += 1
             # self.stats.tried += 1
             # logger.info(
             #     f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price}, {order_log}"
