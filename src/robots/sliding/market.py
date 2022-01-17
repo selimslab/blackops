@@ -19,7 +19,6 @@ from src.stgs.sliding.config import SlidingWindowConfig
 class MarketPrices:
     bid: Optional[Decimal] = None
     ask: Optional[Decimal] = None
-    precision: Optional[Decimal] = None
 
 
 @dataclass
@@ -57,8 +56,6 @@ class MarketWatcher:
                 ):
                     self.prices.ask = ask
                     self.prices.bid = bid
-                    if not self.prices.precision:
-                        self.prices.precision = ask
 
             await asyncio.sleep(0)
 
@@ -107,16 +104,19 @@ class MarketWatcher:
             and self.pair.quote.free >= price * self.config.base_step_qty
         )
 
-    def get_precise_price(self, price: Decimal):
+    def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
         return price.quantize(
-            self.prices.precision, rounding=ROUND_DOWN  # type:ignore
+            reference, rounding=ROUND_DOWN  # type:ignore
         )
 
     async def long(self, price: Decimal) -> Optional[dict]:
         if not self.can_buy(price):
             return None
 
-        precise_price = self.get_precise_price(price)
+        if not self.prices.ask:
+            return None
+
+        precise_price = self.get_precise_price(price, self.prices.ask)
 
         order_log = await self.order_api.send_order(
             OrderType.BUY, precise_price, self.config.base_step_qty
@@ -146,7 +146,10 @@ class MarketWatcher:
             else:
                 qty = round_decimal_floor(self.pair.base.free)
 
-        precise_price = self.get_precise_price(price)
+        if not self.prices.bid:
+            return None
+
+        precise_price = self.get_precise_price(price, self.prices.bid)
 
         order_log = await self.order_api.send_order(OrderType.SELL, precise_price, qty)
 
