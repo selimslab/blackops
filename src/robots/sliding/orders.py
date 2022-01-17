@@ -72,6 +72,8 @@ class OrderApi:
             else:
                 self.stats.refresh_fail += 1
 
+        await self.cancel_open_orders()
+
     async def cancel_open_orders(self) -> None:
         try:
             if self.cancel_lock.locked():
@@ -108,7 +110,7 @@ class OrderApi:
 
             order_log: Optional[dict] = None
 
-            async with lock_with_timeout(self.order_lock, 0.1) as ok:
+            async with lock_with_timeout(self.order_lock, 0.14) as ok:
                 if ok:
                     float_qty = round(float(qty))
                     order_log = await self.exchange.submit_limit_order(

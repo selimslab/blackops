@@ -93,13 +93,7 @@ class BtcturkApiClient(BtcturkBase):
             if not self.session or self.session.closed:
                 self.session = aiohttp.ClientSession()
 
-            async with lock_with_timeout(
-                self.locks.read, sleep_seconds.read_wait
-            ) as ok:
-                if ok:
-                    return await self._http(self.urls.balance_url, self.session.get)
-
-            return None
+            return await self._http(self.urls.balance_url, self.session.get)
         except Exception as e:
             raise e
 

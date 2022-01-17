@@ -236,7 +236,7 @@ class SlidingWindowTrader(RobotBase):
         return {
             "start time": self.start_time,
             "credits": asdict(self.credits),
-            "orders": asdict(self.follower.order_api.stats),
+            "order stats": asdict(self.follower.order_api.stats),
             "open orders": list(self.follower.order_api.open_order_ids),
             "cancelled orders": list(self.follower.order_api.cancelled),
             "targets": asdict(self.targets),
