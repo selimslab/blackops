@@ -122,7 +122,7 @@ class MarketWatcher:
         qty = self.config.base_step_qty
 
         if self.pair.base.free < qty:
-            if self.pair.base.free < qty * Decimal("0.05"):
+            if self.pair.base.free < qty * Decimal("0.1"):
                 return None
             else:
                 qty = self.pair.base.free
