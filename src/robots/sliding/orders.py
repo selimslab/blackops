@@ -6,13 +6,14 @@ from decimal import Decimal
 from typing import Optional
 
 import async_timeout
-import simplejson as json  # type: ignore
+import simplejson as json
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
+from src.numberops.main import round_decimal  # type: ignore
 from src.periodic import StopwatchContext, lock_with_timeout
 from src.stgs.sliding.config import SlidingWindowConfig
 
@@ -90,7 +91,7 @@ class OrderApi:
 
         try:
             order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                self.pair, side, float(price), float(qty)
+                self.pair, side, float(price), float(round_decimal(qty))
             )
             if order_log:
                 # only send result if order delivered

@@ -62,9 +62,9 @@ async def test_cancel_open_orders(api_client, symbol):
 async def test_submit_limit_order(api_client):
 
     res = await api_client.submit_limit_order(
-        quantity=10,
-        price=43.0,
-        side=OrderType.BUY,
+        quantity=float(round_decimal(3.32608957)),
+        price=571.65,
+        side=OrderType.SELL,
         pair=create_asset_pair("AVAX", "TRY"),
     )
     pprint.pprint(res)
