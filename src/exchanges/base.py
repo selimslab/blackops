@@ -40,7 +40,7 @@ class ExchangeAPIClientBase(ABC):
         return (best_bid + best_ask) / Decimal("2")
 
     async def submit_limit_order(
-        self, pair: AssetPair, order_type: OrderType, price: float, quantity: float
+        self, pair: AssetPair, side: OrderType, price: float, quantity: float
     ) -> Optional[dict]:
         pass
 

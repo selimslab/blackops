@@ -62,7 +62,7 @@ class BtcturkApiClient(BtcturkBase):
                 return
             async with method(uri, headers=self._get_headers()) as res:
                 if res.status == 200:
-                    return await res.json()
+                    return await res.json(content_type=None)
                 elif res.status == 429:
                     await self.activate_rate_limit()
                     msg = f"""got 429 too many requests, 
@@ -120,7 +120,7 @@ class BtcturkApiClient(BtcturkBase):
         params = {
             "quantity": quantity,
             "price": price,
-            "stopPrice": price,
+            # "stopPrice": price,
             "orderMethod": "limit",
             "orderType": side.value,
             "pairSymbol": pair.symbol,
@@ -143,7 +143,7 @@ class BtcturkApiClient(BtcturkBase):
                 async with self.session.post(
                     self.urls.order_url, headers=self._get_headers(), json=params
                 ) as res:
-                    return await res.json()
+                    return await res.json(content_type=None)
         except Exception as e:
             msg = f"submit_limit_order: {e}"
             logger.error(msg)
@@ -226,7 +226,7 @@ class BtcturkApiClient(BtcturkBase):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(uri) as res:
-                    return await res.json()
+                    return await res.json(content_type=None)
         except Exception as e:
             logger.error(f"_get {e}")
 

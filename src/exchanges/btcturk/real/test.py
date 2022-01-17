@@ -4,6 +4,7 @@ import pprint
 from contextlib import asynccontextmanager
 
 from src.domain import Asset, AssetPair, create_asset_pair
+from src.domain.models import OrderType
 from src.environment import apiKey, apiSecret
 from src.exchanges.btcturk.real.main import BtcturkApiClient
 
@@ -62,7 +63,7 @@ async def test_submit_limit_order(api_client):
     res = await api_client.submit_limit_order(
         quantity=10,
         price=1,
-        order_type="sell",
+        side=OrderType.SELL,
         pair=create_asset_pair("XRP", "USDT"),
     )
     pprint.pprint(res)
@@ -81,14 +82,14 @@ async def test_get_account_balance(api_client):
 
 async def test_bt_api():
     async with create_api_client() as api_client:
-        # await test_submit_limit_order(api_client)
+        await test_submit_limit_order(api_client)
 
         # await test_get_all_orders(api_client, "XRPUSDT")
 
         # # await test_get_orders_after_an_id(api_client, order_id=5980501563)
 
         # await test_cancel_order(api_client, order_id=5353)
-        await test_get_open_orders(api_client, create_asset_pair("FTM", "TRY"))
+        # await test_get_open_orders(api_client, create_asset_pair("FTM", "TRY"))
 
         # await test_cancel_open_orders(api_client, "USDTTRY")
 
