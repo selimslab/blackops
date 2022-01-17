@@ -47,8 +47,8 @@ class SlidingWindowConfig(StrategyConfigBase):
         self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}"
 
         self.credits.maker = maker_fee_bps + self.input.margin_bps
-
         self.credits.taker = taker_fee_bps + self.input.margin_bps
+
         self.credits.step = 2 * self.credits.taker / self.input.max_step
 
         self.set_base_step_qty(self.base_step_qty_reference_price)
