@@ -12,7 +12,7 @@ from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
-from src.numberops.main import get_precision, round_decimal_half_down  # type: ignore
+from src.numberops.main import get_precision, round_decimal_floor  # type: ignore
 from src.periodic import StopwatchContext, lock_with_timeout
 from src.stgs.sliding.config import SlidingWindowConfig
 
