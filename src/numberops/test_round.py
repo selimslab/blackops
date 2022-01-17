@@ -20,9 +20,9 @@ def test_round():
     # getcontext().prec = 9
     # assert Decimal("42.83") * Decimal("2.3445564") == Decimal("43.833")
 
-    assert Decimal("42.83357619307002").quantize(
+    assert Decimal("43.23313072").quantize(
         Decimal("42.547"), rounding=decimal.ROUND_DOWN
-    ) == Decimal("42.833")
+    ) == Decimal("3.19195")
     assert round_decimal_floor(Decimal("553.5")) == Decimal("500")
     assert round_decimal_floor(Decimal("5063291.139240")) == Decimal("5000000")
 

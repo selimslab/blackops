@@ -31,7 +31,6 @@ class Window:
     bridge: Optional[Decimal] = None
     maker: TargetPrices = field(default_factory=TargetPrices)
     taker: TargetPrices = field(default_factory=TargetPrices)
-    precision: Optional[Decimal] = None
 
 
 @dataclass
@@ -122,11 +121,11 @@ class SlidingWindowTrader(RobotBase):
 
         taker_sell = self.get_short_price_taker()
         if taker_sell:
-            await self.follower.short(self.set_precision(taker_sell))
+            await self.follower.short(taker_sell)
 
         taker_buy = self.get_long_price_taker()
         if taker_buy and self.current_step <= self.config.input.max_step:
-            await self.follower.long(self.set_precision(taker_buy))
+            await self.follower.long(taker_buy)
 
             # maker_buy = self.get_long_price_maker()
             # if maker_buy:
@@ -135,18 +134,11 @@ class SlidingWindowTrader(RobotBase):
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
 
-    def set_precision(self, d: Decimal) -> Decimal:
-        if self.targets.precision:
-            return d.quantize(self.targets.precision, rounding=decimal.ROUND_DOWN)
-        return Decimal("0.0001")
-
     def get_window_mid(self, book: dict) -> Optional[Decimal]:
         if not book:
             return None
         try:
             leader_mid = self.leader_pub.api_client.get_mid(book)
-            if not self.targets.precision:
-                self.targets.precision = leader_mid
 
             self.targets.mid = leader_mid
             if not leader_mid:

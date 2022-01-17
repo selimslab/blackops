@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from typing import Optional
 
 import src.pubsub.log_pub as log_pub
@@ -19,6 +19,7 @@ from src.stgs.sliding.config import SlidingWindowConfig
 class MarketPrices:
     bid: Optional[Decimal] = None
     ask: Optional[Decimal] = None
+    precision: Optional[Decimal] = None
 
 
 @dataclass
@@ -56,6 +57,8 @@ class MarketWatcher:
                 ):
                     self.prices.ask = ask
                     self.prices.bid = bid
+                    if not self.prices.precision:
+                        self.prices.precision = ask
 
             await asyncio.sleep(0)
 
@@ -65,7 +68,8 @@ class MarketWatcher:
             log_pub.publish_error(message=msg)
 
     def clear_prices(self):
-        self.prices = MarketPrices()
+        self.prices.ask = None
+        self.prices.bid = None
 
     def clear_balance(self):
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -103,12 +107,19 @@ class MarketWatcher:
             and self.pair.quote.free >= price * self.config.base_step_qty
         )
 
+    def get_precise_price(self, price: Decimal):
+        return price.quantize(
+            self.prices.precision, rounding=ROUND_DOWN  # type:ignore
+        )
+
     async def long(self, price: Decimal) -> Optional[dict]:
         if not self.can_buy(price):
             return None
 
+        precise_price = self.get_precise_price(price)
+
         order_log = await self.order_api.send_order(
-            OrderType.BUY, price, self.config.base_step_qty
+            OrderType.BUY, precise_price, self.config.base_step_qty
         )
 
         if order_log:
@@ -135,7 +146,9 @@ class MarketWatcher:
             else:
                 qty = round_decimal_floor(self.pair.base.free)
 
-        order_log = await self.order_api.send_order(OrderType.SELL, price, qty)
+        precise_price = self.get_precise_price(price)
+
+        order_log = await self.order_api.send_order(OrderType.SELL, precise_price, qty)
 
         if order_log:
             # If we deliver order, we reflect it in balance until we read the current balance
