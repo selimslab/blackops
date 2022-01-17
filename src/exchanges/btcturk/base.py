@@ -147,7 +147,7 @@ class BtcturkBase(ExchangeAPIClientBase):
 
         return []
 
-    async def cancel_all_open_orders(self, pair: AssetPair) -> list:
+    async def cancel_open_orders(self, pair: AssetPair) -> list:
         res: Optional[dict] = await self.get_open_orders(pair)
         if res:
             orders = self.get_sorted_order_list(res)
@@ -164,7 +164,7 @@ class BtcturkBase(ExchangeAPIClientBase):
 
         cancelled = []
         if len(order_ids) == 1:
-            await asyncio.sleep(0.05)  # allow 50 ms for order to be filled
+            await asyncio.sleep(0.04)  # allow 30 ms for order to be filled
         for order_id in order_ids:
             ok = await self.cancel_order(order_id)
             if ok:

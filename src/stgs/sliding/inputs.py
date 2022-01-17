@@ -23,7 +23,7 @@ class SlidingWindowInput(StrategyInputBase):
 
     max_step: Decimal = Decimal(10)
 
-    quote_step_qty: Decimal = Decimal(5000)
+    quote_step_qty: Decimal = Decimal(3000)
 
     margin_bps: Decimal = Decimal("1")
 

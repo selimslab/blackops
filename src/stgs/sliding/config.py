@@ -2,14 +2,6 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from src.domain import (
-    BPS,
-    Asset,
-    AssetPair,
-    create_asset_pair,
-    maker_fee_bps,
-    taker_fee_bps,
-)
 from src.exchanges.factory import ExchangeType
 from src.idgen import dict_to_hash
 from src.numberops import round_decimal_half_up
@@ -18,16 +10,8 @@ from src.stgs.base import StrategyConfigBase, StrategyType
 from .inputs import SlidingWindowInput
 
 
-class Credits(BaseModel):
-    maker: Decimal = Decimal(0)
-    taker: Decimal = Decimal(0)
-    step: Decimal = Decimal(0)
-
-
 class SlidingWindowConfig(StrategyConfigBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
-
-    credits: Credits = Credits()
 
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
@@ -45,11 +29,6 @@ class SlidingWindowConfig(StrategyConfigBase):
         sha = dict_to_hash(self.input.dict())[:7]
         mode = "testnet" if self.input.testnet else "real"
         self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}"
-
-        self.credits.maker = maker_fee_bps + self.input.margin_bps
-        self.credits.taker = taker_fee_bps + self.input.margin_bps
-
-        self.credits.step = 2 * self.credits.taker / self.input.max_step
 
         self.set_base_step_qty(self.base_step_qty_reference_price)
 

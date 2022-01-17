@@ -6,7 +6,7 @@ from decimal import Decimal, getcontext
 from typing import Any, Optional
 
 import src.pubsub.log_pub as log_pub
-from src.domain import BPS
+from src.domain import BPS, maker_fee_bps, taker_fee_bps
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.periodic import StopwatchContext, periodic
@@ -32,6 +32,13 @@ class Window:
 
 
 @dataclass
+class Credits:
+    maker: Decimal = Decimal(0)
+    taker: Decimal = Decimal(0)
+    step: Decimal = Decimal(0)
+
+
+@dataclass
 class SlidingWindowTrader(RobotBase):
     config: SlidingWindowConfig
 
@@ -48,12 +55,26 @@ class SlidingWindowTrader(RobotBase):
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
 
+    credits: Credits = Credits()
+
     def __post_init__(self) -> None:
+        self.set_credits()
         self.follower = MarketWatcher(
             config=self.config,
             book_pub=self.follower_pub,
             balance_pub=self.balance_pub,
         )
+
+    def set_credits(self):
+        try:
+            self.credits.maker = (
+                (maker_fee_bps + taker_fee_bps) / Decimal(2)
+            ) + self.config.input.margin_bps
+            self.credits.taker = taker_fee_bps + self.config.input.margin_bps
+            self.credits.step = self.credits.taker / self.config.input.max_step
+        except Exception as e:
+            logger.error(e)
+            raise e
 
     async def run(self) -> None:
         logger.info(f"Starting {self.config.sha}..")
@@ -68,8 +89,12 @@ class SlidingWindowTrader(RobotBase):
                 sleep_seconds.update_balances / 8,
             ),
             periodic(
-                self.follower.order_api.cancel_all_open_orders,
-                sleep_seconds.cancel_all_open_orders,
+                self.follower.order_api.refresh_open_orders,
+                sleep_seconds.refresh_open_orders,
+            ),
+            periodic(
+                self.follower.order_api.cancel_open_orders,
+                sleep_seconds.cancel_open_orders,
             ),
         ]
 
@@ -160,7 +185,7 @@ class SlidingWindowTrader(RobotBase):
         try:
             self.update_step()
 
-            slide_down = self.config.credits.step * self.current_step * mid * BPS
+            slide_down = self.credits.step * self.current_step * mid * BPS
 
             mid -= slide_down
 
@@ -168,7 +193,7 @@ class SlidingWindowTrader(RobotBase):
             # self.targets.maker.buy = mid - maker_credit
             # self.targets.maker.sell = mid + maker_credit
 
-            taker_credit = self.config.credits.taker * mid * BPS
+            taker_credit = self.credits.taker * mid * BPS
             self.targets.taker.buy = mid - taker_credit
             self.targets.taker.sell = mid + taker_credit
 
@@ -205,15 +230,15 @@ class SlidingWindowTrader(RobotBase):
         return None
 
     async def close(self) -> None:
-        await self.follower.order_api.cancel_all_open_orders()
+        await self.follower.order_api.cancel_open_orders()
 
     def create_stats_message(self) -> dict:
         return {
             "start time": self.start_time,
-            "orders": {
-                "tried": asdict(self.follower.order_api.orders_tried),
-                "delivered": asdict(self.follower.order_api.orders_delivered),
-            },
+            "credits": asdict(self.credits),
+            "orders": asdict(self.follower.order_api.stats),
+            "open orders": str(self.follower.order_api.open_order_ids),
+            "cancelled orders": str(self.follower.order_api.cancelled),
             "targets": asdict(self.targets),
             "market": asdict(self.follower.prices),
             "binance": {

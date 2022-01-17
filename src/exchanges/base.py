@@ -55,5 +55,5 @@ class ExchangeAPIClientBase(ABC):
     async def cancel_multiple_orders(self, orders: list) -> list:
         return []
 
-    async def cancel_all_open_orders(self, pair: AssetPair) -> list:
+    async def cancel_open_orders(self, pair: AssetPair) -> list:
         return []
