@@ -1,4 +1,5 @@
 import asyncio
+import decimal
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import Decimal, getcontext
@@ -136,7 +137,7 @@ class SlidingWindowTrader(RobotBase):
 
     def set_precision(self, d: Decimal) -> Decimal:
         if self.targets.precision:
-            return d.quantize(self.targets.precision)
+            return d.quantize(self.targets.precision, rounding=decimal.ROUND_DOWN)
         return Decimal("0.0001")
 
     def get_window_mid(self, book: dict) -> Optional[Decimal]:
