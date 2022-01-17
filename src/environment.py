@@ -18,9 +18,6 @@ class SleepSeconds(BaseModel):
 
     read_wait: float = 0.18  # 300/min
     cancel_wait: float = 0.18  # 300/min
-
-    # 300/min total, 10/s
-    # 0.2 on average, sell is a priority
     sell_wait: float = 0.17
     buy_wait: float = 0.18
 
