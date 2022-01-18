@@ -36,7 +36,8 @@ class OrderApi:
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
     read_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    order_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    buy_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    sell_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     cancel_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     cancelled: set = field(default_factory=set)
@@ -105,12 +106,17 @@ class OrderApi:
     ) -> Optional[dict]:
 
         try:
-            if self.order_lock.locked():
+            if side == OrderType.BUY:
+                order_lock = self.buy_lock
+            else:
+                order_lock = self.sell_lock
+
+            if order_lock.locked():
                 return None
 
             order_log: Optional[dict] = None
 
-            async with lock_with_timeout(self.order_lock, sleep_seconds.buy_wait) as ok:
+            async with lock_with_timeout(order_lock, sleep_seconds.buy_wait) as ok:
                 if ok:
                     float_qty = round(float(qty))
                     if side == OrderType.BUY:
