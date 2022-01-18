@@ -56,7 +56,7 @@ class OrderApi:
 
         async with self.read_lock:
             while self.exchange.locks.read.locked():
-                await asyncio.sleep(0.06)
+                await asyncio.sleep(0.03)
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
                 self.stats.refreshed += 1
@@ -87,7 +87,7 @@ class OrderApi:
                     if order_id in self.cancelled:
                         continue
                     while self.exchange.locks.cancel.locked():
-                        await asyncio.sleep(0.06)
+                        await asyncio.sleep(0.03)
                     ok = await self.exchange.cancel_order(order_id)
                     if ok:
                         self.cancelled.add(order_id)
@@ -114,34 +114,31 @@ class OrderApi:
             if order_lock.locked():
                 return None
 
-            order_log: Optional[dict] = None
+            async with order_lock:
+                float_qty = round(float(qty))
+                if side == OrderType.BUY:
+                    lock = self.exchange.locks.buy
+                else:
+                    lock = self.exchange.locks.sell
 
-            async with lock_with_timeout(order_lock, sleep_seconds.buy_wait) as ok:
-                if ok:
-                    float_qty = round(float(qty))
-                    if side == OrderType.BUY:
-                        lock = self.exchange.locks.buy
-                    else:
-                        lock = self.exchange.locks.sell
-                    while lock.locked():
-                        await asyncio.sleep(0.06)
-                    order_log = await self.exchange.submit_limit_order(
-                        self.pair, side, float(price), float_qty
-                    )
+                if lock.locked:
+                    return None
 
-                    if order_log:
-                        # only send result if order delivered
-                        order_id = self.parse_order_id(order_log)
-                        if order_id:
-                            logger.info(order_log)
-                            self.stats.delivered += 1
-                            await asyncio.sleep(
-                                0.12
-                            )  # allow 120 ms for order to be filled
-                            self.open_order_ids.append(order_id)
-                            return order_log
+                order_log: Optional[dict] = await self.exchange.submit_limit_order(
+                    self.pair, side, float(price), float_qty
+                )
+                if order_log:
+                    # only send result if order delivered
+                    order_id = self.parse_order_id(order_log)
+                    if order_id:
+                        logger.info(order_log)
+                        self.stats.delivered += 1
+                        await asyncio.sleep(0.12)  # allow 120 ms for order to be filled
+                        self.open_order_ids.append(order_id)
+                        return order_log
+                else:
+                    self.stats.deliver_fail += 1
 
-            self.stats.deliver_fail += 1
             # self.stats.tried += 1
             # logger.info(
             #     f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price}, {order_log}"
