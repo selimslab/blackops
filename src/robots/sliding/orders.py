@@ -84,6 +84,8 @@ class OrderApi:
                 self.no_open_orders = True
                 while self.open_order_ids:
                     order_id = self.open_order_ids.popleft()
+                    if order_id in self.cancelled:
+                        continue
                     while self.exchange.locks.cancel.locked():
                         await asyncio.sleep(0.05)
                     ok = await self.exchange.cancel_order(order_id)
@@ -91,10 +93,11 @@ class OrderApi:
                         self.cancelled.add(order_id)
                         self.stats.cancelled += 1
                     else:
+                        # couldn't cancel but maybe filled
                         self.no_open_orders = False
                         self.stats.cancel_fail += 1
         except Exception as e:
-            msg = f"watch_open_orders: {e}"
+            msg = f"cancel_open_orders: {e}"
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
