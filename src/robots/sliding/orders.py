@@ -123,15 +123,17 @@ class OrderApi:
                         self.pair, side, float(price), float_qty
                     )
 
-            if order_log:
-                # only send result if order delivered
-                order_id = self.parse_order_id(order_log)
-                if order_id:
-                    logger.info(order_log)
-                    self.stats.delivered += 1
-                    await asyncio.sleep(0.1)  # allow 100 ms for order to be filled
-                    self.open_order_ids.append(order_id)
-                    return order_log
+                    if order_log:
+                        # only send result if order delivered
+                        order_id = self.parse_order_id(order_log)
+                        if order_id:
+                            logger.info(order_log)
+                            self.stats.delivered += 1
+                            await asyncio.sleep(
+                                0.12
+                            )  # allow 120 ms for order to be filled
+                            self.open_order_ids.append(order_id)
+                            return order_log
 
             self.stats.deliver_fail += 1
             # self.stats.tried += 1
