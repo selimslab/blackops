@@ -86,11 +86,15 @@ class SlidingWindowTrader(RobotBase):
             self.follower.consume_pub(),
             periodic(
                 self.follower.update_balances,
-                sleep_seconds.update_balances / 8,
+                sleep_seconds.update_balances / 12,
             ),
             periodic(
                 self.follower.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
+            ),
+            periodic(
+                self.follower.order_api.cancel_open_orders,
+                sleep_seconds.refresh_open_orders / 3,
             ),
         ]
 
