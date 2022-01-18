@@ -55,7 +55,7 @@ class OrderApi:
 
         async with self.read_lock:
             while self.exchange.locks.read.locked():
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.06)
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
                 self.stats.refreshed += 1
@@ -87,7 +87,7 @@ class OrderApi:
                     if order_id in self.cancelled:
                         continue
                     while self.exchange.locks.cancel.locked():
-                        await asyncio.sleep(0.05)
+                        await asyncio.sleep(0.06)
                     ok = await self.exchange.cancel_order(order_id)
                     if ok:
                         self.cancelled.add(order_id)
@@ -119,7 +119,7 @@ class OrderApi:
                     else:
                         lock = self.exchange.locks.sell
                     while lock.locked():
-                        await asyncio.sleep(0.05)
+                        await asyncio.sleep(0.06)
                     order_log = await self.exchange.submit_limit_order(
                         self.pair, side, float(price), float_qty
                     )
