@@ -43,14 +43,14 @@ class OrderApi:
 
     stats: OrderStats = field(default_factory=OrderStats)
 
-    no_open_orders: bool = True
+    open_orders_fresh: bool = True
 
     async def refresh_open_orders(self) -> None:
 
         if self.read_lock.locked():
             return None
 
-        if self.no_open_orders:
+        if self.open_orders_fresh:
             return None
 
         async with self.read_lock:
@@ -66,7 +66,7 @@ class OrderApi:
                     if order_id and order_id not in self.cancelled:
                         self.open_order_ids.append(order_id)
                 self.cancelled = set()
-                self.no_open_orders = False
+                self.open_orders_fresh = True
             else:
                 self.stats.refresh_fail += 1
 
@@ -81,7 +81,6 @@ class OrderApi:
                 return None
 
             async with self.cancel_lock:
-                self.no_open_orders = True
                 while self.open_order_ids:
                     order_id = self.open_order_ids.popleft()
                     if order_id in self.cancelled:
@@ -94,7 +93,7 @@ class OrderApi:
                         self.stats.cancelled += 1
                     else:
                         # couldn't cancel but maybe filled
-                        self.no_open_orders = False
+                        self.open_orders_fresh = False
                         self.stats.cancel_fail += 1
         except Exception as e:
             msg = f"cancel_open_orders: {e}"
@@ -132,7 +131,6 @@ class OrderApi:
                     self.stats.delivered += 1
                     await asyncio.sleep(0.1)  # allow 100 ms for order to be filled
                     self.open_order_ids.append(order_id)
-                    self.no_open_orders = False
                     return order_log
 
             self.stats.deliver_fail += 1
