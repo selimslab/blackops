@@ -129,7 +129,7 @@ class OrderApi:
                     # only send result if order delivered
                     order_id = self.parse_order_id(order_log)
                     if order_id:
-                        logger.info(f"{self.pair} {side} {price} {qty}")
+                        logger.info(f"{self.pair} {side} {float(qty)} {price}")
                         if side == OrderType.BUY:
                             self.stats.buy_delivered += 1
                         else:
