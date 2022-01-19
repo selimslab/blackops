@@ -20,7 +20,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     max_step: Decimal = Decimal(8)
 
-    quote_step_qty: Decimal = Decimal(8000)
+    quote_step_qty: Decimal = Decimal(7200)
 
     margin_bps: Decimal = Decimal("2")
 
@@ -46,18 +46,6 @@ class SlidingWindowConfig(StrategyConfigBase):
         if self.follower_exchange != ExchangeType.BTCTURK:
             raise ValueError(f"{self.follower_exchange} is not supported")
 
-    def is_valid_params(self):
-        if self.margin_bps < 1:
-            raise Exception("margin_bps must be greater than 1")
-        if self.margin_bps > 3:
-            raise Exception("margin_bps must be less than 3")
-
-        if self.max_step < 2:
-            raise Exception("max_step must be greater than 1")
-        if self.max_step > 12:
-            raise Exception("max_step must be less than 12")
-
     def is_valid(self):
         self.is_valid_exchanges()
-        self.is_valid_params()
         return self.input.is_valid()

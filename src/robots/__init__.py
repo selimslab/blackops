@@ -1,2 +1,2 @@
 from .factory import robot_factory
-from .sliding.config import SlidingWindowConfig, SlidingWindowInput
+from .sliding import SlidingWindowConfig, SlidingWindowInput, SlidingWindowTrader
