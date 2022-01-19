@@ -8,6 +8,7 @@ from src.api.routers.home import router as home_router
 from src.api.routers.robot import router as robot_router
 from src.api.routers.stg import router as stg_router
 from src.flow import flow_api
+from src.monitoring import logger
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
 
@@ -17,6 +18,8 @@ app.include_router(stg_router, prefix="/stg", tags=["Strategy"])
 app.include_router(robot_router, prefix="/robot", tags=["Robot"])
 app.include_router(home_router, tags=["Home"])
 
+# app.logger = logger
+
 
 @app.exception_handler(Exception)
 async def validation_exception_handler(request, exc: Exception):
@@ -24,6 +27,11 @@ async def validation_exception_handler(request, exc: Exception):
         status_code=500,
         content={"error": str(exc)},
     )
+
+
+@app.on_event("startup")
+async def startup_event():
+    pass
 
 
 @app.on_event("shutdown")

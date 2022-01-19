@@ -121,7 +121,7 @@ class MarketWatcher:
 
         precise_price = self.get_precise_price(price, self.prices.ask)
 
-        async with lock_with_timeout(self.buy_lock, 0.05) as ok:
+        async with lock_with_timeout(self.buy_lock, 0.1) as ok:
             if ok:
                 order_log = await self.order_api.send_order(
                     OrderType.BUY, precise_price, self.config.base_step_qty
@@ -155,10 +155,7 @@ class MarketWatcher:
             return None
         precise_price = self.get_precise_price(price, self.prices.bid)
 
-        if not self.can_sell():
-            return None
-
-        async with lock_with_timeout(self.sell_lock, 0.05) as ok:
+        async with lock_with_timeout(self.sell_lock, 0.07) as ok:
             if ok:
                 order_log = await self.order_api.send_order(
                     OrderType.SELL, precise_price, qty
