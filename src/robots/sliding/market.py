@@ -137,7 +137,7 @@ class MarketWatcher:
     def can_sell(self) -> bool:
         return bool(
             self.pair.base.free
-        ) and self.pair.base.free >= self.config.base_step_qty * Decimal("0.08")
+        ) and self.pair.base.free >= self.config.base_step_qty * Decimal("0.12")
 
     async def short(self, price: Decimal) -> Optional[dict]:
         if not self.can_sell():
@@ -146,7 +146,7 @@ class MarketWatcher:
         qty = self.config.base_step_qty
 
         if self.pair.base.free < qty:
-            if self.pair.base.free < qty * Decimal("0.08"):
+            if self.pair.base.free < qty * Decimal("0.12"):
                 return None
             else:
                 qty = round_decimal_floor(self.pair.base.free)
