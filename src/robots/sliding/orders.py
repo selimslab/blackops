@@ -68,8 +68,8 @@ class OrderApi:
                 for order_id in order_ids:
                     if order_id and order_id not in self.cancelled:
                         self.open_order_ids.append(order_id)
-                self.cancelled = set()
                 self.open_orders_fresh = True
+                self.cancelled = set()
             else:
                 self.stats.refresh_fail += 1
 
@@ -98,6 +98,9 @@ class OrderApi:
                         # couldn't cancel but maybe filled
                         self.open_orders_fresh = False
                         self.stats.cancel_fail += 1
+                if self.open_orders_fresh:
+                    self.cancelled = set()
+
         except Exception as e:
             msg = f"cancel_open_orders: {e}"
             logger.error(msg)
@@ -127,7 +130,9 @@ class OrderApi:
                     if order_id:
                         logger.info(order_log)
                         self.stats.delivered += 1
-                        await asyncio.sleep(0.12)  # allow 120 ms for order to be filled
+                        await asyncio.sleep(
+                            sleep_seconds.sell_wait
+                        )  # allow 120 ms for order to be filled
                         self.open_order_ids.append(order_id)
                         return order_log
                     else:
