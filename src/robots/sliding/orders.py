@@ -141,6 +141,7 @@ class OrderApi:
                         return order_log
                     else:
                         self.stats.deliver_fail += 1
+                        logger.warning(order_log)
                 else:
                     self.stats.parent_locked += 1
 
