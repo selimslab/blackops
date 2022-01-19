@@ -26,7 +26,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     sell_to_buy_ratio: Decimal = Decimal("1.6")
 
-    minimum_sell_qty: Decimal = Decimal("200")
+    minimum_sell_qty: Decimal = Decimal("250")
 
     input: SlidingWindowInput
 
