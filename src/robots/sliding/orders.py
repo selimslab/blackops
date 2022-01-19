@@ -17,7 +17,8 @@ from src.stgs.sliding.config import SlidingWindowConfig
 
 @dataclass
 class OrderStats:
-    delivered: int = 0
+    buy_delivered: int = 0
+    sell_delivered: int = 0
     robot_locked: int = 0
     parent_locked: int = 0
     deliver_fail: int = 0
@@ -58,7 +59,7 @@ class OrderApi:
 
         async with self.read_lock:
             while self.exchange.locks.read.locked():
-                await asyncio.sleep(0.03)
+                await asyncio.sleep(0.05)
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
                 self.stats.refreshed += 1
@@ -89,7 +90,7 @@ class OrderApi:
                     if order_id in self.cancelled:
                         continue
                     while self.exchange.locks.cancel.locked():
-                        await asyncio.sleep(0.03)
+                        await asyncio.sleep(0.05)
                     ok = await self.exchange.cancel_order(order_id)
                     if ok:
                         self.cancelled.add(order_id)
@@ -128,11 +129,14 @@ class OrderApi:
                     # only send result if order delivered
                     order_id = self.parse_order_id(order_log)
                     if order_id:
-                        logger.info(order_log)
-                        self.stats.delivered += 1
+                        logger.info(f"{self.pair} {side} {price} {qty}")
+                        if side == OrderType.BUY:
+                            self.stats.buy_delivered += 1
+                        else:
+                            self.stats.sell_delivered += 1
                         await asyncio.sleep(
-                            sleep_seconds.sell_wait
-                        )  # allow 120 ms for order to be filled
+                            sleep_seconds.buy_wait
+                        )  # allow time for order to be filled
                         self.open_order_ids.append(order_id)
                         return order_log
                     else:
@@ -140,10 +144,6 @@ class OrderApi:
                 else:
                     self.stats.parent_locked += 1
 
-            # self.stats.tried += 1
-            # logger.info(
-            #     f"cannot {side.value} {float_qty} ({qty}) {self.pair.symbol}  @ {price}, {order_log}"
-            # )
             return None
         except Exception as e:
             msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
