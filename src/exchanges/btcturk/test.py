@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from src.domain import Asset, AssetPair, create_asset_pair
 from src.domain.models import OrderType
 from src.environment import apiKey, apiSecret
-from src.exchanges.btcturk.real.main import BtcturkApiClient
+from src.exchanges.btcturk.main import BtcturkApiClient
 from src.numberops import round_decimal_half_up
 
 

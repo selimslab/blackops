@@ -1,10 +1,10 @@
 from decimal import Decimal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from src.exchanges.factory import ExchangeType
 from src.idgen import dict_to_hash
-from src.numberops import round_decimal_half_up
 from src.stgs.base import StrategyConfigBase, StrategyType
 
 from .inputs import SlidingWindowInput
@@ -16,8 +16,17 @@ class SlidingWindowConfig(StrategyConfigBase):
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
-    base_step_qty: Decimal = Decimal(0)
-    base_step_qty_reference_price: Decimal
+    bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
+
+    max_step: Decimal = Decimal(8)
+
+    quote_step_qty: Decimal = Decimal(8000)
+
+    margin_bps: Decimal = Decimal("2")
+
+    sell_to_buy_ratio: Decimal = Decimal("1.6")
+
+    minimum_sell_qty: Decimal = Decimal("200")
 
     input: SlidingWindowInput
 
@@ -26,17 +35,9 @@ class SlidingWindowConfig(StrategyConfigBase):
 
         self.is_valid()
 
-        sha = dict_to_hash(self.input.dict())[:7]
-        mode = "testnet" if self.input.testnet else "real"
-        self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}_{self.input.quote_step_qty}"
-
-        self.set_base_step_qty(self.base_step_qty_reference_price)
-
-    def set_base_step_qty(self, price: Decimal) -> None:
-        self.base_step_qty_reference_price = price
-        self.base_step_qty = round_decimal_half_up(
-            self.input.quote_step_qty / self.base_step_qty_reference_price
-        )
+        # sha = dict_to_hash(self.input.dict())[:7]
+        mode = "test" if self.input.testnet else "real"
+        self.sha = f"{self.input.base}{self.input.quote}_{mode}"
 
     def is_valid_exchanges(self):
         if self.leader_exchange != ExchangeType.BINANCE:
@@ -46,9 +47,17 @@ class SlidingWindowConfig(StrategyConfigBase):
             raise ValueError(f"{self.follower_exchange} is not supported")
 
     def is_valid_params(self):
-        if self.base_step_qty <= 0:
-            raise Exception("base_step_qty must be greater than 0")
+        if self.margin_bps < 1:
+            raise Exception("margin_bps must be greater than 1")
+        if self.margin_bps > 3:
+            raise Exception("margin_bps must be less than 3")
+
+        if self.max_step < 2:
+            raise Exception("max_step must be greater than 1")
+        if self.max_step > 12:
+            raise Exception("max_step must be less than 12")
 
     def is_valid(self):
         self.is_valid_exchanges()
+        self.is_valid_params()
         return self.input.is_valid()

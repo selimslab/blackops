@@ -1,5 +1,5 @@
 import decimal
-from decimal import Decimal, getcontext
+from decimal import Decimal
 
 from .main import (
     get_bps,

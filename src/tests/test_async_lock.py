@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import async_timeout
 
-from src.periodic import StopwatchContext, lock_with_timeout
+from src.periodic import StopwatchAPI, lock_with_timeout
 
 
 @dataclass
