@@ -116,14 +116,7 @@ class BtcturkApiClient(BtcturkBase):
         'message': 'SUCCESS',
         'success': True}
         """
-        params = {
-            "quantity": quantity,
-            "price": price,
-            # "stopPrice": price,
-            "orderMethod": "limit",
-            "orderType": side.value,
-            "pairSymbol": pair.symbol,
-        }
+
         try:
             if side == OrderType.BUY:
                 lock = self.locks.buy
@@ -140,6 +133,14 @@ class BtcturkApiClient(BtcturkBase):
 
             async with lock_with_timeout(lock, wait) as ok:
                 if ok:
+                    params = {
+                        "quantity": quantity,
+                        "price": price,
+                        # "stopPrice": price,
+                        "orderMethod": "limit",
+                        "orderType": side.value,
+                        "pairSymbol": pair.symbol,
+                    }
                     async with self.session.post(
                         self.urls.order_url, headers=self._get_headers(), json=params
                     ) as res:

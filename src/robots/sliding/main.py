@@ -94,7 +94,7 @@ class SlidingWindowTrader(RobotBase):
             ),
             periodic(
                 self.follower.order_api.cancel_open_orders,
-                sleep_seconds.refresh_open_orders / 3,
+                sleep_seconds.refresh_open_orders / 4,
             ),
         ]
 

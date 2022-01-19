@@ -18,6 +18,8 @@ from src.stgs.sliding.config import SlidingWindowConfig
 @dataclass
 class OrderStats:
     delivered: int = 0
+    robot_locked: int = 0
+    parent_locked: int = 0
     deliver_fail: int = 0
     cancelled: int = 0
     cancel_fail: int = 0
@@ -112,20 +114,12 @@ class OrderApi:
                 order_lock = self.sell_lock
 
             if order_lock.locked():
+                self.stats.robot_locked += 1
                 return None
 
             async with order_lock:
-                float_qty = round(float(qty))
-                if side == OrderType.BUY:
-                    lock = self.exchange.locks.buy
-                else:
-                    lock = self.exchange.locks.sell
-
-                if lock.locked:
-                    return None
-
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                    self.pair, side, float(price), float_qty
+                    self.pair, side, float(price), round(float(qty))
                 )
                 if order_log:
                     # only send result if order delivered
@@ -136,8 +130,10 @@ class OrderApi:
                         await asyncio.sleep(0.12)  # allow 120 ms for order to be filled
                         self.open_order_ids.append(order_id)
                         return order_log
+                    else:
+                        self.stats.deliver_fail += 1
                 else:
-                    self.stats.deliver_fail += 1
+                    self.stats.parent_locked += 1
 
             # self.stats.tried += 1
             # logger.info(
