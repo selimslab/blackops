@@ -79,11 +79,9 @@ class LeaderFollowerTrader(RobotBase):
             #     (maker_fee_bps + taker_fee_bps) / Decimal(2)
             # ) + self.config.margin_bps
             self.credits.taker = taker_fee_bps + self.config.margin_bps
-            self.credits.step = (
-                self.credits.taker / self.config.max_step * Decimal("1.2")
-            )
-            self.credits.sell = self.credits.taker - Decimal(2)
-            self.credits.buy = self.credits.taker + Decimal(2)
+            self.credits.step = self.credits.taker / self.config.max_step
+            self.credits.sell = self.credits.taker - Decimal("1.5")
+            self.credits.buy = self.credits.taker + Decimal("1.5")
 
         except Exception as e:
             logger.error(e)
