@@ -28,7 +28,7 @@ def sliding_window_factory(config: SlidingWindowConfig):
     )
     if network == NetworkType.TESTNET:
         follower_pub.api_client.dummy_exchange.add_balance(  # type:ignore
-            Asset(symbol=stg.quote), stg.max_step * stg.quote_step_qty * 2
+            Asset(symbol=stg.quote), config.max_step * config.quote_step_qty * 2
         )
 
     bridge_pub = None

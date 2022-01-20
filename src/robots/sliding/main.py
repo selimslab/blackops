@@ -27,7 +27,7 @@ class TargetPrices:
 class Window:
     mid: Optional[Decimal] = None
     bridge: Optional[Decimal] = None
-    maker: TargetPrices = field(default_factory=TargetPrices)
+    # maker: TargetPrices = field(default_factory=TargetPrices)
     taker: TargetPrices = field(default_factory=TargetPrices)
 
 
@@ -69,9 +69,9 @@ class SlidingWindowTrader(RobotBase):
         try:
             self.credits.maker = (
                 (maker_fee_bps + taker_fee_bps) / Decimal(2)
-            ) + self.config.input.margin_bps
-            self.credits.taker = taker_fee_bps + self.config.input.margin_bps
-            self.credits.step = self.credits.taker / self.config.input.max_step
+            ) + self.config.margin_bps
+            self.credits.taker = taker_fee_bps + self.config.margin_bps
+            self.credits.step = self.credits.taker / self.config.max_step
         except Exception as e:
             logger.error(e)
             raise e
