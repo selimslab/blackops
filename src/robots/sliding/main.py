@@ -144,11 +144,11 @@ class SlidingWindowTrader(RobotBase):
 
         taker_sell = self.get_short_price_taker()
         if taker_sell:
-            await self.follower.short(taker_sell)
+            await self.follower.short(taker_sell, self.config.base_step_qty)
 
         taker_buy = self.get_long_price_taker()
         if taker_buy and self.current_step <= self.config.input.max_step:
-            await self.follower.long(taker_buy)
+            await self.follower.long(taker_buy, self.config.base_step_qty)
 
             # maker_buy = self.get_long_price_maker()
             # if maker_buy:
@@ -202,6 +202,9 @@ class SlidingWindowTrader(RobotBase):
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
+    def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
+        return price.quantize(reference, rounding=decimal.ROUND_DOWN)
+
     def get_long_price_taker(self) -> Optional[Decimal]:
         """
         if targets.taker.buy < ask <= targets.maker.buy
@@ -212,7 +215,7 @@ class SlidingWindowTrader(RobotBase):
         ask = self.follower.prices.ask
 
         if ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
-            return self.targets.taker.buy
+            return self.get_precise_price(self.targets.taker.buy, ask)
 
         return None
 
@@ -226,7 +229,7 @@ class SlidingWindowTrader(RobotBase):
         bid = self.follower.prices.bid
 
         if bid and self.targets.taker.sell and bid >= self.targets.taker.sell:
-            return bid
+            return self.get_precise_price(self.targets.taker.sell, bid)
         return None
 
     async def close(self) -> None:

@@ -12,20 +12,14 @@ class SlidingWindowInput(StrategyInputBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     base: str = Field(..., example="ETH")
+    bridge: Optional[str] = Field(default=None, example="USDT")
     quote: str = Field(..., example="TRY")
 
-    bridge: Optional[str] = Field(default=None, example="USDT")
     bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
 
     use_bridge = True
     testnet = False
     use_real_money = True
-
-    max_step: Decimal = Decimal(10)
-
-    quote_step_qty: Decimal = Decimal(3000)
-
-    margin_bps: Decimal = Decimal("1")
 
     def is_valid_type(self):
         if self.type != StrategyType.SLIDING_WINDOW:
@@ -78,20 +72,8 @@ class SlidingWindowInput(StrategyInputBase):
         if self.bridge and self.use_bridge and not self.bridge_exchange:
             raise ValueError(f"bridge exchange is required if you want to use a bridge")
 
-    def is_valid_params(self):
-        if self.margin_bps < 1:
-            raise Exception("margin_bps must be greater than 1")
-        if self.margin_bps > 3:
-            raise Exception("margin_bps must be less than 3")
-
-        if self.max_step < 2:
-            raise Exception("max_step must be greater than 1")
-        if self.max_step > 12:
-            raise Exception("max_step must be less than 12")
-
     def is_valid(self):
         self.is_valid_type()
         self.is_valid_mode()
         self.is_valid_symbols()
         self.is_valid_bridge()
-        self.is_valid_params()

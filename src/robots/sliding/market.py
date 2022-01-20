@@ -32,9 +32,6 @@ class MarketWatcher:
 
     stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
 
-    sell_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    buy_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
     def __post_init__(self):
         self.order_api = OrderApi(
             config=self.config,
@@ -101,68 +98,34 @@ class MarketWatcher:
             log_pub.publish_error(message=msg)
             raise e
 
-    def can_buy(self, price) -> bool:
-        return (
-            bool(self.pair.quote.free)
-            and self.pair.quote.free >= price * self.config.base_step_qty
-        )
+    def can_buy(self, price, qty) -> bool:
+        return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
 
-    def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
-        return price.quantize(
-            reference, rounding=ROUND_DOWN  # type:ignore
-        )
-
-    async def long(self, price: Decimal) -> Optional[dict]:
-        if not self.can_buy(price):
+    async def long(self, price: Decimal, qty: Decimal) -> Optional[dict]:
+        if not self.can_buy(price, qty):
             return None
 
-        if not self.prices.ask:
-            return None
+        order_log = await self.order_api.send_order(OrderType.BUY, price, qty)
 
-        precise_price = self.get_precise_price(price, self.prices.ask)
-
-        async with lock_with_timeout(self.buy_lock, 0.1) as ok:
-            if ok:
-                order_log = await self.order_api.send_order(
-                    OrderType.BUY, precise_price, self.config.base_step_qty
-                )
-
-                if order_log:
-                    # If we deliver order, we reflect it in balance until we read the current balance
-                    self.pair.base.free += self.config.base_step_qty
-                    return order_log
+        if order_log:
+            # If we deliver order, we reflect it in balance until we read the current balance
+            self.pair.base.free += qty
+            return order_log
 
         return None
 
-    def can_sell(self) -> bool:
-        return bool(
-            self.pair.base.free
-        ) and self.pair.base.free >= self.config.base_step_qty * Decimal("0.12")
-
-    async def short(self, price: Decimal) -> Optional[dict]:
-        if not self.can_sell():
-            return None
-
-        qty = self.config.base_step_qty
-
+    async def short(self, price: Decimal, qty: Decimal) -> Optional[dict]:
         if self.pair.base.free < qty:
-            if self.pair.base.free < qty * Decimal("0.12"):
+            if self.pair.base.free * price < self.config.min_sell_qty:
                 return None
             else:
                 qty = round_decimal_floor(self.pair.base.free)
 
-        if not self.prices.bid:
-            return None
-        precise_price = self.get_precise_price(price, self.prices.bid)
+            order_log = await self.order_api.send_order(OrderType.SELL, price, qty)
 
-        async with lock_with_timeout(self.sell_lock, 0.07) as ok:
-            if ok:
-                order_log = await self.order_api.send_order(
-                    OrderType.SELL, precise_price, qty
-                )
+            if order_log:
+                # If we deliver order, we reflect it in balance until we read the current balance
+                self.pair.base.free -= qty
+                return order_log
 
-                if order_log:
-                    # If we deliver order, we reflect it in balance until we read the current balance
-                    self.pair.base.free -= qty
-                    return order_log
         return None
