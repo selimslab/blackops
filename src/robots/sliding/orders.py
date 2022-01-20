@@ -153,7 +153,7 @@ class OrderApi:
                 if order_log:
                     order_id = self.parse_order_id(order_log)
                     if order_id:
-                        logger.info(f"{self.pair} {side} {float(qty)} {price}")
+                        # logger.info(f"{self.pair} {side} {float(qty)} {price}")
                         await self.order_delivered(order_id, side)
                         return order_id
                     else:
