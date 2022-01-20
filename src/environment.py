@@ -23,7 +23,7 @@ class SleepSeconds(BaseModel):
     cancel_wait: float = 0.16  # 300/min
 
     sell_wait: float = 0.1
-    buy_wait: float = 0.18
+    buy_wait: float = 0.24
 
     update_balances: float = 0.72  # 90/min
     poll_balance_update: float = update_balances / 16
