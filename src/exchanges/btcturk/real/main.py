@@ -15,7 +15,7 @@ from src.domain.models import OrderType
 from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
-from src.periodic import StopwatchAPI, lock_with_timeout
+from src.periodic import StopwatchContext, lock_with_timeout
 from src.web import update_url_query_params
 
 

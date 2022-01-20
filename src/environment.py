@@ -14,7 +14,8 @@ decimal.getcontext().prec = 9
 
 class SleepSeconds(BaseModel):
 
-    clear_prices: float = 0.6
+    clear_prices: float = 0.42
+    clear_balance: float = 2.1
 
     rate_limit: float = 5
 
@@ -24,10 +25,7 @@ class SleepSeconds(BaseModel):
     buy_wait: float = 0.17
 
     update_balances: float = 0.72  # 90/min
-    poll_balance_update: float = update_balances / 16
-
-    refresh_open_orders: float = 0.6  # try every 200ms, 6 robots 1.2 secs
-    cancel_open_orders: float = 0.1  # try every 200ms, 6 robots 1.2 secs
+    refresh_open_orders: float = 0.8  # try every 200ms, 6 robots 1.2 secs
 
     broadcast_stats: float = 1
 

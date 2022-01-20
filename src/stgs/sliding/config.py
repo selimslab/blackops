@@ -7,32 +7,19 @@ from src.idgen import dict_to_hash
 from src.numberops import round_decimal_half_up
 from src.stgs.base import StrategyConfigBase, StrategyType
 
-from .inputs import LeaderFollowerInput
+from .inputs import SlidingWindowInput
 
 
-class LeaderFollowerConfig(StrategyConfigBase):
+class SlidingWindowConfig(StrategyConfigBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
-    bridge: str = Field("USDT")
-    bridge_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
-
     base_step_qty: Decimal = Decimal(0)
     base_step_qty_reference_price: Decimal
 
-    max_step: Decimal = Decimal(8)
-
-    quote_step_qty: Decimal = Decimal(5000)
-
-    margin_bps: Decimal = Decimal(1)
-
-    min_sell_qty: Decimal = Decimal(400)
-
-    testnet = False
-
-    input: LeaderFollowerInput
+    input: SlidingWindowInput
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -40,16 +27,15 @@ class LeaderFollowerConfig(StrategyConfigBase):
         self.is_valid()
 
         sha = dict_to_hash(self.input.dict())[:7]
-        mode = "test" if self.input.testnet else "real"
-
-        self.sha = f"{self.input.base}_{self.input.quote}_{mode}"
+        mode = "testnet" if self.input.testnet else "real"
+        self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}_{self.input.quote_step_qty}"
 
         self.set_base_step_qty(self.base_step_qty_reference_price)
 
     def set_base_step_qty(self, price: Decimal) -> None:
         self.base_step_qty_reference_price = price
         self.base_step_qty = round_decimal_half_up(
-            self.quote_step_qty / self.base_step_qty_reference_price
+            self.input.quote_step_qty / self.base_step_qty_reference_price
         )
 
     def is_valid_exchanges(self):

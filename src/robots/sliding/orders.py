@@ -7,10 +7,12 @@ from typing import Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
-from src.exchanges.base import ExchangeAPIClientBase
-from src.exchanges.locks import Locks
+from src.environment import sleep_seconds
+from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
-from src.stgs import LeaderFollowerConfig
+from src.numberops.main import get_precision, round_decimal_floor  # type: ignore
+from src.periodic import StopwatchContext, lock_with_timeout
+from src.stgs.sliding.config import SlidingWindowConfig
 
 
 @dataclass
@@ -28,13 +30,18 @@ class OrderStats:
 
 @dataclass
 class OrderApi:
-    config: LeaderFollowerConfig
+    config: SlidingWindowConfig
     pair: AssetPair
-    exchange: ExchangeAPIClientBase
+    exchange: BtcturkBase
 
     open_order_ids: collections.deque = field(default_factory=collections.deque)
 
-    locks: Locks = field(default_factory=Locks)
+    stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
+
+    read_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    buy_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    sell_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    cancel_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     cancelled: set = field(default_factory=set)
 
@@ -42,74 +49,56 @@ class OrderApi:
 
     open_orders_fresh: bool = True
 
-    def refresh_open_order_successful(self, orders) -> None:
-        order_ids = [order.get("id") for order in orders]
-
-        for order_id in order_ids:
-            if order_id and order_id not in self.cancelled:
-                self.open_order_ids.append(order_id)
-
-        self.cancelled = set()
-        self.open_orders_fresh = True
-        self.stats.refreshed += 1
-
     async def refresh_open_orders(self) -> None:
+
+        if self.read_lock.locked():
+            return None
+
         if self.open_orders_fresh:
             return None
 
-        if self.locks.read.locked():
-            return None
-
-        async with self.locks.read:
-            await self.wait_for_lock(self.exchange.locks.read)
-
+        async with self.read_lock:
+            while self.exchange.locks.read.locked():
+                await asyncio.sleep(0.05)
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
+                self.stats.refreshed += 1
                 orders = self.exchange.get_sorted_order_list(res)
-                self.refresh_open_order_successful(orders)
+                order_ids = [order.get("id") for order in orders]
+
+                for order_id in order_ids:
+                    if order_id and order_id not in self.cancelled:
+                        self.open_order_ids.append(order_id)
+                self.open_orders_fresh = True
+                self.cancelled = set()
             else:
                 self.stats.refresh_fail += 1
 
         await self.cancel_open_orders()
 
-    def cancel_successful(self, order_id) -> None:
-        self.cancelled.add(order_id)
-        self.stats.cancelled += 1
-
-    def cancel_failed(self) -> None:
-        # couldn't cancel but maybe filled
-        self.open_orders_fresh = False
-        self.stats.cancel_fail += 1
-
-    async def wait_for_lock(self, lock):
-        while lock.locked():
-            await asyncio.sleep(0.05)
-
-    async def cancel_order(self, order_id) -> None:
-        await self.wait_for_lock(self.exchange.locks.cancel)
-
-        ok = await self.exchange.cancel_order(order_id)
-
-        if ok:
-            self.cancel_successful(order_id)
-        else:
-            self.cancel_failed()
-
     async def cancel_open_orders(self) -> None:
         try:
+            if self.cancel_lock.locked():
+                return None
+
             if not self.open_order_ids:
                 return None
 
-            if self.locks.cancel.locked():
-                return None
-
-            async with self.locks.cancel:
+            async with self.cancel_lock:
                 while self.open_order_ids:
                     order_id = self.open_order_ids.popleft()
                     if order_id in self.cancelled:
                         continue
-                    await self.cancel_order(order_id)
-
+                    while self.exchange.locks.cancel.locked():
+                        await asyncio.sleep(0.05)
+                    ok = await self.exchange.cancel_order(order_id)
+                    if ok:
+                        self.cancelled.add(order_id)
+                        self.stats.cancelled += 1
+                    else:
+                        # couldn't cancel but maybe filled
+                        self.open_orders_fresh = False
+                        self.stats.cancel_fail += 1
                 if self.open_orders_fresh:
                     self.cancelled = set()
 
@@ -118,32 +107,16 @@ class OrderApi:
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
-    async def order_delivered(self, order_id, side):
-        if side == OrderType.BUY:
-            self.stats.buy_delivered += 1
-        else:
-            self.stats.sell_delivered += 1
-        await asyncio.sleep(0.1)  # allow time for order to be filled
-        self.open_order_ids.append(order_id)
-        await asyncio.sleep(0.06)
-
-    def order_delivered_but_failed(self, order_log):
-        self.stats.deliver_fail += 1
-        logger.info(order_log)
-        log_pub.publish_error(message=order_log)
-
-    def parent_locked(self):
-        self.stats.parent_locked += 1
-
-    def get_order_lock(self, side):
-        return self.locks.buy if side == OrderType.BUY else self.locks.sell
-
     async def send_order(
         self, side: OrderType, price: Decimal, qty: Decimal
-    ) -> Optional[OrderId]:
+    ) -> Optional[dict]:
 
         try:
-            order_lock = self.get_order_lock(side)
+            if side == OrderType.BUY:
+                order_lock = self.buy_lock
+            else:
+                order_lock = self.sell_lock
+
             if order_lock.locked():
                 self.stats.robot_locked += 1
                 return None
@@ -153,18 +126,28 @@ class OrderApi:
                     self.pair, side, float(price), round(float(qty))
                 )
                 if order_log:
+                    # only send result if order delivered
                     order_id = self.parse_order_id(order_log)
                     if order_id:
                         logger.info(f"{self.pair} {side} {float(qty)} {price}")
-                        await self.order_delivered(order_id, side)
-                        return order_id
+                        if side == OrderType.BUY:
+                            self.stats.buy_delivered += 1
+                        else:
+                            self.stats.sell_delivered += 1
+                        await asyncio.sleep(
+                            sleep_seconds.buy_wait
+                        )  # allow time for order to be filled
+                        self.open_order_ids.append(order_id)
+                        return order_log
                     else:
-                        self.order_delivered_but_failed(order_log)
+                        self.stats.deliver_fail += 1
+                        logger.warning(order_log)
                 else:
-                    self.parent_locked()
+                    self.stats.parent_locked += 1
+
             return None
         except Exception as e:
-            msg = f"send_order: {e}: [{side, price, qty}], {traceback.format_exc()}"
+            msg = f"send_order: {e}: [{side, price, self.config.base_step_qty}], {traceback.format_exc()}"
             logger.info(msg)
             log_pub.publish_error(message=msg)
             return None
