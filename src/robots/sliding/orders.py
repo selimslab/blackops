@@ -121,10 +121,10 @@ class OrderApi:
     async def order_delivered(self, order_id, side):
         if side == OrderType.BUY:
             self.stats.buy_delivered += 1
-            await asyncio.sleep(0.12)  # allow time for order to be filled
+            await asyncio.sleep(0.13)  # allow time for order to be filled
         else:
             self.stats.sell_delivered += 1
-            await asyncio.sleep(0.1)  # allow time for order to be filled
+            await asyncio.sleep(0.11)  # allow time for order to be filled
 
         self.open_order_ids.append(order_id)
 
