@@ -117,10 +117,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             mid = self.bridge_pub.api_client.get_mid(book)
             if mid:
-                async with self.stopwatches.bridge.stopwatch(
-                    self.clear_bridge, sleep_seconds.clear_prices
-                ):
-                    self.targets.bridge = mid
+                self.targets.bridge = mid
 
     def clear_targets(self):
         self.targets = Window()
