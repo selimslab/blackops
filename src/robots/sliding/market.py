@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass, field
-from decimal import ROUND_DOWN, Decimal
+from decimal import Decimal
 from typing import Optional
 
 import src.pubsub.log_pub as log_pub

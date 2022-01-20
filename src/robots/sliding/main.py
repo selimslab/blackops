@@ -2,7 +2,7 @@ import asyncio
 import decimal
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from decimal import Decimal, getcontext
+from decimal import Decimal
 from typing import Any, Optional
 
 import src.pubsub.log_pub as log_pub
@@ -147,7 +147,7 @@ class SlidingWindowTrader(RobotBase):
             await self.follower.short(taker_sell, self.config.base_step_qty)
 
         taker_buy = self.get_long_price_taker()
-        if taker_buy and self.current_step <= self.config.input.max_step:
+        if taker_buy and self.current_step <= self.config.max_step:
             await self.follower.long(taker_buy, self.config.base_step_qty)
 
             # maker_buy = self.get_long_price_maker()
