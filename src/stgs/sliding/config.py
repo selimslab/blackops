@@ -7,27 +7,32 @@ from src.idgen import dict_to_hash
 from src.numberops import round_decimal_half_up
 from src.stgs.base import StrategyConfigBase, StrategyType
 
-from .inputs import SlidingWindowInput
+from .inputs import LeaderFollowerInput
 
 
-class SlidingWindowConfig(StrategyConfigBase):
+class LeaderFollowerConfig(StrategyConfigBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
     follower_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
+
+    bridge: str = Field("USDT")
+    bridge_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
     base_step_qty: Decimal = Decimal(0)
     base_step_qty_reference_price: Decimal
 
     max_step: Decimal = Decimal(8)
 
-    quote_step_qty: Decimal = Decimal(6000)
+    quote_step_qty: Decimal = Decimal(5000)
 
     margin_bps: Decimal = Decimal(1)
 
     min_sell_qty: Decimal = Decimal(250)
 
-    input: SlidingWindowInput
+    testnet = False
+
+    input: LeaderFollowerInput
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -36,7 +41,8 @@ class SlidingWindowConfig(StrategyConfigBase):
 
         sha = dict_to_hash(self.input.dict())[:7]
         mode = "test" if self.input.testnet else "real"
-        self.sha = f"{sha}_{self.input.base}_{self.input.quote}_{mode}"
+
+        self.sha = f"{self.input.base}_{self.input.quote}_{mode}"
 
         self.set_base_step_qty(self.base_step_qty_reference_price)
 

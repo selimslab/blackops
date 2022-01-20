@@ -12,7 +12,7 @@ from src.periodic import StopwatchContext, lock_with_timeout, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.sliding.orders import OrderApi
-from src.stgs.sliding.config import SlidingWindowConfig
+from src.stgs.sliding.config import LeaderFollowerConfig
 
 
 @dataclass
@@ -23,7 +23,7 @@ class MarketPrices:
 
 @dataclass
 class MarketWatcher:
-    config: SlidingWindowConfig
+    config: LeaderFollowerConfig
 
     book_pub: BookPub
     balance_pub: BalancePub

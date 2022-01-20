@@ -7,14 +7,12 @@ from src.stgs.base import StrategyInputBase, StrategyType
 from src.stgs.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 
 
-class SlidingWindowInput(StrategyInputBase):
+class LeaderFollowerInput(StrategyInputBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     base: str = Field(..., example="ETH")
     bridge: Optional[str] = Field(default=None, example="USDT")
     quote: str = Field(..., example="TRY")
-
-    bridge_exchange: Optional[ExchangeType] = ExchangeType.BTCTURK
 
     use_bridge = True
     testnet = False
@@ -55,21 +53,21 @@ class SlidingWindowInput(StrategyInputBase):
         if self.bridge and self.bridge not in SUPPORTED_BRIDDGES:
             raise ValueError(f"{self.bridge} is not a supported bridge")
 
-        if (
-            self.bridge_exchange
-            and self.bridge_exchange
-            and self.bridge_exchange
-            not in [
-                ExchangeType.BINANCE,
-                ExchangeType.BTCTURK,
-            ]
-        ):
-            raise ValueError(
-                f"{self.bridge_exchange} is not a supported bridge exchange"
-            )
+        # if (
+        #     self.bridge_exchange
+        #     and self.bridge_exchange
+        #     and self.bridge_exchange
+        #     not in [
+        #         ExchangeType.BINANCE,
+        #         ExchangeType.BTCTURK,
+        #     ]
+        # ):
+        #     raise ValueError(
+        #         f"{self.bridge_exchange} is not a supported bridge exchange"
+        #     )
 
-        if self.bridge and self.use_bridge and not self.bridge_exchange:
-            raise ValueError(f"bridge exchange is required if you want to use a bridge")
+        # if self.bridge and self.use_bridge and not self.bridge_exchange:
+        #     raise ValueError(f"bridge exchange is required if you want to use a bridge")
 
     def is_valid(self):
         self.is_valid_type()

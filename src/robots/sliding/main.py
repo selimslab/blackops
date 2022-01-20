@@ -14,7 +14,7 @@ from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
 from src.robots.sliding.market import MarketWatcher
-from src.stgs.sliding.config import SlidingWindowConfig
+from src.stgs.sliding.config import LeaderFollowerConfig
 
 
 @dataclass
@@ -39,8 +39,8 @@ class Credits:
 
 
 @dataclass
-class SlidingWindowTrader(RobotBase):
-    config: SlidingWindowConfig
+class LeaderFollowerTrader(RobotBase):
+    config: LeaderFollowerConfig
 
     leader_pub: BookPub
     follower_pub: BookPub

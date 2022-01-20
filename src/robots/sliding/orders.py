@@ -12,7 +12,7 @@ from src.exchanges.btcturk.base import BtcturkBase
 from src.monitoring import logger
 from src.numberops.main import get_precision, round_decimal_floor  # type: ignore
 from src.periodic import StopwatchContext, lock_with_timeout
-from src.stgs.sliding.config import SlidingWindowConfig
+from src.stgs.sliding.config import LeaderFollowerConfig
 
 
 @dataclass
@@ -30,7 +30,7 @@ class OrderStats:
 
 @dataclass
 class OrderApi:
-    config: SlidingWindowConfig
+    config: LeaderFollowerConfig
     pair: AssetPair
     exchange: BtcturkBase
 
