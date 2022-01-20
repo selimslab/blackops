@@ -7,7 +7,7 @@ from src.stgs.base import StrategyInputBase, StrategyType
 from src.stgs.symbols import ALL_SYMBOLS, BTCTURK_TRY_BASES, SUPPORTED_BRIDDGES
 
 
-class SlidingWindowInput(StrategyInputBase):
+class LeaderFollowerInput(StrategyInputBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     base: str = Field(..., example="ETH")

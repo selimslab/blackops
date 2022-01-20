@@ -14,7 +14,7 @@ from src.exchanges.locks import Locks
 from src.monitoring import logger
 from src.numberops.main import get_precision, round_decimal_floor  # type: ignore
 from src.periodic import StopwatchAPI, lock_with_timeout
-from src.robots.sliding.config import SlidingWindowConfig
+from src.robots.sliding.config import LeaderFollowerConfig
 
 
 @dataclass
@@ -32,7 +32,7 @@ class OrderStats:
 
 @dataclass
 class OrderApi:
-    config: SlidingWindowConfig
+    config: LeaderFollowerConfig
     pair: AssetPair
     exchange: ExchangeAPIClientBase
 

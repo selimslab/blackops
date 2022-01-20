@@ -1,2 +1,2 @@
-from .inputs import SlidingWindowInput
-from .main import SlidingWindowConfig, SlidingWindowTrader
+from .inputs import LeaderFollowerInput
+from .main import LeaderFollowerConfig, LeaderFollowerTrader

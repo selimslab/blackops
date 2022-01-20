@@ -7,10 +7,10 @@ from src.exchanges.factory import ExchangeType
 from src.idgen import dict_to_hash
 from src.stgs.base import StrategyConfigBase, StrategyType
 
-from .inputs import SlidingWindowInput
+from .inputs import LeaderFollowerInput
 
 
-class SlidingWindowConfig(StrategyConfigBase):
+class LeaderFollowerConfig(StrategyConfigBase):
     type: StrategyType = Field(StrategyType.SLIDING_WINDOW, const=True)
 
     leader_exchange: ExchangeType = Field(ExchangeType.BINANCE)
@@ -28,7 +28,7 @@ class SlidingWindowConfig(StrategyConfigBase):
 
     minimum_sell_qty: Decimal = Decimal("250")
 
-    input: SlidingWindowInput
+    input: LeaderFollowerInput
 
     def __init__(self, **data):
         super().__init__(**data)

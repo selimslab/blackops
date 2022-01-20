@@ -3,10 +3,10 @@ from src.domain.models import create_asset_pair
 from src.exchanges.factory import ExchangeType, NetworkType
 from src.monitoring import logger
 from src.pubsub import pub_factory
-from src.robots import SlidingWindowConfig, SlidingWindowTrader
+from src.robots import LeaderFollowerConfig, LeaderFollowerTrader
 
 
-def sliding_window_factory(config: SlidingWindowConfig):
+def sliding_window_factory(config: LeaderFollowerConfig):
 
     config.is_valid()
 
@@ -49,7 +49,7 @@ def sliding_window_factory(config: SlidingWindowConfig):
             symbol=pair.symbol,
         )
 
-    trader = SlidingWindowTrader(
+    trader = LeaderFollowerTrader(
         config=config,
         leader_pub=leader_pub,
         follower_pub=follower_pub,
