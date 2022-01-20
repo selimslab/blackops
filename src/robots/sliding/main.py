@@ -73,11 +73,13 @@ class LeaderFollowerTrader(RobotBase):
 
     def set_credits(self):
         try:
-            self.credits.maker = (
-                (maker_fee_bps + taker_fee_bps) / Decimal(2)
-            ) + self.config.margin_bps
+            # self.credits.maker = (
+            #     (maker_fee_bps + taker_fee_bps) / Decimal(2)
+            # ) + self.config.margin_bps
             self.credits.taker = taker_fee_bps + self.config.margin_bps
-            self.credits.step = self.credits.taker / self.config.max_step
+            self.credits.step = (
+                self.credits.taker / self.config.max_step * Decimal("1.2")
+            )
         except Exception as e:
             logger.error(e)
             raise e
@@ -184,13 +186,17 @@ class LeaderFollowerTrader(RobotBase):
         try:
             self.update_step()
 
-            slide_down = self.credits.step * self.current_step * mid * BPS
+            mid_bps = mid * BPS
+
+            slide_down = self.credits.step * self.current_step * mid_bps
 
             mid -= slide_down
 
-            taker_credit = self.credits.taker * mid * BPS
-            self.targets.taker.buy = mid - taker_credit
-            self.targets.taker.sell = mid + taker_credit
+            sell_credit = (self.credits.taker - 2) * mid_bps
+            buy_credit = (self.credits.taker + 2) * mid_bps
+
+            self.targets.taker.buy = mid - buy_credit
+            self.targets.taker.sell = mid + sell_credit
 
         except Exception as e:
             msg = f"calculate_window: {e}"
