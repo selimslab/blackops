@@ -14,27 +14,12 @@ from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
 from src.periodic import lock_with_timeout
 
-# @dataclass
-# class TimeoutLock:
-#     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-
-@dataclass
-class Locks:
-    buy: asyncio.Lock = field(default_factory=asyncio.Lock)
-    sell: asyncio.Lock = field(default_factory=asyncio.Lock)
-    cancel: asyncio.Lock = field(default_factory=asyncio.Lock)
-    rate_limit: asyncio.Lock = field(default_factory=asyncio.Lock)
-    read: asyncio.Lock = field(default_factory=asyncio.Lock)
-
 
 @dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
     api_key: str = "no key"
     api_secret: str = "no secret"
-
-    locks: Locks = field(default_factory=Locks)
 
     session: Optional[aiohttp.ClientSession] = None
 

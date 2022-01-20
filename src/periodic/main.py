@@ -63,7 +63,7 @@ async def lock_with_timeout(lock: asyncio.Lock, sleep: float):
 
 
 @dataclass
-class StopwatchContext:
+class StopwatchAPI:
     task: Optional[asyncio.Task] = None
 
     async def call_after(self, func: Callable, seconds: float) -> None:

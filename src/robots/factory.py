@@ -3,10 +3,11 @@ from dataclasses import dataclass
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
 from src.robots.sliding.factory import sliding_window_factory
-from src.robots.sliding.main import SlidingWindowTrader
 from src.stgs import StrategyConfig, StrategyType
 
-Robot = SlidingWindowTrader  # union type
+from .sliding.main import LeaderFollowerTrader
+
+Robot = LeaderFollowerTrader  # union type
 
 
 @dataclass
