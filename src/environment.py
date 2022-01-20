@@ -15,7 +15,7 @@ decimal.getcontext().prec = 9
 class SleepSeconds(BaseModel):
 
     clear_leader_prices: float = 0.3
-    clear_follower_prices: float = 0.6
+    clear_follower_prices: float = 0.8
 
     rate_limit: float = 5
 
