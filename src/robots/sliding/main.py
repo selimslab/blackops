@@ -9,7 +9,7 @@ import src.pubsub.log_pub as log_pub
 from src.domain import BPS, maker_fee_bps, taker_fee_bps
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.periodic import StopwatchContext, periodic
+from src.periodic import StopwatchAPI, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
@@ -51,7 +51,7 @@ class LeaderFollowerTrader(RobotBase):
 
     targets: Window = field(default_factory=Window)
 
-    stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
+    stopwatch_api: StopwatchAPI = field(default_factory=StopwatchAPI)
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
 

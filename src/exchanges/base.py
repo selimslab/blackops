@@ -1,15 +1,17 @@
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from src.domain import Asset, AssetPair
 from src.domain.models import OrderType
+from src.exchanges.locks import Locks
 
 
 @dataclass
 class ExchangeAPIClientBase(ABC):
     name: Optional[str] = None
+    locks: Locks = field(default_factory=Locks)
 
     async def get_account_balance(self) -> Optional[dict]:
         pass
@@ -57,3 +59,6 @@ class ExchangeAPIClientBase(ABC):
 
     async def cancel_open_orders(self, pair: AssetPair) -> list:
         return []
+
+    def get_sorted_order_list(self, order_res: dict):
+        pass

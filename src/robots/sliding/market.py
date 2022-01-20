@@ -8,7 +8,7 @@ from src.domain import OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops.main import one_bps_lower, round_decimal_floor  # type: ignore
-from src.periodic import StopwatchContext, lock_with_timeout, periodic
+from src.periodic import StopwatchAPI, lock_with_timeout, periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.sliding.orders import OrderApi
@@ -30,7 +30,7 @@ class MarketWatcher:
 
     prices: MarketPrices = field(default_factory=MarketPrices)
 
-    stopwatch_api: StopwatchContext = field(default_factory=StopwatchContext)
+    stopwatch_api: StopwatchAPI = field(default_factory=StopwatchAPI)
 
     def __post_init__(self):
         self.order_api = OrderApi(
