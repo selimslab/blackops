@@ -22,7 +22,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
     base_step_qty: Decimal = Decimal(0)
     base_step_qty_reference_price: Decimal
 
-    max_step: Decimal = Decimal(8)
+    max_step: Decimal = Decimal(6)
 
     quote_step_qty: Decimal = Decimal(10000)
 
