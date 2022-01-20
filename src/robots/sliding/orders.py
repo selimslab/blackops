@@ -125,12 +125,10 @@ class OrderApi:
             self.stats.sell_delivered += 1
         await asyncio.sleep(0.1)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
-        await asyncio.sleep(0.06)
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
-        logger.info(order_log)
-        log_pub.publish_error(message=order_log)
+        logger.error(order_log)
 
     def parent_locked(self):
         self.stats.parent_locked += 1
