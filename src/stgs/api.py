@@ -17,7 +17,9 @@ StrategyInput = LeaderFollowerInput
 
 StrategyConfig = LeaderFollowerConfig
 
-STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: LeaderFollowerConfig}
+STRATEGY_INPUT_CLASS = {StrategyType.SLIDING_WINDOW: LeaderFollowerInput}
+
+STRATEGY_CONFIG_CLASS = {StrategyType.SLIDING_WINDOW: LeaderFollowerConfig}
 
 
 @dataclass
@@ -37,10 +39,11 @@ class StrategyAPI:
         stg_dict = json.loads(stg_str)
         stg_type = StrategyType(stg_dict.get("type"))
 
-        STG_CLASS = STRATEGY_CLASS[stg_type]
+        STG_CLASS = STRATEGY_INPUT_CLASS[stg_type]
+        stg: StrategyInput = STG_CLASS(**stg_dict)
 
-        stg: StrategyConfig = STG_CLASS(**stg_dict)
-        return stg
+        stg_config = await self.stg_to_config(stg)
+        return stg_config
 
     async def delete_all_stg(self):
         await async_redis_client.delete(self.STG_MAP)
@@ -59,18 +62,23 @@ class StrategyAPI:
 
         return ticker
 
-    async def create_stg(self, stg: StrategyInput) -> StrategyConfig:
-
+    async def stg_to_config(self, stg: StrategyInput) -> StrategyConfig:
         pair = AssetPair(base=Asset(symbol=stg.base), quote=Asset(symbol=stg.quote))
 
         ticker = await self.get_ticker(pair)
 
         stg_config = StrategyConfig(input=stg, base_step_qty_reference_price=ticker)
 
-        if not await async_redis_client.hexists(self.STG_MAP, stg_config.sha):
-            await async_redis_client.hset(
-                self.STG_MAP, stg_config.sha, json.dumps(stg_config.dict())
-            )
+        return stg_config
+
+    async def create_stg(self, stg: StrategyInput) -> StrategyConfig:
+
+        stg_config = await self.stg_to_config(stg)
+
+        # overwrite if exists
+        await async_redis_client.hset(
+            self.STG_MAP, stg_config.sha, json.dumps(stg.dict())
+        )
 
         return stg_config
 
