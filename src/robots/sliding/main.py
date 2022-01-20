@@ -3,7 +3,7 @@ import decimal
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import src.pubsub.log_pub as log_pub
 from src.domain import BPS, maker_fee_bps, taker_fee_bps
@@ -42,6 +42,8 @@ class Credits:
     maker: Decimal = Decimal(0)
     taker: Decimal = Decimal(0)
     step: Decimal = Decimal(0)
+    sell: Decimal = Decimal(0)
+    buy: Decimal = Decimal(0)
 
 
 @dataclass
@@ -80,6 +82,9 @@ class LeaderFollowerTrader(RobotBase):
             self.credits.step = (
                 self.credits.taker / self.config.max_step * Decimal("1.2")
             )
+            self.credits.sell = self.credits.taker - Decimal(2)
+            self.credits.buy = self.credits.taker + Decimal(2)
+
         except Exception as e:
             logger.error(e)
             raise e
@@ -147,13 +152,18 @@ class LeaderFollowerTrader(RobotBase):
 
     async def should_transact(self) -> None:
 
-        taker_sell = self.get_short_price_taker()
-        if taker_sell:
-            await self.follower.short(taker_sell, self.config.base_step_qty)
+        res = self.get_short_price_taker()
+        if res:
+            price, power = res
+            await self.follower.short(price, self.config.base_step_qty)
 
-        taker_buy = self.get_long_price_taker()
-        if taker_buy and self.current_step <= self.config.max_step:
-            await self.follower.long(taker_buy, self.config.base_step_qty)
+        if self.current_step >= self.config.max_step:
+            return
+
+        res = self.get_long_price_taker()
+        if res:
+            price, power = res
+            await self.follower.long(price, self.config.base_step_qty)
 
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
@@ -192,8 +202,8 @@ class LeaderFollowerTrader(RobotBase):
 
             mid -= slide_down
 
-            sell_credit = (self.credits.taker - 2) * mid_bps
-            buy_credit = (self.credits.taker + 2) * mid_bps
+            sell_credit = self.credits.sell * mid_bps
+            buy_credit = self.credits.buy * mid_bps
 
             self.targets.taker.buy = mid - buy_credit
             self.targets.taker.sell = mid + sell_credit
@@ -210,19 +220,23 @@ class LeaderFollowerTrader(RobotBase):
     def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
         return price.quantize(reference, rounding=decimal.ROUND_DOWN)
 
-    def get_long_price_taker(self) -> Optional[Decimal]:
+    def get_long_price_taker(self) -> Optional[Tuple[Decimal, Decimal]]:
         ask = self.follower.prices.ask
+        buy = self.targets.taker.buy
 
-        if ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
-            return self.get_precise_price(self.targets.taker.buy, ask)
+        if ask and buy and ask <= buy:
+            # signal_power = (buy - ask)/self.credits.buy*buy*BPS + 1
+            return self.get_precise_price(buy, ask), Decimal("1")
 
         return None
 
-    def get_short_price_taker(self) -> Optional[Decimal]:
+    def get_short_price_taker(self) -> Optional[Tuple[Decimal, Decimal]]:
         bid = self.follower.prices.bid
-
-        if bid and self.targets.taker.sell and bid >= self.targets.taker.sell:
-            return self.get_precise_price(self.targets.taker.sell, bid)
+        sell = self.targets.taker.sell
+        if bid and sell and bid >= sell:
+            # signal_power = self.config.max_step - (sell - bid)/self.credits.sell*sell*BPS
+            # signal_power = (bid - sell)/self.credits.sell*sell*BPS + 1
+            return self.get_precise_price(sell, bid), Decimal("1")
         return None
 
     async def close(self) -> None:
