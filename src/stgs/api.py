@@ -8,16 +8,16 @@ from pydantic.json import pydantic_encoder
 
 from src.domain import Asset, AssetPair
 from src.exchanges.btcturk import btc_real_api_client_public
-from src.robots import LeaderFollowerConfig, LeaderFollowerInput
 from src.storage.redis import async_redis_client
 
 from .base import StrategyType
+from .sliding import SlidingWindowConfig, SlidingWindowInput
 
-StrategyInput = LeaderFollowerInput
+StrategyInput = SlidingWindowInput
 
-StrategyConfig = LeaderFollowerConfig
+StrategyConfig = SlidingWindowConfig
 
-STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: LeaderFollowerConfig}
+STRATEGY_CLASS = {StrategyType.SLIDING_WINDOW: SlidingWindowConfig}
 
 
 @dataclass
@@ -51,17 +51,21 @@ class StrategyAPI:
         else:
             raise ValueError("stg not found")
 
-    # async def get_ticker(self, pair: AssetPair) -> Decimal:
+    async def get_ticker(self, pair: AssetPair) -> Decimal:
 
-    #     ticker = await btc_real_api_client_public.get_ticker(pair)
-    #     if not ticker:
-    #         raise Exception("couldn't read price, please try again")
+        ticker = await btc_real_api_client_public.get_ticker(pair)
+        if not ticker:
+            raise Exception("couldn't read price, please try again")
 
-    #     return ticker
+        return ticker
 
-    async def create_stg(self, stg_input: StrategyInput) -> StrategyConfig:
+    async def create_stg(self, stg: StrategyInput) -> StrategyConfig:
 
-        stg_config = StrategyConfig(input=stg_input)
+        pair = AssetPair(base=Asset(symbol=stg.base), quote=Asset(symbol=stg.quote))
+
+        ticker = await self.get_ticker(pair)
+
+        stg_config = StrategyConfig(input=stg, base_step_qty_reference_price=ticker)
 
         if not await async_redis_client.hexists(self.STG_MAP, stg_config.sha):
             await async_redis_client.hset(

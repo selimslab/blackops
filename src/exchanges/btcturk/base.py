@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional, Tuple
@@ -20,10 +20,22 @@ from src.periodic import lock_with_timeout
 
 
 @dataclass
+class Locks:
+    buy: asyncio.Lock = field(default_factory=asyncio.Lock)
+    sell: asyncio.Lock = field(default_factory=asyncio.Lock)
+    cancel: asyncio.Lock = field(default_factory=asyncio.Lock)
+    rate_limit: asyncio.Lock = field(default_factory=asyncio.Lock)
+    read: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+
+@dataclass
 class BtcturkBase(ExchangeAPIClientBase):
 
     api_key: str = "no key"
     api_secret: str = "no secret"
+
+    locks: Locks = field(default_factory=Locks)
+
     session: Optional[aiohttp.ClientSession] = None
 
     async def activate_rate_limit(self) -> None:

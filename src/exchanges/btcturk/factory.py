@@ -1,6 +1,6 @@
 from src.environment import apiKey, apiSecret
 
-from .main import BtcturkApiClient
+from .real.main import BtcturkApiClient
 from .testnet.testnet import BtcturkApiClientTestnet
 
 

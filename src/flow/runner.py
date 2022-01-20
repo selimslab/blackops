@@ -16,7 +16,7 @@ from src.pubsub.pubs import PublisherBase
 from src.pubsub.radio import radio
 from src.robots import robot_factory
 from src.robots.factory import Robot  # type: ignore
-from src.robots.sliding.main import LeaderFollowerTrader
+from src.robots.sliding.main import SlidingWindowTrader
 from src.stgs import StrategyConfig
 
 
@@ -32,7 +32,7 @@ class FlowRun:
     sha: str
     log_channel: str
     status: TaskStatus
-    robot: LeaderFollowerTrader
+    robot: SlidingWindowTrader
     aiotask: Optional[asyncio.Task] = None
 
 
@@ -131,19 +131,19 @@ class FlowRunner:
     def get_tasks(self) -> list:
         return list(self.flowruns.keys())
 
-    def start_balance_station(self, robot: LeaderFollowerTrader):
+    def start_balance_station(self, robot: SlidingWindowTrader):
         return radio.create_station_if_not_exists(robot.balance_pub)
 
-    def start_leader_station(self, robot: LeaderFollowerTrader):
+    def start_leader_station(self, robot: SlidingWindowTrader):
         return radio.create_station_if_not_exists(robot.leader_pub)
 
-    def start_follower_station(self, robot: LeaderFollowerTrader):
+    def start_follower_station(self, robot: SlidingWindowTrader):
         return radio.create_station_if_not_exists(robot.follower_pub)
 
     def start_stats_station(self):
         return radio.create_station_if_not_exists(stats_pub)
 
-    def start_bridge_station(self, robot: LeaderFollowerTrader):
+    def start_bridge_station(self, robot: SlidingWindowTrader):
         if robot.bridge_pub:
             return radio.create_station_if_not_exists(robot.bridge_pub)
 

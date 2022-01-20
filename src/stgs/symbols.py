@@ -1,5 +1,7 @@
 SUPPORTED_BRIDDGES = set(["USDT"])
 
+BINANCE_TRY_BASES = set(["ETH", "DOGE"])
+
 
 BTCTURK_TRY_BASES = set(
     [

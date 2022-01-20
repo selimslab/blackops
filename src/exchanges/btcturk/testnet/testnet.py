@@ -7,7 +7,7 @@ from src.environment import sleep_seconds
 from src.exchanges.btcturk.base import BtcturkBase
 from src.exchanges.btcturk.testnet.dummy import BtcturkDummy
 from src.monitoring import logger
-from src.periodic import StopwatchAPI, lock_with_timeout
+from src.periodic import StopwatchContext, lock_with_timeout
 
 
 @dataclass

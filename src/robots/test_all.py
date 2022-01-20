@@ -9,7 +9,9 @@
 # from src.monitoring import logger
 # from src.pubsub.radio import radio
 # from src.robots.factory import Robot, robot_factory
-# from src.robots.sliding.main import TargetPrices, Window, MarketPrices
+# from src.robots.sliding.main import TargetPrices, Window
+# from src.robots.sliding.market import MarketPrices
+# from src.robots.sliding.orders import OrdersDelivered
 # from src.stgs import StrategyConfig, StrategyInput, strategy_api
 
 
