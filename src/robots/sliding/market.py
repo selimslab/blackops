@@ -58,7 +58,7 @@ class MarketWatcher:
             bid = self.book_pub.api_client.get_best_bid(book)
             if ask and bid:
                 async with self.stopwatches.follower.stopwatch(
-                    self.clear_prices, sleep_seconds.clear_prices
+                    self.clear_follower_prices, sleep_seconds.clear_follower_prices
                 ):
                     self.prices.ask = ask
                     self.prices.bid = bid
@@ -70,7 +70,7 @@ class MarketWatcher:
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
-    def clear_prices(self):
+    def clear_follower_prices(self):
         self.prices.ask = None
         self.prices.bid = None
 

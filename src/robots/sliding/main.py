@@ -118,7 +118,7 @@ class LeaderFollowerTrader(RobotBase):
             mid = self.bridge_pub.api_client.get_mid(book)
             if mid:
                 async with self.stopwatches.leader.stopwatch(
-                    self.clear_bridge, sleep_seconds.clear_prices
+                    self.clear_bridge, sleep_seconds.clear_follower_prices
                 ):
                     self.targets.bridge = mid
 
@@ -137,7 +137,7 @@ class LeaderFollowerTrader(RobotBase):
         mid = self.get_window_mid(book)
         if mid:
             async with self.stopwatches.leader.stopwatch(
-                self.clear_targets, sleep_seconds.clear_prices
+                self.clear_targets, sleep_seconds.clear_leader_prices
             ):
                 self.update_window(mid)
 
