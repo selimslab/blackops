@@ -32,6 +32,12 @@ class Window:
 
 
 @dataclass
+class Stopwatches:
+    leader: StopwatchAPI = field(default_factory=StopwatchAPI)
+    bridge: StopwatchAPI = field(default_factory=StopwatchAPI)
+
+
+@dataclass
 class Credits:
     maker: Decimal = Decimal(0)
     taker: Decimal = Decimal(0)
@@ -51,7 +57,7 @@ class LeaderFollowerTrader(RobotBase):
 
     targets: Window = field(default_factory=Window)
 
-    stopwatch_api: StopwatchAPI = field(default_factory=StopwatchAPI)
+    stopwatches: Stopwatches = field(default_factory=Stopwatches)
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
 
@@ -86,7 +92,7 @@ class LeaderFollowerTrader(RobotBase):
             self.follower.consume_pub(),
             periodic(
                 self.follower.update_balances,
-                sleep_seconds.update_balances / 12,
+                sleep_seconds.poll_balance_update,
             ),
             periodic(
                 self.follower.order_api.refresh_open_orders,
@@ -94,7 +100,7 @@ class LeaderFollowerTrader(RobotBase):
             ),
             periodic(
                 self.follower.order_api.cancel_open_orders,
-                sleep_seconds.refresh_open_orders / 4,
+                sleep_seconds.cancel_open_orders,
             ),
         ]
 
@@ -111,7 +117,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             mid = self.bridge_pub.api_client.get_mid(book)
             if mid:
-                async with self.stopwatch_api.stopwatch(
+                async with self.stopwatches.bridge.stopwatch(
                     self.clear_bridge, sleep_seconds.clear_prices
                 ):
                     self.targets.bridge = mid
@@ -130,7 +136,7 @@ class LeaderFollowerTrader(RobotBase):
     async def decide(self, book) -> None:
         mid = self.get_window_mid(book)
         if mid:
-            async with self.stopwatch_api.stopwatch(
+            async with self.stopwatches.leader.stopwatch(
                 self.clear_targets, sleep_seconds.clear_prices
             ):
                 self.update_window(mid)
@@ -138,9 +144,6 @@ class LeaderFollowerTrader(RobotBase):
             await self.should_transact()
 
     async def should_transact(self) -> None:
-        # maker_sell = self.get_short_price_maker()
-        # if maker_sell:
-        #     await self.follower.short(maker_sell)
 
         taker_sell = self.get_short_price_taker()
         if taker_sell:
@@ -149,10 +152,6 @@ class LeaderFollowerTrader(RobotBase):
         taker_buy = self.get_long_price_taker()
         if taker_buy and self.current_step <= self.config.max_step:
             await self.follower.long(taker_buy, self.config.base_step_qty)
-
-            # maker_buy = self.get_long_price_maker()
-            # if maker_buy:
-            #     await self.follower.long(maker_buy)
 
     def update_step(self):
         self.current_step = self.follower.pair.base.free / self.config.base_step_qty
@@ -189,10 +188,6 @@ class LeaderFollowerTrader(RobotBase):
 
             mid -= slide_down
 
-            # maker_credit = self.config.credits.maker * mid * BPS
-            # self.targets.maker.buy = mid - maker_credit
-            # self.targets.maker.sell = mid + maker_credit
-
             taker_credit = self.credits.taker * mid * BPS
             self.targets.taker.buy = mid - taker_credit
             self.targets.taker.sell = mid + taker_credit
@@ -206,12 +201,6 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=decimal.ROUND_DOWN)
 
     def get_long_price_taker(self) -> Optional[Decimal]:
-        """
-        if targets.taker.buy < ask <= targets.maker.buy
-            buy order at one_bps_lower(ask)
-        if ask <= targets.taker.buy:
-            buy order at taker.buy
-        """
         ask = self.follower.prices.ask
 
         if ask and self.targets.taker.buy and ask <= self.targets.taker.buy:
@@ -220,12 +209,6 @@ class LeaderFollowerTrader(RobotBase):
         return None
 
     def get_short_price_taker(self) -> Optional[Decimal]:
-        """
-        if targets.maker.sell <= bid < targets.taker.sell
-            sell order at one_bps_higher(bid)
-        if bid >= targets.taker.sell:
-            sell order at bid
-        """
         bid = self.follower.prices.bid
 
         if bid and self.targets.taker.sell and bid >= self.targets.taker.sell:
@@ -254,30 +237,3 @@ class LeaderFollowerTrader(RobotBase):
                 "books seen": self.follower_pub.books_seen,
             },
         }
-
-    # def get_long_price_maker(self) -> Optional[Decimal]:
-
-    #     ask = self.follower.prices.ask
-
-    #     if (
-    #         ask
-    #         and self.targets.taker.buy
-    #         and self.targets.maker.buy
-    #         and self.targets.taker.buy < ask <= self.targets.maker.buy
-    #     ):
-    #         return one_bps_lower(ask)
-
-    #     return None
-
-    # def get_short_price_maker(self) -> Optional[Decimal]:
-    #     bid = self.follower.prices.bid
-
-    #     if (
-    #         bid
-    #         and self.targets.taker.sell
-    #         and self.targets.maker.sell
-    #         and self.targets.maker.sell <= bid < self.targets.taker.sell
-    #     ):
-    #         return one_bps_higher(bid)
-
-    #     return None

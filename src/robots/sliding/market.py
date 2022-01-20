@@ -5,6 +5,7 @@ from typing import Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import OrderType, create_asset_pair
+from src.domain.models import OrderId
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops.main import one_bps_lower, round_decimal_floor  # type: ignore
@@ -22,6 +23,11 @@ class MarketPrices:
 
 
 @dataclass
+class Stopwatches:
+    follower: StopwatchAPI = field(default_factory=StopwatchAPI)
+
+
+@dataclass
 class MarketWatcher:
     config: LeaderFollowerConfig
 
@@ -30,7 +36,7 @@ class MarketWatcher:
 
     prices: MarketPrices = field(default_factory=MarketPrices)
 
-    stopwatch_api: StopwatchAPI = field(default_factory=StopwatchAPI)
+    stopwatches: Stopwatches = field(default_factory=Stopwatches)
 
     def __post_init__(self):
         self.order_api = OrderApi(
@@ -51,7 +57,7 @@ class MarketWatcher:
             ask = self.book_pub.api_client.get_best_ask(book)
             bid = self.book_pub.api_client.get_best_bid(book)
             if ask and bid:
-                async with self.stopwatch_api.stopwatch(
+                async with self.stopwatches.follower.stopwatch(
                     self.clear_prices, sleep_seconds.clear_prices
                 ):
                     self.prices.ask = ask
@@ -68,9 +74,6 @@ class MarketWatcher:
         self.prices.ask = None
         self.prices.bid = None
 
-    def clear_balance(self):
-        self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
-
     async def update_balances(self) -> None:
         try:
             res: Optional[dict] = self.balance_pub.balances
@@ -81,16 +84,13 @@ class MarketWatcher:
                 res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
             )
 
-            async with self.stopwatch_api.stopwatch(
-                self.clear_balance, sleep_seconds.clear_balance
-            ):
-                base_balances: dict = balances[self.pair.base.symbol]
-                self.pair.base.free = Decimal(base_balances["free"])
-                self.pair.base.locked = Decimal(base_balances["locked"])
+            base_balances: dict = balances[self.pair.base.symbol]
+            self.pair.base.free = Decimal(base_balances["free"])
+            self.pair.base.locked = Decimal(base_balances["locked"])
 
-                quote_balances: dict = balances[self.pair.quote.symbol]
-                self.pair.quote.free = Decimal(quote_balances["free"])
-                self.pair.quote.locked = Decimal(quote_balances["locked"])
+            quote_balances: dict = balances[self.pair.quote.symbol]
+            self.pair.quote.free = Decimal(quote_balances["free"])
+            self.pair.quote.locked = Decimal(quote_balances["locked"])
 
         except Exception as e:
             msg = f"update_balances: {e}"
@@ -101,31 +101,31 @@ class MarketWatcher:
     def can_buy(self, price, qty) -> bool:
         return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
 
-    async def long(self, price: Decimal, qty: Decimal) -> Optional[dict]:
+    async def long(self, price: Decimal, qty: Decimal) -> Optional[OrderId]:
         if not self.can_buy(price, qty):
             return None
 
-        order_log = await self.order_api.send_order(OrderType.BUY, price, qty)
+        order_id = await self.order_api.send_order(OrderType.BUY, price, qty)
 
-        if order_log:
+        if order_id:
             # If we deliver order, we reflect it in balance until we read the current balance
             self.pair.base.free += qty
-            return order_log
+            return order_id
 
         return None
 
-    async def short(self, price: Decimal, qty: Decimal) -> Optional[dict]:
+    async def short(self, price: Decimal, qty: Decimal) -> Optional[OrderId]:
         if self.pair.base.free < qty:
             if self.pair.base.free * price < self.config.min_sell_qty:
                 return None
             else:
                 qty = round_decimal_floor(self.pair.base.free)
 
-            order_log = await self.order_api.send_order(OrderType.SELL, price, qty)
+            order_id = await self.order_api.send_order(OrderType.SELL, price, qty)
 
-            if order_log:
+            if order_id:
                 # If we deliver order, we reflect it in balance until we read the current balance
                 self.pair.base.free -= qty
-                return order_log
+                return order_id
 
         return None
