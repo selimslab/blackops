@@ -7,13 +7,9 @@ from typing import Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
-from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
-from src.exchanges.btcturk.base import BtcturkBase
 from src.exchanges.locks import Locks
 from src.monitoring import logger
-from src.numberops.main import get_precision, round_decimal_floor  # type: ignore
-from src.periodic import StopwatchAPI, lock_with_timeout
 from src.stgs import LeaderFollowerConfig
 
 
@@ -37,8 +33,6 @@ class OrderApi:
     exchange: ExchangeAPIClientBase
 
     open_order_ids: collections.deque = field(default_factory=collections.deque)
-
-    stopwatch_api: StopwatchAPI = field(default_factory=StopwatchAPI)
 
     locks: Locks = field(default_factory=Locks)
 
@@ -135,7 +129,8 @@ class OrderApi:
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
-        logger.warning(order_log)
+        logger.info(order_log)
+        log_pub.publish_error(message=order_log)
 
     def parent_locked(self):
         self.stats.parent_locked += 1

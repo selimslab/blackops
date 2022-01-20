@@ -28,7 +28,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
 
     margin_bps: Decimal = Decimal(1)
 
-    min_sell_qty: Decimal = Decimal(250)
+    min_sell_qty: Decimal = Decimal(400)
 
     testnet = False
 
