@@ -116,7 +116,7 @@ class MarketWatcher:
 
     async def short(self, price: Decimal, qty: Decimal) -> Optional[OrderId]:
         if self.pair.base.free < qty:
-            if self.pair.base.free * price < self.config.min_sell_qty:
+            if self.pair.base.free * round(float(price)) < self.config.min_sell_qty:
                 return None
             else:
                 qty = round_decimal_floor(self.pair.base.free)
