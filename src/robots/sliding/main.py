@@ -117,7 +117,10 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             mid = self.bridge_pub.api_client.get_mid(book)
             if mid:
-                self.targets.bridge = mid
+                async with self.stopwatches.leader.stopwatch(
+                    self.clear_bridge, sleep_seconds.clear_prices
+                ):
+                    self.targets.bridge = mid
 
     def clear_targets(self):
         self.targets = Window()
@@ -193,6 +196,10 @@ class LeaderFollowerTrader(RobotBase):
             msg = f"calculate_window: {e}"
             logger.error(msg)
             log_pub.publish_error(message=msg)
+
+    def clear_leader_prices(self):
+        self.targets.taker.buy = None
+        self.targets.taker.sell = None
 
     def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
         return price.quantize(reference, rounding=decimal.ROUND_DOWN)

@@ -14,7 +14,7 @@ decimal.getcontext().prec = 9
 
 class SleepSeconds(BaseModel):
 
-    clear_prices: float = 0.6
+    clear_prices: float = 0.3
 
     rate_limit: float = 5
 
