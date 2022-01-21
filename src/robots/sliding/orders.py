@@ -178,7 +178,11 @@ class OrderApi:
         )
 
     def can_buy(self, price, qty) -> bool:
-        return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
+        return (
+            bool(self.pair.quote.free)
+            and self.pair.quote.free >= price * qty
+            and qty > 0
+        )
 
     async def send_order(
         self, side: OrderType, price: Decimal, qty: int

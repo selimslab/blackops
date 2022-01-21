@@ -200,7 +200,7 @@ class LeaderFollowerTrader(RobotBase):
     ) -> None:
         remaining_step = self.config.max_step - current_step
 
-        if remaining_step <= 0:
+        if remaining_step <= 0.3:
             return
 
         if not self.base_step_qty:
