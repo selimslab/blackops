@@ -62,11 +62,13 @@ class OrderApi:
 
         self.open_order_qtys = {
             order_id: qty
-            for order_id, qty in self.open_order_qtys
+            for order_id, qty in self.open_order_qtys.items()
             if order_id in still_open
         }
-        self.open_orders.buy = set(o for o in self.open_orders.buy if o in still_open)
-        self.open_orders.sell = set(o for o in self.open_orders.sell if o in still_open)
+        self.open_orders.buy = set([o for o in self.open_orders.buy if o in still_open])
+        self.open_orders.sell = set(
+            [o for o in self.open_orders.sell if o in still_open]
+        )
 
         self.open_orders_fresh = True
         self.stats.refreshed += 1
