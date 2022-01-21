@@ -104,45 +104,52 @@ class LeaderFollowerTrader(RobotBase):
 
         gen = create_book_consumer_generator(self.bridge_pub)
         async for book in gen:
-            bridge = self.bridge_pub.api_client.get_mid(book)
-            if bridge:
-                await self.price_api.update_bridge(bridge)
+            if book:
+                bridge = self.bridge_pub.api_client.get_mid(book)
+                if bridge:
+                    await self.price_api.update_bridge(bridge)
 
     # FOLLOWER
 
     async def consume_follower_pub(self) -> None:
         gen = create_book_consumer_generator(self.follower_pub)
         async for book in gen:
-            await self.update_follower_prices(book)
+            if book:
+                await self.update_follower_prices(book)
 
     async def update_follower_prices(self, book: dict) -> None:
         ask = self.follower_pub.api_client.get_best_ask(book)
         bid = self.follower_pub.api_client.get_best_bid(book)
         if ask and bid:
+
+            if not self.base_step_qty:
+                mid = (ask + bid) / Decimal(2)
+                self.set_base_step_qty(mid)
+
             await self.price_api.update_follower_prices(ask, bid)
 
     # LEADER
-
     async def consume_leader_pub(self) -> None:
         gen = create_book_consumer_generator(self.leader_pub)
         async for book in gen:
-            mid = self.leader_pub.api_client.get_mid(book)
-            if not mid:
-                continue
+            if book:
+                await self.consume_leader_book(book)
 
-            mid = self.price_api.apply_bridge_to_price(
-                mid, self.config.input.use_bridge
-            )
+    async def consume_leader_book(self, book: dict) -> None:
+        mid = self.leader_pub.api_client.get_mid(book)
+        if not mid:
+            return
 
-            if not mid:
-                continue
+        mid = self.price_api.apply_bridge_to_price(mid, self.config.input.use_bridge)
 
-            await self.decide(mid)
+        if not mid:
+            return
+
+        await self.decide(mid)
+
+    # DECIDE
 
     async def decide(self, mid: Decimal) -> None:
-
-        if not self.base_step_qty:
-            self.set_base_step_qty(mid)
         if not self.base_step_qty:
             return
 
@@ -163,19 +170,18 @@ class LeaderFollowerTrader(RobotBase):
     async def should_sell(
         self, mid: Decimal, bid: Decimal, base_step_qty: Decimal
     ) -> None:
-        min_sell_signal = self.decision_api.get_sell_signal_min(mid)
+        sell_credit = self.decision_api.get_sell_signal_min(mid)
         signal = bid - mid
-
-        price = mid + min_sell_signal
+        price = mid + sell_credit
 
         self.stats.taker.sell = price
         self.stats.signals.sell = signal
 
-        if signal >= min_sell_signal:
+        if signal >= sell_credit:
 
             price = self.price_api.get_precise_price(price, bid)
 
-            qty = base_step_qty * signal / min_sell_signal
+            qty = base_step_qty * signal / sell_credit
 
             await self.sell(price, qty)
 
@@ -202,16 +208,16 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        min_buy_signal = self.decision_api.get_buy_signal_min(mid)
+        buy_credit = self.decision_api.get_buy_signal_min(mid)
         signal = mid - ask
-        price = mid - min_buy_signal
+        price = mid - buy_credit
 
         self.stats.taker.buy = price
         self.stats.signals.buy = signal
 
-        if signal >= min_buy_signal:
+        if signal >= buy_credit:
             price = self.price_api.get_precise_price(price, ask)
-            qty = self.base_step_qty * signal / min_buy_signal
+            qty = self.base_step_qty * signal / buy_credit
             await self.buy(price, qty, remaining_step)
 
     def can_buy(self, price, qty) -> bool:
