@@ -144,7 +144,10 @@ class OrderApi:
         return self.locks.buy if side == OrderType.BUY else self.locks.sell
 
     def can_sell(self, price, qty) -> bool:
-        return qty * round(float(price)) >= self.config.min_sell_qty
+        return (
+            self.pair.base.free >= qty
+            and qty * round(float(price)) >= self.config.min_sell_qty
+        )
 
     def can_buy(self, price, qty) -> bool:
         return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
