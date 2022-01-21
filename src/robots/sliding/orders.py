@@ -76,6 +76,7 @@ class OrderApi:
         self.stats.cancelled += 1
         if order_id in self.open_order_qtys:
             self.pair.base.free += self.open_order_qtys[order_id]
+            del self.open_order_qtys[order_id]
 
     def cancel_failed(self) -> None:
         # couldn't cancel but maybe filled
