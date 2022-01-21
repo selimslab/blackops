@@ -182,16 +182,13 @@ class LeaderFollowerTrader(RobotBase):
 
             await self.sell(price, qty)
 
-    def can_sell(self, price, qty) -> bool:
-        return qty * round(float(price)) >= self.config.min_sell_qty
-
     async def sell(self, price, qty):
         if self.pair.base.free < qty:
             qty = round_decimal_floor(self.pair.base.free)
 
         qty = int(qty)
 
-        if not self.can_sell(price, qty):
+        if not self.order_api.can_sell(price, qty):
             return None
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
@@ -221,11 +218,8 @@ class LeaderFollowerTrader(RobotBase):
             qty = self.base_step_qty * signal
             await self.buy(price, qty)
 
-    def can_buy(self, price, qty) -> bool:
-        return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
-
     async def buy(self, price, qty):
-        if not self.can_buy(price, qty):
+        if not self.order_api.can_buy(price, qty):
             return
 
         qty = int(qty)

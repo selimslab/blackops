@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
+from black import re
+
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
 from src.exchanges.base import ExchangeAPIClientBase
@@ -143,6 +145,12 @@ class OrderApi:
     def get_order_lock(self, side):
         return self.locks.buy if side == OrderType.BUY else self.locks.sell
 
+    def can_sell(self, price, qty) -> bool:
+        return qty * round(float(price)) >= self.config.min_sell_qty
+
+    def can_buy(self, price, qty) -> bool:
+        return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
+
     async def send_order(
         self, side: OrderType, price: Decimal, qty: int
     ) -> Optional[OrderId]:
@@ -150,6 +158,12 @@ class OrderApi:
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
                 self.stats.robot_locked += 1
+                return None
+
+            if side == OrderType.BUY:
+                if not self.can_buy(price, qty):
+                    return None
+            elif not self.can_sell(price, qty):
                 return None
 
             async with order_lock:
