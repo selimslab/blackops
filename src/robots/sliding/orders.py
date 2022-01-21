@@ -27,6 +27,12 @@ class OrderStats:
 
 
 @dataclass
+class OpenOrders:
+    buy: set = field(default_factory=set)
+    sell: set = field(default_factory=set)
+
+
+@dataclass
 class OrderApi:
     config: LeaderFollowerConfig
     pair: AssetPair
@@ -35,6 +41,8 @@ class OrderApi:
     open_order_ids: collections.deque = field(default_factory=collections.deque)
     cancelled_order_ids: set = field(default_factory=set)
     open_order_qtys: dict = field(default_factory=dict)
+
+    open_orders: OpenOrders = field(default_factory=OpenOrders)
 
     stats: OrderStats = field(default_factory=OrderStats)
 
@@ -49,6 +57,17 @@ class OrderApi:
                 self.open_order_ids.append(order_id)
 
         self.cancelled_order_ids = set()
+
+        still_open = set(list(self.open_order_ids))
+
+        self.open_order_qtys = {
+            order_id: qty
+            for order_id, qty in self.open_order_qtys
+            if order_id in still_open
+        }
+        self.open_orders.buy = set(o for o in self.open_orders.buy if o in still_open)
+        self.open_orders.sell = set(o for o in self.open_orders.sell if o in still_open)
+
         self.open_orders_fresh = True
         self.stats.refreshed += 1
 
@@ -77,6 +96,11 @@ class OrderApi:
         if order_id in self.open_order_qtys:
             self.pair.base.free += self.open_order_qtys[order_id]
             del self.open_order_qtys[order_id]
+
+        if order_id in self.open_orders.buy:
+            self.open_orders.buy.remove(order_id)
+        elif order_id in self.open_orders.sell:
+            self.open_orders.sell.remove(order_id)
 
     def cancel_failed(self) -> None:
         # couldn't cancel but maybe filled
@@ -125,14 +149,15 @@ class OrderApi:
             self.stats.buy_delivered += 1
             self.pair.base.free += qty
             self.open_order_qtys[order_id] = -1 * qty
+            self.open_orders.buy.add(order_id)
         else:
             self.stats.sell_delivered += 1
             self.pair.base.free -= qty
             self.open_order_qtys[order_id] = qty
+            self.open_orders.sell.add(order_id)
 
         await asyncio.sleep(0.08)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
-        await asyncio.sleep(0.07)
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
@@ -157,6 +182,7 @@ class OrderApi:
         self, side: OrderType, price: Decimal, qty: int
     ) -> Optional[OrderId]:
         try:
+
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
                 self.stats.robot_locked += 1
@@ -165,8 +191,13 @@ class OrderApi:
             if side == OrderType.BUY:
                 if not self.can_buy(price, qty):
                     return None
-            elif not self.can_sell(price, qty):
-                return None
+                if self.open_orders.buy:
+                    return None
+            elif side == OrderType.SELL:
+                if not self.can_sell(price, qty):
+                    return None
+                if self.open_orders.sell:
+                    return None
 
             async with order_lock:
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
