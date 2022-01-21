@@ -132,7 +132,7 @@ class OrderApi:
 
         await asyncio.sleep(0.08)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(0.07)
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
