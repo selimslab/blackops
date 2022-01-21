@@ -12,8 +12,9 @@ async def read_all():
     """View all strategies"""
     stgs = await strategy_api.list_stgs()
     if stgs:
-        shas = [stg.get("sha") for stg in stgs]
-        return [s for s in shas if s]
+        return stgs
+        # shas = [stg.get("sha") for stg in stgs]
+        # return [s for s in shas if s]
     raise HTTPException(status_code=404, detail="no stg yet")
 
 
