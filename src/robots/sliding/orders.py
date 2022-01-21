@@ -139,6 +139,9 @@ class OrderApi:
     ) -> Optional[OrderId]:
 
         try:
+            if int(qty) < 1:
+                return None
+
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
                 self.stats.robot_locked += 1
@@ -146,7 +149,7 @@ class OrderApi:
 
             async with order_lock:
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                    self.pair, side, float(price), round(float(qty))
+                    self.pair, side, float(price), int(qty)
                 )
                 if order_log:
                     order_id = self.parse_order_id(order_log)
@@ -155,7 +158,7 @@ class OrderApi:
                         return order_id
                     else:
                         self.order_delivered_but_failed(order_log)
-                        logger.info(f"{self.pair} {side} {float(qty)} {price}")
+                        logger.info(f"{self.pair} {side} {int(qty)} {price}")
                 else:
                     self.parent_locked()
             return None
