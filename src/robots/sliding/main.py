@@ -165,17 +165,17 @@ class LeaderFollowerTrader(RobotBase):
         self, mid: Decimal, bid: Decimal, base_step_qty: Decimal
     ) -> None:
         sell_credit = self.decision_api.get_sell_signal_min(mid)
-        signal = bid - mid
+        signal = (bid - mid) / sell_credit
         price = mid + sell_credit
 
         self.stats.taker.sell = price
         self.stats.signals.sell = signal
 
-        if signal >= sell_credit:
+        if signal >= 1:
 
             price = self.price_api.get_precise_price(price, bid)
 
-            qty = base_step_qty * signal / sell_credit
+            qty = base_step_qty * signal
 
             await self.sell(price, qty)
 
@@ -209,15 +209,15 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         buy_credit = self.decision_api.get_buy_signal_min(mid)
-        signal = mid - ask
+        signal = (mid - ask) / buy_credit
         price = mid - buy_credit
 
         self.stats.taker.buy = price
         self.stats.signals.buy = signal
 
-        if signal >= buy_credit:
+        if signal >= 1:
             price = self.price_api.get_precise_price(price, ask)
-            qty = self.base_step_qty * signal / buy_credit
+            qty = self.base_step_qty * signal
             await self.buy(price, qty, remaining_step)
 
     def can_buy(self, price, qty) -> bool:
