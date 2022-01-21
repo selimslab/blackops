@@ -34,6 +34,7 @@ class OrderApi:
 
     open_order_ids: collections.deque = field(default_factory=collections.deque)
     cancelled_order_ids: set = field(default_factory=set)
+    open_order_qtys: dict = field(default_factory=dict)
 
     stats: OrderStats = field(default_factory=OrderStats)
 
@@ -73,6 +74,8 @@ class OrderApi:
     def cancel_successful(self, order_id) -> None:
         self.cancelled_order_ids.add(order_id)
         self.stats.cancelled += 1
+        if order_id in self.open_order_qtys:
+            self.pair.base.free += self.open_order_qtys[order_id]
 
     def cancel_failed(self) -> None:
         # couldn't cancel but maybe filled
@@ -116,11 +119,16 @@ class OrderApi:
             logger.error(msg)
             log_pub.publish_error(message=msg)
 
-    async def order_delivered(self, order_id, side):
+    async def order_delivered(self, order_id: OrderId, side: OrderType, qty: int):
         if side == OrderType.BUY:
             self.stats.buy_delivered += 1
+            self.pair.base.free += qty
+            self.open_order_qtys[order_id] = -1 * qty
         else:
             self.stats.sell_delivered += 1
+            self.pair.base.free -= qty
+            self.open_order_qtys[order_id] = qty
+
         await asyncio.sleep(0.1)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
 
@@ -137,7 +145,6 @@ class OrderApi:
     async def send_order(
         self, side: OrderType, price: Decimal, qty: int
     ) -> Optional[OrderId]:
-
         try:
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
@@ -151,8 +158,7 @@ class OrderApi:
                 if order_log:
                     order_id = self.parse_order_id(order_log)
                     if order_id:
-                        await self.order_delivered(order_id, side)
-                        return order_id
+                        await self.order_delivered(order_id, side, qty)
                     else:
                         self.order_delivered_but_failed(order_log)
                         logger.info(f"{self.pair} {side} {int(qty)} {price}")

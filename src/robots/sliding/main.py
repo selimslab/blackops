@@ -161,6 +161,8 @@ class LeaderFollowerTrader(RobotBase):
         if ask:
             await self.should_buy(mid, ask, current_step)
 
+    # SELL
+
     async def should_sell(self, mid: Decimal, bid: Decimal) -> None:
         sell_credit = self.decision_api.get_sell_signal_min(mid)
         signal = (bid - mid) / sell_credit
@@ -195,10 +197,9 @@ class LeaderFollowerTrader(RobotBase):
         if not self.can_sell(price, qty):
             return None
 
-        order_id = await self.order_api.send_order(OrderType.SELL, price, qty)
+        await self.order_api.send_order(OrderType.SELL, price, qty)
 
-        if order_id:
-            self.pair.base.free -= qty
+    # BUY
 
     async def should_buy(
         self, mid: Decimal, ask: Decimal, current_step: Decimal
@@ -231,9 +232,7 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         qty = int(qty)
-        order_id = await self.order_api.send_order(OrderType.BUY, price, qty)
-        if order_id:
-            self.pair.base.free += qty
+        await self.order_api.send_order(OrderType.BUY, price, qty)
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
