@@ -216,6 +216,9 @@ class LeaderFollowerTrader(RobotBase):
         if signal >= 1:
             price = self.price_api.get_precise_price(price, ask)
             qty = self.base_step_qty * signal
+            max_buyable = remaining_step * self.base_step_qty
+            if qty > max_buyable:
+                qty = max_buyable
             await self.buy(price, qty)
 
     async def buy(self, price, qty):
