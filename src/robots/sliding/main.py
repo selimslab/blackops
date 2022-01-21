@@ -180,17 +180,11 @@ class LeaderFollowerTrader(RobotBase):
 
             await self.sell(price, qty)
 
-    def is_less_than_min_sell_qty(self, price: Decimal, qty: Decimal):
-        return qty * round(float(price)) < self.config.min_sell_qty
-
-    def can_sell(self, price, qty):
-        return self.is_less_than_min_sell_qty(price, qty)
-
     async def sell(self, price, qty):
         if self.pair.base.free < qty:
             qty = round_decimal_floor(self.pair.base.free)
 
-        if not self.can_sell(price, qty):
+        if qty * round(float(price)) < self.config.min_sell_qty:
             return None
 
         order_id = await self.order_api.send_order(OrderType.SELL, price, qty)
