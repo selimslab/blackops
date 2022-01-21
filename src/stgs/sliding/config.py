@@ -21,7 +21,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
 
     max_step: Decimal = Decimal(6)
 
-    quote_step_qty: Decimal = Decimal(8000)
+    quote_step_qty: Decimal = Decimal(12000)
 
     margin_bps: Decimal = Decimal(1)
 
