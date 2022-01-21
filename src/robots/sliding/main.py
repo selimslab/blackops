@@ -250,6 +250,7 @@ class LeaderFollowerTrader(RobotBase):
                 "taker": asdict(self.stats.taker),
                 "market": asdict(self.price_api.follower),
                 "bridge": self.price_api.bridge,
+                "signals": asdict(self.stats.signals),
             },
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),
