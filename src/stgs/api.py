@@ -65,9 +65,9 @@ class StrategyAPI:
     async def stg_to_config(self, stg: StrategyInput) -> StrategyConfig:
         pair = AssetPair(base=Asset(symbol=stg.base), quote=Asset(symbol=stg.quote))
 
-        ticker = await self.get_ticker(pair)
+        # ticker = await self.get_ticker(pair)
 
-        stg_config = StrategyConfig(input=stg, base_step_qty_reference_price=ticker)
+        stg_config = StrategyConfig(input=stg)
 
         return stg_config
 

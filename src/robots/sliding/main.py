@@ -1,49 +1,25 @@
 import asyncio
-import decimal
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 import src.pubsub.log_pub as log_pub
-from src.domain import BPS, maker_fee_bps, taker_fee_bps
+from src.domain import BPS, OrderType, create_asset_pair, maker_fee_bps, taker_fee_bps
+from src.domain.models import AssetPair
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.periodic import StopwatchAPI, periodic
+from src.numberops import round_decimal_floor, round_decimal_half_up
+from src.periodic import periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
-from src.robots.sliding.market import MarketWatcher
+from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
-
-@dataclass
-class TargetPrices:
-    buy: Optional[Decimal] = None
-    sell: Optional[Decimal] = None
-
-
-@dataclass
-class Window:
-    mid: Optional[Decimal] = None
-    bridge: Optional[Decimal] = None
-    # maker: TargetPrices = field(default_factory=TargetPrices)
-    taker: TargetPrices = field(default_factory=TargetPrices)
-
-
-@dataclass
-class Stopwatches:
-    leader: StopwatchAPI = field(default_factory=StopwatchAPI)
-    bridge: StopwatchAPI = field(default_factory=StopwatchAPI)
-
-
-@dataclass
-class Credits:
-    maker: Decimal = Decimal(0)
-    taker: Decimal = Decimal(0)
-    step: Decimal = Decimal(0)
-    sell: Decimal = Decimal(0)
-    buy: Decimal = Decimal(0)
+from .decision import DecisionAPI
+from .models import Credits, MarketPrices, Signals, Window, stopwatches
+from .prices import PriceAPI
+from .stats import Stats
 
 
 @dataclass
@@ -55,39 +31,25 @@ class LeaderFollowerTrader(RobotBase):
     balance_pub: BalancePub
     bridge_pub: Optional[BookPub] = None
 
-    current_step: Decimal = Decimal("0")
+    base_step_qty: Optional[Decimal] = None
 
-    targets: Window = field(default_factory=Window)
-
-    stopwatches: Stopwatches = field(default_factory=Stopwatches)
-
-    start_time: datetime = field(default_factory=lambda: datetime.now())
-
-    credits: Credits = Credits()
+    price_api: PriceAPI = field(default_factory=PriceAPI)
+    decision_api: DecisionAPI = field(default_factory=DecisionAPI)
+    stats: Stats = field(default_factory=Stats)
 
     def __post_init__(self) -> None:
-        self.set_credits()
-        self.follower = MarketWatcher(
+        self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
+
+        self.decision_api.set_credits(self.config)
+
+        self.order_api = OrderApi(
             config=self.config,
-            book_pub=self.follower_pub,
-            balance_pub=self.balance_pub,
+            pair=self.pair,
+            exchange=self.follower_pub.api_client,
         )
 
-    def set_credits(self):
-        try:
-            # self.credits.maker = (
-            #     (maker_fee_bps + taker_fee_bps) / Decimal(2)
-            # ) + self.config.margin_bps
-            self.credits.taker = taker_fee_bps + self.config.margin_bps
-            self.credits.step = (
-                self.credits.taker / self.config.max_step * Decimal("1.1")
-            )
-            self.credits.sell = self.credits.taker - Decimal("2")
-            self.credits.buy = self.credits.taker + Decimal("2")
-
-        except Exception as e:
-            logger.error(e)
-            raise e
+    def set_base_step_qty(self, price: Decimal) -> None:
+        self.base_step_qty = round_decimal_half_up(self.config.quote_step_qty / price)
 
     async def run(self) -> None:
         logger.info(f"Starting {self.config.sha}..")
@@ -96,17 +58,17 @@ class LeaderFollowerTrader(RobotBase):
     async def run_streams(self) -> None:
         aws: Any = [
             self.consume_leader_pub(),
-            self.follower.consume_pub(),
+            self.consume_follower_pub(),
             periodic(
-                self.follower.update_balances,
+                self.update_balances,
                 sleep_seconds.poll_balance_update,
             ),
             periodic(
-                self.follower.order_api.refresh_open_orders,
+                self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
             ),
             periodic(
-                self.follower.order_api.cancel_open_orders,
+                self.order_api.cancel_open_orders,
                 sleep_seconds.cancel_open_orders,
             ),
         ]
@@ -116,142 +78,173 @@ class LeaderFollowerTrader(RobotBase):
 
         await asyncio.gather(*aws)
 
+    # BALANCE
+
+    async def update_balances(self) -> None:
+        res: Optional[dict] = self.balance_pub.balances
+        if not res:
+            return
+
+        balances = self.follower_pub.api_client.parse_account_balance(
+            res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
+        )
+        base_balances: dict = balances[self.pair.base.symbol]
+        self.pair.base.free = Decimal(base_balances["free"])
+        self.pair.base.locked = Decimal(base_balances["locked"])
+
+        quote_balances: dict = balances[self.pair.quote.symbol]
+        self.pair.quote.free = Decimal(quote_balances["free"])
+        self.pair.quote.locked = Decimal(quote_balances["locked"])
+
+    # BRIDGE
+
     async def consume_bridge_pub(self) -> None:
         if not self.bridge_pub:
             raise Exception("no bridge_pub")
 
         gen = create_book_consumer_generator(self.bridge_pub)
         async for book in gen:
-            mid = self.bridge_pub.api_client.get_mid(book)
-            if mid:
-                async with self.stopwatches.leader.stopwatch(
-                    self.clear_bridge, sleep_seconds.clear_follower_prices
-                ):
-                    self.targets.bridge = mid
+            bridge = self.bridge_pub.api_client.get_mid(book)
+            if bridge:
+                await self.price_api.update_bridge(bridge)
 
-    def clear_targets(self):
-        self.targets = Window()
+    # FOLLOWER
 
-    def clear_bridge(self):
-        self.targets.bridge = None
+    async def consume_follower_pub(self) -> None:
+        gen = create_book_consumer_generator(self.follower_pub)
+        async for book in gen:
+            await self.update_follower_prices(book)
+
+    async def update_follower_prices(self, book: dict) -> None:
+        ask = self.follower_pub.api_client.get_best_ask(book)
+        bid = self.follower_pub.api_client.get_best_bid(book)
+        if ask and bid:
+            await self.price_api.update_follower_prices(ask, bid)
+
+    # LEADER
 
     async def consume_leader_pub(self) -> None:
         gen = create_book_consumer_generator(self.leader_pub)
         async for book in gen:
-            await self.decide(book)
+            mid = self.leader_pub.api_client.get_mid(book)
+            if not mid:
+                continue
 
-    async def decide(self, book) -> None:
-        mid = self.get_window_mid(book)
-        if mid:
-            async with self.stopwatches.leader.stopwatch(
-                self.clear_targets, sleep_seconds.clear_leader_prices
-            ):
-                self.update_window(mid)
+            mid = self.price_api.apply_bridge_to_price(
+                mid, self.config.input.use_bridge
+            )
 
-            await self.should_transact()
+            if not mid:
+                continue
 
-    async def should_transact(self) -> None:
+            await self.decide(mid)
 
-        res = self.get_short_price_taker()
-        if res:
-            price, power = res
-            await self.follower.short(price, self.config.base_step_qty)
+    async def decide(self, mid: Decimal) -> None:
 
-        if self.current_step >= self.config.max_step:
+        if not self.base_step_qty:
+            self.set_base_step_qty(mid)
+        if not self.base_step_qty:
             return
 
-        res = self.get_long_price_taker()
-        if res:
-            price, power = res
-            await self.follower.long(price, self.config.base_step_qty)
+        current_step = self.pair.base.free / self.base_step_qty
+        mid = self.decision_api.get_risk_adjusted_mid(mid, current_step)
 
-    def update_step(self):
-        self.current_step = self.follower.pair.base.free / self.config.base_step_qty
+        bid = self.price_api.follower.bid
+        if bid:
+            await self.should_sell(mid, bid, current_step)
 
-    def get_window_mid(self, book: dict) -> Optional[Decimal]:
-        if not book:
-            return None
-        try:
-            leader_mid = self.leader_pub.api_client.get_mid(book)
+        ask = self.price_api.follower.ask
+        if ask:
+            await self.should_buy(mid, ask, current_step)
 
-            self.targets.mid = leader_mid
-            if not leader_mid:
-                return None
+    def is_less_than_min_sell_qty(self, price: Decimal):
+        return self.pair.base.free * round(float(price)) < self.config.min_sell_qty
 
-            if self.config.input.use_bridge:
-                if self.targets.bridge:
-                    return leader_mid * self.targets.bridge
+    async def should_sell(
+        self, mid: Decimal, bid: Decimal, base_step_qty: Decimal
+    ) -> None:
+        min_sell_signal = self.decision_api.get_sell_signal_min(mid)
+        signal = bid - mid
+
+        price = mid + min_sell_signal
+
+        self.stats.taker.sell = price
+        self.stats.signals.sell = signal
+
+        if signal >= min_sell_signal:
+
+            price = self.price_api.get_precise_price(price, bid)
+
+            qty = base_step_qty * signal / min_sell_signal
+
+            await self.sell(price, qty)
+
+    async def sell(self, price, qty):
+        if self.pair.base.free < qty:
+            if self.is_less_than_min_sell_qty(price):
                 return None
             else:
-                return leader_mid
+                qty = round_decimal_floor(self.pair.base.free)
 
-        except Exception as e:
-            msg = f"get_window_mid: {e}"
-            logger.error(msg)
-            log_pub.publish_error(message=msg)
-            return None
+        order_id = await self.order_api.send_order(OrderType.SELL, price, qty)
 
-    def update_window(self, mid: Decimal) -> None:
+        if order_id:
+            self.pair.base.free -= qty
 
-        try:
-            self.update_step()
+    async def should_buy(
+        self, mid: Decimal, ask: Decimal, current_step: Decimal
+    ) -> None:
+        remaining_step = self.config.max_step - current_step
 
-            mid_bps = mid * BPS
+        if remaining_step <= 0:
+            return
 
-            slide_down = self.credits.step * self.current_step * mid_bps
+        if not self.base_step_qty:
+            return
 
-            mid -= slide_down
+        min_buy_signal = self.decision_api.get_buy_signal_min(mid)
+        signal = mid - ask
+        price = mid - min_buy_signal
 
-            sell_credit = self.credits.sell * mid_bps
-            buy_credit = self.credits.buy * mid_bps
+        self.stats.taker.buy = price
+        self.stats.signals.buy = signal
 
-            self.targets.taker.buy = mid - buy_credit
-            self.targets.taker.sell = mid + sell_credit
+        if signal >= min_buy_signal:
+            price = self.price_api.get_precise_price(price, ask)
+            qty = self.base_step_qty * signal / min_buy_signal
+            await self.buy(price, qty, remaining_step)
 
-        except Exception as e:
-            msg = f"calculate_window: {e}"
-            logger.error(msg)
-            log_pub.publish_error(message=msg)
+    def can_buy(self, price, qty) -> bool:
+        return bool(self.pair.quote.free) and self.pair.quote.free >= price * qty
 
-    def clear_leader_prices(self):
-        self.targets.taker.buy = None
-        self.targets.taker.sell = None
+    async def buy(self, price, qty, remaining_step):
+        plus_step = qty / self.base_step_qty
+        if plus_step > remaining_step:
+            qty = self.base_step_qty * remaining_step
 
-    def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
-        return price.quantize(reference, rounding=decimal.ROUND_DOWN)
+        if not self.can_buy(price, qty):
+            return
 
-    def get_long_price_taker(self) -> Optional[Tuple[Decimal, Decimal]]:
-        ask = self.follower.prices.ask
-        buy = self.targets.taker.buy
-
-        if ask and buy and ask <= buy:
-            # signal_power = (buy - ask)/self.credits.buy*buy*BPS + 1
-            return self.get_precise_price(buy, ask), Decimal("1")
-
-        return None
-
-    def get_short_price_taker(self) -> Optional[Tuple[Decimal, Decimal]]:
-        bid = self.follower.prices.bid
-        sell = self.targets.taker.sell
-        if bid and sell and bid >= sell:
-            # signal_power = self.config.max_step - (sell - bid)/self.credits.sell*sell*BPS
-            # signal_power = (bid - sell)/self.credits.sell*sell*BPS + 1
-            return self.get_precise_price(sell, bid), Decimal("1")
-        return None
+        order_id = await self.order_api.send_order(OrderType.BUY, price, qty)
+        if order_id:
+            self.pair.base.free += qty
 
     async def close(self) -> None:
-        await self.follower.order_api.cancel_open_orders()
+        await self.order_api.cancel_open_orders()
 
     def create_stats_message(self) -> dict:
         return {
-            "start time": self.start_time,
-            "credits": asdict(self.credits),
-            "order stats": asdict(self.follower.order_api.stats),
-            "open orders": list(self.follower.order_api.open_order_ids),
-            "cancelled orders": list(self.follower.order_api.cancelled),
-            "open_orders_fresh": self.follower.order_api.open_orders_fresh,
-            "targets": asdict(self.targets),
-            "market": asdict(self.follower.prices),
+            "start time": self.stats.start_time,
+            "credits": asdict(self.decision_api.credits),
+            "order": {
+                "fresh": self.order_api.open_orders_fresh,
+                "stats": asdict(self.order_api.stats),
+            },
+            "prices": {
+                "taker": asdict(self.stats.taker),
+                "market": asdict(self.price_api.follower),
+                "bridge": self.price_api.bridge,
+            },
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),
                 "books seen": self.leader_pub.books_seen,

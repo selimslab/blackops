@@ -33,23 +33,21 @@ class OrderApi:
     exchange: ExchangeAPIClientBase
 
     open_order_ids: collections.deque = field(default_factory=collections.deque)
-
-    locks: Locks = field(default_factory=Locks)
-
-    cancelled: set = field(default_factory=set)
+    cancelled_order_ids: set = field(default_factory=set)
 
     stats: OrderStats = field(default_factory=OrderStats)
 
+    locks: Locks = field(default_factory=Locks)
     open_orders_fresh: bool = True
 
     def refresh_open_order_successful(self, orders) -> None:
         order_ids = [order.get("id") for order in orders]
 
         for order_id in order_ids:
-            if order_id and order_id not in self.cancelled:
+            if order_id and order_id not in self.cancelled_order_ids:
                 self.open_order_ids.append(order_id)
 
-        self.cancelled = set()
+        self.cancelled_order_ids = set()
         self.open_orders_fresh = True
         self.stats.refreshed += 1
 
@@ -73,7 +71,7 @@ class OrderApi:
         await self.cancel_open_orders()
 
     def cancel_successful(self, order_id) -> None:
-        self.cancelled.add(order_id)
+        self.cancelled_order_ids.add(order_id)
         self.stats.cancelled += 1
 
     def cancel_failed(self) -> None:
@@ -106,12 +104,12 @@ class OrderApi:
             async with self.locks.cancel:
                 while self.open_order_ids:
                     order_id = self.open_order_ids.popleft()
-                    if order_id in self.cancelled:
+                    if order_id in self.cancelled_order_ids:
                         continue
                     await self.cancel_order(order_id)
 
                 if self.open_orders_fresh:
-                    self.cancelled = set()
+                    self.cancelled_order_ids = set()
 
         except Exception as e:
             msg = f"cancel_open_orders: {e}"
@@ -123,7 +121,7 @@ class OrderApi:
             self.stats.buy_delivered += 1
         else:
             self.stats.sell_delivered += 1
-        await asyncio.sleep(0.13)  # allow time for order to be filled
+        await asyncio.sleep(0.1)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
 
     def order_delivered_but_failed(self, order_log):
