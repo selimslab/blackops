@@ -139,7 +139,7 @@ class OrderApi:
     ) -> Optional[OrderId]:
 
         try:
-            if int(qty) < 1:
+            if int(qty) < 0.5:
                 return None
 
             order_lock = self.get_order_lock(side)

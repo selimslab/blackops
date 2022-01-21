@@ -273,8 +273,8 @@
       "type": "text",
       "x": 683.69921875,
       "y": 21.4375,
-      "width": 345,
-      "height": 408,
+      "width": 279,
+      "height": 306,
       "angle": 0,
       "strokeColor": "#343a40",
       "backgroundColor": "transparent",
@@ -286,19 +286,19 @@
       "groupIds": [],
       "strokeSharpness": "sharp",
       "seed": 1552767979,
-      "version": 296,
-      "versionNonce": 1950536165,
+      "version": 298,
+      "versionNonce": 1238337291,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1642751040049,
-      "text": "fee 10 \nmargin 1\n\nmax step 5\nbase qty 10k \nmax 50k TRY per coin \n\nsell credit 6 bps\nbuy credit 16 bps\n\n\n",
+      "updated": 1642763580668,
+      "text": "fee 10 \nmargin 1\n\n \nsell credit 6 bps\nbuy credit 16 bps\n\n\n",
       "fontSize": 28,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
-      "baseline": 401,
+      "baseline": 299,
       "containerId": null,
-      "originalText": "fee 10 \nmargin 1\n\nmax step 5\nbase qty 10k \nmax 50k TRY per coin \n\nsell credit 6 bps\nbuy credit 16 bps\n\n\n"
+      "originalText": "fee 10 \nmargin 1\n\n \nsell credit 6 bps\nbuy credit 16 bps\n\n\n"
     },
     {
       "type": "line",
@@ -967,8 +967,8 @@
     {
       "id": "ac6HzzYEm4vWLweZdxyYh",
       "type": "text",
-      "x": -273.91796875,
-      "y": -366.70703125,
+      "x": -274.671875,
+      "y": -432.03125,
       "width": 584,
       "height": 1952,
       "angle": 0,
@@ -982,8 +982,8 @@
       "groupIds": [],
       "strokeSharpness": "sharp",
       "seed": 949831589,
-      "version": 909,
-      "versionNonce": 9004965,
+      "version": 934,
+      "versionNonce": 2071133605,
       "isDeleted": false,
       "boundElements": [
         {
@@ -995,7 +995,7 @@
           "type": "arrow"
         }
       ],
-      "updated": 1642752079003,
+      "updated": 1642763569591,
       "text": "\n\nbase_step_qty = max_quote_qty/max_step\n\n---\n\ntaker credit = fee + margin \n\nstep credit = taker credit / max step\n\nsell credit = taker credit - 2bps\n\nbuy credit = taker credit + 2bps\n\n--- \n\nbinance mid \n\nhold risk = current_step * step_credit \n\nmid = mid - hold_risk\n\n---\n\nsell signal = bid-mid\n\nmin_sell_signal = sell_credit * mid\n\ntaker_sell = mid - min_sell_signal\n\nif sell signal > min_sell_signal:\n\n    price = taker_sell\n    qty = base_step_qty * signal/min_sell_signal\n\n\n---\n\nbuy signal = mid-ask \n\nmin_buy_signal = buy_credit * mid\n\ntaker_buy = mid - min_buy_signal\n\nif buy signal > min_buy_signal:\n\n    price = taker_buy\n    qty = base_step_qty * signal/min_buy_signal\n\n\n\n\n\n\n\n\n\n\n\n\n ",
       "fontSize": 28,
       "fontFamily": 2,
