@@ -135,13 +135,10 @@ class OrderApi:
         return self.locks.buy if side == OrderType.BUY else self.locks.sell
 
     async def send_order(
-        self, side: OrderType, price: Decimal, qty: Decimal
+        self, side: OrderType, price: Decimal, qty: int
     ) -> Optional[OrderId]:
 
         try:
-            if int(qty) < 0.5:
-                return None
-
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
                 self.stats.robot_locked += 1
@@ -149,7 +146,7 @@ class OrderApi:
 
             async with order_lock:
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
-                    self.pair, side, float(price), int(qty)
+                    self.pair, side, float(price), qty
                 )
                 if order_log:
                     order_id = self.parse_order_id(order_log)

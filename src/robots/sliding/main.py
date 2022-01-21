@@ -190,6 +190,8 @@ class LeaderFollowerTrader(RobotBase):
         if self.pair.base.free < qty:
             qty = round_decimal_floor(self.pair.base.free)
 
+        qty = int(qty)
+
         if not self.can_sell(price, qty):
             return None
 
@@ -228,6 +230,7 @@ class LeaderFollowerTrader(RobotBase):
         if not self.can_buy(price, qty):
             return
 
+        qty = int(qty)
         order_id = await self.order_api.send_order(OrderType.BUY, price, qty)
         if order_id:
             self.pair.base.free += qty
