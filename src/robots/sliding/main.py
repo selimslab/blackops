@@ -183,7 +183,7 @@ class LeaderFollowerTrader(RobotBase):
         return qty * round(float(price)) < self.config.min_sell_qty
 
     def can_sell(self, price, qty):
-        return not self.is_less_than_min_sell_qty(price, qty)
+        return self.is_less_than_min_sell_qty(price, qty)
 
     async def sell(self, price, qty):
         if self.pair.base.free < qty:
