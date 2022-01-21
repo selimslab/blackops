@@ -130,8 +130,9 @@ class OrderApi:
             self.pair.base.free -= qty
             self.open_order_qtys[order_id] = qty
 
-        await asyncio.sleep(0.1)  # allow time for order to be filled
+        await asyncio.sleep(0.11)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
+        await asyncio.sleep(0.06)
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
