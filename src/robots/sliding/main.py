@@ -3,9 +3,7 @@ from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any, Optional
 
-import src.pubsub.log_pub as log_pub
-from src.domain import BPS, OrderType, create_asset_pair, maker_fee_bps, taker_fee_bps
-from src.domain.models import AssetPair
+from src.domain import OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
@@ -17,7 +15,6 @@ from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
 from .decision import DecisionAPI
-from .models import Credits, MarketPrices, Signals, Window, stopwatches
 from .prices import PriceAPI
 from .stats import Stats
 
