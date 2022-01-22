@@ -3,7 +3,8 @@ from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any, Optional
 
-from src.domain import OrderType, create_asset_pair
+from src.domain import OrderType
+from src.domain.models import Asset, AssetPair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
@@ -23,6 +24,8 @@ from .stats import Stats
 class LeaderFollowerTrader(RobotBase):
     config: LeaderFollowerConfig
 
+    pair: AssetPair
+
     leader_pub: BookPub
     follower_pub: BookPub
     balance_pub: BalancePub
@@ -35,9 +38,8 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     def __post_init__(self) -> None:
-        self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
-
-        self.balance_pub.add_pair(self.pair)
+        self.balance_pub.add_asset(self.pair.base)
+        self.balance_pub.add_asset(self.pair.quote)
 
         self.decision_api.set_credits(self.config)
 
