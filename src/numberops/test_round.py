@@ -23,6 +23,9 @@ def test_round():
     assert round(float(Decimal(200.00))) == 200
     assert round(float(Decimal(0.23))) == int(Decimal(0.23))
 
+    d = Decimal("0.0037850200")
+    assert float(d) == 0.00378502
+
     assert Decimal("43.23313072").quantize(
         Decimal("11.547"), rounding=decimal.ROUND_DOWN
     ) == Decimal("43.233")

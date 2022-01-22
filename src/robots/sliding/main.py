@@ -93,6 +93,8 @@ class LeaderFollowerTrader(RobotBase):
         self.pair.quote.free = Decimal(quote_balances["free"])
         self.pair.quote.locked = Decimal(quote_balances["locked"])
 
+        self.order_api.open_order_qtys = {}
+
     # BRIDGE
 
     async def consume_bridge_pub(self) -> None:
