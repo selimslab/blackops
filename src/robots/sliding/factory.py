@@ -19,15 +19,14 @@ def sliding_window_factory(config: LeaderFollowerConfig):
         ex_type=ExchangeType(config.follower_exchange), network=network
     )
 
-    base = asset_factory.create_asset(stg.base)
-    quote = asset_factory.create_asset(stg.quote)
-    pair = AssetPair(base=base, quote=quote)
+    pair = asset_factory.create_asset_pair(stg.base, stg.quote)
 
     follower_pub = pub_factory.create_book_pub_if_not_exists(
         ex_type=ExchangeType(config.follower_exchange),
         network=network,
         symbol=pair.symbol,  # eth try
     )
+
     if network == NetworkType.TESTNET:
         follower_pub.api_client.dummy_exchange.add_balance(  # type:ignore
             Asset(symbol=stg.quote), config.max_step * config.quote_step_qty * 2

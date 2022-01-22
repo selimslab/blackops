@@ -18,9 +18,6 @@ class Asset(BaseModel):
     free: Decimal = Decimal("0")
     locked: Decimal = Decimal("0")
 
-    def __str__(self) -> str:
-        return f"{self.symbol}"
-
     @property
     def total_balance(self):
         return self.free + self.locked
@@ -34,9 +31,6 @@ class AssetPair(BaseModel):
     def symbol(self):
         return self.base.symbol + self.quote.symbol
 
-    def __str__(self):
-        return f"{self.base}_{self.quote}"
-
 
 @dataclass
 class AssetFactory:
@@ -46,6 +40,9 @@ class AssetFactory:
         if symbol not in self.assets:
             self.assets[symbol] = Asset(symbol=symbol)
         return self.assets[symbol]
+
+    def create_asset_pair(self, base: AssetSymbol, quote: AssetSymbol) -> AssetPair:
+        return AssetPair(base=self.create_asset(base), quote=self.create_asset(quote))
 
 
 asset_factory = AssetFactory()
