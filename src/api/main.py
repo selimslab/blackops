@@ -1,5 +1,7 @@
+import asyncio
+
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -11,6 +13,7 @@ from src.flow import flow_api
 from src.monitoring import logger
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
+app.logger = logger
 
 app.mount("/panel", StaticFiles(directory="static", html=True), name="panel")
 
@@ -18,7 +21,14 @@ app.include_router(stg_router, prefix="/stg", tags=["Strategy"])
 app.include_router(robot_router, prefix="/robot", tags=["Robot"])
 app.include_router(home_router, tags=["Home"])
 
-# app.logger = logger
+
+# @app.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     while True:
+#         # data = await websocket.receive_text()
+#         await websocket.send_json({"hello": "world"})
+#         await asyncio.sleep(1)
 
 
 @app.exception_handler(Exception)

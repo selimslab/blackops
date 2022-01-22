@@ -1,5 +1,3 @@
-import sys
+from .log_setup import setup_logging
 
-from loguru import logger
-
-logger.add(sys.stderr, colorize=True, backtrace=True, format="{time} {level} {message}")
+logger = setup_logging()
