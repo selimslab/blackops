@@ -36,8 +36,8 @@ class DecisionAPI:
     ) -> Signals:
         midbps = mid * BPS
         return Signals(
-            sell=(bid - mid) / credits.taker.sell * midbps,
-            buy=(mid - ask) / credits.taker.buy * midbps,
+            sell=((bid - mid) / credits.taker.sell * midbps),
+            buy=((mid - ask) / credits.taker.buy * midbps),
         )
 
     def get_precision_price(self, price: Decimal, reference: Decimal) -> Decimal:
