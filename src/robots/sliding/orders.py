@@ -49,27 +49,27 @@ class OrderApi:
     locks: Locks = field(default_factory=Locks)
     open_orders_fresh: bool = True
 
-    def refresh_open_order_successful(self, orders) -> None:
-        order_ids = [order.get("id") for order in orders]
+    def refresh_open_order_successful(self, orderlist: list) -> None:
+        orders = {order.get("id"): order for order in orderlist}
+        order_ids = list(orders.keys())
 
         for order_id in order_ids:
-            if order_id and order_id not in self.cancelled_order_ids:
+            if order_id not in self.cancelled_order_ids:
                 self.open_order_ids.append(order_id)
 
         self.cancelled_order_ids = set()
 
-        still_open = set(list(self.open_order_ids))
+        still_open = set(self.open_order_ids)
 
         self.open_order_qtys = {
-            order_id: qty
-            for order_id, qty in self.open_order_qtys.items()
+            order_id: Decimal(orders.get(order_id, {}).get("leftAmount", 0))
+            for order_id in self.open_order_qtys
             if order_id in still_open
         }
         self.open_orders.buy = set([o for o in self.open_orders.buy if o in still_open])
         self.open_orders.sell = set(
             [o for o in self.open_orders.sell if o in still_open]
         )
-
         self.open_orders_fresh = True
         self.stats.refreshed += 1
 
@@ -111,7 +111,7 @@ class OrderApi:
 
     async def wait_for_lock(self, lock):
         while lock.locked():
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.04)
 
     async def cancel_order(self, order_id) -> None:
         await self.wait_for_lock(self.exchange.locks.cancel)
@@ -158,7 +158,7 @@ class OrderApi:
             self.open_order_qtys[order_id] = qty
             self.open_orders.sell.add(order_id)
 
-        await asyncio.sleep(0.08)  # allow time for order to be filled
+        await asyncio.sleep(0.1)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
 
     def order_delivered_but_failed(self, order_log):
@@ -180,8 +180,7 @@ class OrderApi:
     def can_buy(self, price, qty) -> bool:
         return (
             bool(self.pair.quote.free)
-            and self.pair.quote.free >= price * qty
-            and qty > 0
+            and self.pair.quote.free >= price * qty > self.config.min_buy_qty
         )
 
     async def send_order(

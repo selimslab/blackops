@@ -183,7 +183,7 @@ class LeaderFollowerTrader(RobotBase):
             await self.sell(price, qty)
 
     async def sell(self, price, qty):
-        if self.pair.base.free < qty:
+        if qty > self.pair.base.free:
             qty = round_decimal_floor(self.pair.base.free)
 
         qty = int(qty)
@@ -200,9 +200,6 @@ class LeaderFollowerTrader(RobotBase):
     ) -> None:
         remaining_step = self.config.max_step - current_step
 
-        if remaining_step <= 0.3:
-            return
-
         if not self.base_step_qty:
             return
 
@@ -212,6 +209,9 @@ class LeaderFollowerTrader(RobotBase):
 
         self.stats.taker.buy = price
         self.stats.signals.buy = signal
+
+        if remaining_step < 0.3:
+            return
 
         if signal >= 1:
             price = self.price_api.get_precise_price(price, ask)
