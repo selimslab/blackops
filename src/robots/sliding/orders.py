@@ -189,6 +189,8 @@ class OrderApi:
         self, side: OrderType, price: Decimal, qty: int
     ) -> Optional[OrderId]:
         try:
+            msg = f"send_order: [{side, price, qty}]"
+            logger.info(msg)
 
             order_lock = self.get_order_lock(side)
             if order_lock.locked():

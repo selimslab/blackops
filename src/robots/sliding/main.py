@@ -183,7 +183,7 @@ class LeaderFollowerTrader(RobotBase):
             if self.order_api.can_sell(price, qty):
                 await self.order_api.send_order(OrderType.SELL, price, int(qty))
 
-        if signals.buy >= 1:
+        elif signals.buy >= 1:
             price = prices.taker.buy
             qty = self.base_step_qty * signals.buy
 
@@ -201,8 +201,9 @@ class LeaderFollowerTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.stats.start_time,
-            "base credits": asdict(self.decision_api.credits),
+            "base_step_qty": self.base_step_qty,
             "current step": self.current_step,
+            "base credits": asdict(self.decision_api.credits),
             "current credits": asdict(self.stats.credits),
             "signals": asdict(self.stats.signals),
             "order": {
