@@ -152,7 +152,7 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        current_step = self.pair.base.free / self.base_step_qty
+        current_step = self.pair.base.total_balance / self.base_step_qty
         mid = self.decision_api.get_risk_adjusted_mid(mid, current_step)
 
         bid = self.price_api.follower.bid
@@ -212,7 +212,7 @@ class LeaderFollowerTrader(RobotBase):
         self.stats.taker.buy = price
         self.stats.signals.buy = signal
 
-        if remaining_step < 0.3:
+        if remaining_step < 0.2:
             return
 
         if signal >= 1:

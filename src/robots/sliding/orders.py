@@ -164,7 +164,7 @@ class OrderApi:
             self.open_order_qtys[order_id] = qty
             self.open_orders.sell.add(order_id)
 
-        await asyncio.sleep(0.1)  # allow time for order to be filled
+        await asyncio.sleep(0.12)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
 
     def order_delivered_but_failed(self, order_log):
@@ -220,6 +220,7 @@ class OrderApi:
                         await self.order_delivered(order_id, side, qty)
                     else:
                         self.order_delivered_but_failed(order_log)
+                        await asyncio.sleep(0.1)
                         logger.info(
                             f"{self.pair} {side} {int(qty)} {price} : {order_log}"
                         )
