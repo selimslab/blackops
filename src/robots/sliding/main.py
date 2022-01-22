@@ -167,12 +167,12 @@ class LeaderFollowerTrader(RobotBase):
         signals = self.decision_api.get_signals(mid, ask, bid, credits)
         prices = self.decision_api.get_target_prices(mid, ask, bid, credits)
 
+        if not prices.taker:
+            return
+
         self.stats.credits = credits
         self.stats.signals = signals
         self.stats.prices = prices
-
-        if not prices.taker:
-            return
 
         if signals.sell >= 1:
             price = prices.taker.sell
