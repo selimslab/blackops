@@ -175,27 +175,25 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         if signals.sell >= 1:
+            price = prices.taker.sell
             qty = self.base_step_qty * signals.sell
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
 
-            if self.order_api.can_sell(prices.taker.sell, qty):
-                await self.order_api.send_order(
-                    OrderType.SELL, prices.taker.sell, int(qty)
-                )
+            if self.order_api.can_sell(price, qty):
+                await self.order_api.send_order(OrderType.SELL, price, int(qty))
 
         elif signals.buy >= 1:
+            price = prices.taker.buy
             qty = self.base_step_qty * signals.buy
 
             remaining_steps = self.config.max_step - self.current_step
             max_buyable = remaining_steps * self.base_step_qty
             if qty > max_buyable:
-                qty = round_decimal_floor(max_buyable)
+                qty = max_buyable
 
-            if self.order_api.can_buy(prices.taker.buy, qty):
-                await self.order_api.send_order(
-                    OrderType.BUY, prices.taker.buy, int(qty)
-                )
+            if self.order_api.can_buy(price, qty):
+                await self.order_api.send_order(OrderType.BUY, price, int(qty))
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
@@ -207,21 +205,21 @@ class LeaderFollowerTrader(RobotBase):
             "current step": self.current_step,
             "current credits": asdict(self.stats.credits),
             "signals": asdict(self.stats.signals),
-            "prices": {
-                "market": asdict(self.price_api.follower),
-                "target": asdict(self.stats.prices),
-                "bridge": self.price_api.bridge,
-            },
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
             },
-            "binance": {
-                "last update": self.leader_pub.last_updated.time(),
-                "books seen": self.leader_pub.books_seen,
-            },
-            "btc": {
-                "last update": self.follower_pub.last_updated.time(),
-                "books seen": self.follower_pub.books_seen,
+            "prices": {
+                "market": asdict(self.price_api.follower),
+                "target": asdict(self.stats.prices),
+                "bridge": self.price_api.bridge,
+                "binance": {
+                    "last update": self.leader_pub.last_updated.time(),
+                    "books seen": self.leader_pub.books_seen,
+                },
+                "btc": {
+                    "last update": self.follower_pub.last_updated.time(),
+                    "books seen": self.follower_pub.books_seen,
+                },
             },
         }
