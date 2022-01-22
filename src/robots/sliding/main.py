@@ -29,6 +29,7 @@ class LeaderFollowerTrader(RobotBase):
     bridge_pub: Optional[BookPub] = None
 
     base_step_qty: Optional[Decimal] = None
+    current_step: Decimal = Decimal(0)
 
     price_api: PriceAPI = field(default_factory=PriceAPI)
     decision_api: DecisionAPI = field(default_factory=DecisionAPI)
@@ -160,8 +161,8 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        current_step = self.pair.base.free / self.base_step_qty
-        credits = self.decision_api.get_credits(mid, current_step)
+        self.current_step = self.pair.base.free / self.base_step_qty
+        credits = self.decision_api.get_credits(self.current_step)
 
         signals = self.decision_api.get_signals(mid, ask, bid, credits)
         prices = self.decision_api.get_target_prices(mid, ask, bid, credits)
@@ -186,7 +187,7 @@ class LeaderFollowerTrader(RobotBase):
         elif signals.buy >= 1:
             qty = self.base_step_qty * signals.buy
 
-            remaining_steps = self.config.max_step - current_step
+            remaining_steps = self.config.max_step - self.current_step
             max_buyable = remaining_steps * self.base_step_qty
             if qty > max_buyable:
                 qty = round_decimal_floor(max_buyable)
@@ -202,8 +203,9 @@ class LeaderFollowerTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.stats.start_time,
-            "credit constants": asdict(self.decision_api.credit_constants),
-            "credits": asdict(self.stats.credits),
+            "base credits": asdict(self.decision_api.credits),
+            "current step": asdict(self.current_step),
+            "current credits": asdict(self.stats.credits),
             "signals": asdict(self.stats.signals),
             "prices": {
                 "market": asdict(self.price_api.follower),

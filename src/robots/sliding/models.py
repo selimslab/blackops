@@ -30,22 +30,16 @@ class FeeBPS:
 
 
 @dataclass
-class CreditConstantsBPS:
+class CreditsBPS:
     sell: Decimal = Decimal(0)
     hold: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
 
 @dataclass
-class CreditConstants:
-    taker: CreditConstantsBPS = field(default_factory=CreditConstantsBPS)
-    maker: CreditConstantsBPS = field(default_factory=CreditConstantsBPS)
-
-
-@dataclass
 class Credits:
-    buy: Decimal = Decimal(0)
-    sell: Decimal = Decimal(0)
+    taker: CreditsBPS = field(default_factory=CreditsBPS)
+    maker: CreditsBPS = field(default_factory=CreditsBPS)
 
 
 @dataclass
