@@ -17,7 +17,7 @@ class DecisionAPI:
         # ) + self.config.margin_bps
 
         taker_credit = taker_fee_bps + config.margin_bps
-        self.credits.step = Decimal("1")
+        self.credits.step = Decimal("0.6")
         self.credits.sell = Decimal("8")
         self.credits.buy = 2 * taker_credit - self.credits.sell
 

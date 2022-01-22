@@ -21,12 +21,12 @@ class LeaderFollowerConfig(StrategyConfigBase):
 
     max_step: Decimal = Decimal(5)
 
-    quote_step_qty: Decimal = Decimal(12000)
+    quote_step_qty: Decimal = Decimal(10000)
 
     margin_bps: Decimal = Decimal(2)
 
     min_sell_qty: Decimal = Decimal(400)
-    min_buy_qty: Decimal = Decimal(2000)
+    min_buy_qty: Decimal = Decimal(3000)
 
     testnet = False
 
