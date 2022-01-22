@@ -16,17 +16,17 @@ class DecisionAPI:
         #     (maker_fee_bps + taker_fee_bps) / Decimal(2)
         # ) + self.config.margin_bps
 
-        self.credits.taker = taker_fee_bps + config.margin_bps
-        self.credits.step = self.credits.taker / config.max_step
-        self.credits.sell = self.credits.taker - Decimal("4.5")
-        self.credits.buy = self.credits.taker + Decimal("4.5")
+        window = 2 * (taker_fee_bps + config.margin_bps)
+        self.credits.taker.sell = Decimal(6)
+        self.credits.taker.buy = window - self.credits.taker.sell  # 14
+        self.credits.taker.hold = Decimal(1)
 
     def get_sell_signal_min(self, mid: Decimal) -> Decimal:
-        return self.credits.sell * mid * BPS
+        return self.credits.taker.sell * mid * BPS
 
     def get_buy_signal_min(self, mid: Decimal) -> Decimal:
-        return self.credits.buy * mid * BPS
+        return self.credits.taker.buy * mid * BPS
 
     def get_risk_adjusted_mid(self, mid: Decimal, current_step: Decimal) -> Decimal:
-        hold_risk = self.credits.step * current_step * mid * BPS
+        hold_risk = self.credits.taker.hold * current_step * mid * BPS
         return mid - hold_risk

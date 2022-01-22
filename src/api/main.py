@@ -1,5 +1,3 @@
-import asyncio
-
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
@@ -13,7 +11,6 @@ from src.flow import flow_api
 from src.monitoring import logger
 
 app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
-app.logger = logger
 
 app.mount("/panel", StaticFiles(directory="static", html=True), name="panel")
 
@@ -41,11 +38,12 @@ async def validation_exception_handler(request, exc: Exception):
 
 @app.on_event("startup")
 async def startup_event():
-    pass
+    logger.info("Starting API..")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    logger.info("Cleaning after API..")
     await flow_api.stop_all_tasks()
 
 

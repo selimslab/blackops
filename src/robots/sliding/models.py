@@ -18,12 +18,15 @@ class MarketPrices:
 
 
 @dataclass
-class Credits:
-    maker: Decimal = Decimal(0)
-    taker: Decimal = Decimal(0)
-    step: Decimal = Decimal(0)
+class CreditBPS:
     sell: Decimal = Decimal(0)
+    hold: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
+
+
+@dataclass
+class Credits:
+    taker: CreditBPS = field(default_factory=CreditBPS)
 
 
 @dataclass
