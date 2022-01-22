@@ -23,7 +23,6 @@ class PublisherBase:
 class BalancePub(PublisherBase):
     exchange: ExchangeAPIClientBase
     last_updated = datetime.now()
-    balances: Optional[dict] = None
     assets: Dict[AssetSymbol, Asset] = field(default_factory=dict)
 
     async def run(self):
