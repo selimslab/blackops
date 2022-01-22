@@ -29,13 +29,20 @@ class InterceptHandler(logging.Handler):
 
 def setup_logging():
     # intercept everything at the root logger
-    logging.root.handlers = [InterceptHandler()]
+    # logging.root.handlers = [InterceptHandler()]
+
+    logging.getLogger("uvicorn").handlers = [InterceptHandler()]
+    logging.getLogger("uvicorn").propagate = True
 
     # remove every other logger's handlers
     # and propagate to root logger
-    for name in logging.root.manager.loggerDict.keys():
-        logging.getLogger(name).handlers = []
-        logging.getLogger(name).propagate = True
+    # for name in logging.root.manager.loggerDict.keys():
+    #     logging.getLogger(name).handlers = []
+    #     logging.getLogger(name).propagate = True
+
+    # print(logging.root.manager.loggerDict.keys())
+    # logging.getLogger('sentry_sdk').propagate = False
+    # logging.getLogger('sentry_sdk.errors').propagate = False
 
     # configure loguru
     # logger.add(sys.stdout, colorize=True, format="{time} {level} {message}")
