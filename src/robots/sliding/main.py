@@ -183,7 +183,7 @@ class LeaderFollowerTrader(RobotBase):
             if self.order_api.can_sell(price, qty):
                 await self.order_api.send_order(OrderType.SELL, price, int(qty))
 
-        elif signals.buy >= 1:
+        if signals.buy >= 1:
             price = prices.taker.buy
             qty = self.base_step_qty * signals.buy
 
