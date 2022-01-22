@@ -1,5 +1,7 @@
+from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
+from typing import Dict
 
 from pydantic.main import BaseModel
 
@@ -36,8 +38,23 @@ class AssetPair(BaseModel):
         return f"{self.base}_{self.quote}"
 
 
+@dataclass
+class AssetFactory:
+    assets: Dict[AssetSymbol, Asset] = field(default_factory=dict)
+
+    def create_asset(self, symbol: AssetSymbol) -> Asset:
+        if symbol not in self.assets:
+            self.assets[symbol] = Asset(symbol=symbol)
+        return self.assets[symbol]
+
+
+asset_factory = AssetFactory()
+
+
 def create_asset_pair(base: AssetSymbol, quote: AssetSymbol) -> AssetPair:
-    return AssetPair(base=Asset(symbol=base), quote=Asset(symbol=quote))
+    return AssetPair(
+        base=asset_factory.create_asset(base), quote=asset_factory.create_asset(quote)
+    )
 
 
 OrderId = int

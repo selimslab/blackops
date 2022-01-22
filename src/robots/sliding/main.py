@@ -238,6 +238,7 @@ class LeaderFollowerTrader(RobotBase):
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
+                "open qtys": self.order_api.open_order_qtys,
             },
             "prices": {
                 "taker": asdict(self.stats.taker),

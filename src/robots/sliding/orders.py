@@ -169,7 +169,6 @@ class OrderApi:
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
-        logger.error(order_log)
 
     def parent_locked(self):
         self.stats.parent_locked += 1
@@ -224,7 +223,9 @@ class OrderApi:
                         await self.order_delivered(order_id, side, qty)
                     else:
                         self.order_delivered_but_failed(order_log)
-                        logger.info(f"{self.pair} {side} {int(qty)} {price}")
+                        logger.info(
+                            f"{self.pair} {side} {int(qty)} {price} : {order_log}"
+                        )
                 else:
                     self.parent_locked()
             return None
