@@ -144,89 +144,57 @@ class LeaderFollowerTrader(RobotBase):
 
         await self.decide(mid)
 
-    # DECIDE
-
     async def decide(self, mid: Decimal) -> None:
         if not self.base_step_qty:
             return
 
-        current_step = self.pair.base.free / self.base_step_qty
-        mid = self.decision_api.get_risk_adjusted_mid(mid, current_step)
-
-        bid = self.price_api.follower.bid
-        if bid:
-            await self.should_sell(mid, bid)
-
         ask = self.price_api.follower.ask
-        if ask:
-            await self.should_buy(mid, ask, current_step)
+        bid = self.price_api.follower.bid
 
-    # SELL
+        if not ask:
+            return
 
-    async def should_sell(self, mid: Decimal, bid: Decimal) -> None:
-        sell_credit = self.decision_api.get_sell_signal_min(mid)
-        signal = (bid - mid) / sell_credit
-        price = mid + sell_credit
-
-        self.stats.taker.sell = price
-        self.stats.signals.sell = signal
+        if not bid:
+            return
 
         if not self.base_step_qty:
             return
 
-        if signal >= 1:
+        current_step = self.pair.base.free / self.base_step_qty
+        credits = self.decision_api.get_credits(mid, current_step)
 
-            price = self.price_api.get_precise_price(price, bid)
+        signals = self.decision_api.get_signals(mid, ask, bid, credits)
+        prices = self.decision_api.get_target_prices(mid, ask, bid, credits)
 
-            qty = self.base_step_qty * signal
+        self.stats.credits = credits
+        self.stats.signals = signals
+        self.stats.prices = prices
 
-            await self.sell(price, qty)
-
-    async def sell(self, price, qty):
-        if qty > self.pair.base.free:
-            qty = round_decimal_floor(self.pair.base.free)
-
-        qty = int(qty)
-
-        if not self.order_api.can_sell(price, qty):
-            return None
-
-        await self.order_api.send_order(OrderType.SELL, price, qty)
-
-    # BUY
-
-    async def should_buy(
-        self, mid: Decimal, ask: Decimal, current_step: Decimal
-    ) -> None:
-        remaining_step = self.config.max_step - current_step
-
-        if not self.base_step_qty:
+        if not prices.taker:
             return
 
-        buy_credit = self.decision_api.get_buy_signal_min(mid)
-        signal = (mid - ask) / buy_credit
-        price = mid - buy_credit
+        if signals.sell >= 1:
+            qty = self.base_step_qty * signals.sell
+            if qty > self.pair.base.free:
+                qty = round_decimal_floor(self.pair.base.free)
 
-        self.stats.taker.buy = price
-        self.stats.signals.buy = signal
+            if self.order_api.can_sell(prices.taker.sell, qty):
+                await self.order_api.send_order(
+                    OrderType.SELL, prices.taker.sell, int(qty)
+                )
 
-        if remaining_step < 0.3:
-            return
+        elif signals.buy >= 1:
+            qty = self.base_step_qty * signals.buy
 
-        if signal >= 1:
-            price = self.price_api.get_precise_price(price, ask)
-            qty = self.base_step_qty * signal
-            max_buyable = remaining_step * self.base_step_qty
+            remaining_steps = self.config.max_step - current_step
+            max_buyable = remaining_steps * self.base_step_qty
             if qty > max_buyable:
-                qty = max_buyable
-            await self.buy(price, qty)
+                qty = round_decimal_floor(max_buyable)
 
-    async def buy(self, price, qty):
-        if not self.order_api.can_buy(price, qty):
-            return
-
-        qty = int(qty)
-        await self.order_api.send_order(OrderType.BUY, price, qty)
+            if self.order_api.can_buy(prices.taker.buy, qty):
+                await self.order_api.send_order(
+                    OrderType.BUY, prices.taker.buy, int(qty)
+                )
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
@@ -234,16 +202,17 @@ class LeaderFollowerTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.stats.start_time,
-            "credits": asdict(self.decision_api.credits),
+            "credit constants": asdict(self.decision_api.credit_constants),
+            "credits": asdict(self.stats.credits),
+            "signals": asdict(self.stats.signals),
+            "prices": {
+                "market": asdict(self.price_api.follower),
+                "target": asdict(self.stats.prices),
+                "bridge": self.price_api.bridge,
+            },
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-            },
-            "prices": {
-                "taker": asdict(self.stats.taker),
-                "market": asdict(self.price_api.follower),
-                "bridge": self.price_api.bridge,
-                "signals": asdict(self.stats.signals),
             },
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),

@@ -7,6 +7,4 @@ from .models import (
     OrderId,
     OrderType,
     create_asset_pair,
-    maker_fee_bps,
-    taker_fee_bps,
 )
