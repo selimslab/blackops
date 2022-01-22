@@ -23,7 +23,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
 
     quote_step_qty: Decimal = Decimal(12000)
 
-    margin_bps: Decimal = Decimal(1)
+    margin_bps: Decimal = Decimal(2)
 
     min_sell_qty: Decimal = Decimal(400)
     min_buy_qty: Decimal = Decimal(3000)
