@@ -1,3 +1,5 @@
 import imp
 
-from .log import logger
+from .log_setup import setup_logging
+
+logger = setup_logging()
