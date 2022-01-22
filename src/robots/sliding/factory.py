@@ -1,5 +1,5 @@
 from src.domain import Asset
-from src.domain.models import AssetPair, asset_factory
+from src.domain.models import create_asset_pair
 from src.exchanges.factory import ExchangeType, NetworkType
 from src.monitoring import logger
 from src.pubsub import pub_factory
@@ -19,14 +19,13 @@ def sliding_window_factory(config: LeaderFollowerConfig):
         ex_type=ExchangeType(config.follower_exchange), network=network
     )
 
-    pair = asset_factory.create_asset_pair(stg.base, stg.quote)
+    pair = create_asset_pair(stg.base, stg.quote)
 
     follower_pub = pub_factory.create_book_pub_if_not_exists(
         ex_type=ExchangeType(config.follower_exchange),
         network=network,
         symbol=pair.symbol,  # eth try
     )
-
     if network == NetworkType.TESTNET:
         follower_pub.api_client.dummy_exchange.add_balance(  # type:ignore
             Asset(symbol=stg.quote), config.max_step * config.quote_step_qty * 2
@@ -53,7 +52,6 @@ def sliding_window_factory(config: LeaderFollowerConfig):
         )
 
     trader = LeaderFollowerTrader(
-        pair=pair,
         config=config,
         leader_pub=leader_pub,
         follower_pub=follower_pub,

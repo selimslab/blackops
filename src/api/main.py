@@ -1,24 +1,19 @@
 import asyncio
 
 import uvicorn
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import src.sentry
-from src.api.auth import auth
 from src.api.routers.home import router as home_router
 from src.api.routers.robot import router as robot_router
 from src.api.routers.stg import router as stg_router
 from src.flow import flow_api
 from src.monitoring import logger
 
-app = FastAPI(
-    title="BlackOps API",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    dependencies=[Depends(auth)],
-)
+app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
+app.logger = logger
 
 app.mount("/panel", StaticFiles(directory="static", html=True), name="panel")
 

@@ -157,18 +157,10 @@ class StatsPub(PublisherBase):
         stats: Dict[str, Any] = {}
 
         stats["time"] = datetime.now()
-
-        # stats["radio listeners"] = {
-        #     key: st.listeners for key, st in radio.stations.items()
-        # }
-
-        balance_pub = None
+        stats["radio listeners"] = {
+            key: st.listeners for key, st in radio.stations.items()
+        }
         for flowrun in flow_runner.flowruns.values():
-            if not balance_pub:
-                balance_pub = flowrun.robot.balance_pub
-                stats["balance"] = list(
-                    asset.dict() for asset in balance_pub.assets.values()
-                )
 
             stat_dict = flowrun.robot.create_stats_message()
 
@@ -178,6 +170,7 @@ class StatsPub(PublisherBase):
         log_pub.publish_stats(message=stats_msg)
 
     async def run(self):
+
         await periodic(self.broadcast_stats, sleep_seconds.broadcast_stats)
 
 

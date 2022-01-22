@@ -3,8 +3,7 @@ from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any, Optional
 
-from src.domain import OrderType
-from src.domain.models import Asset, AssetPair
+from src.domain import OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
@@ -24,8 +23,6 @@ from .stats import Stats
 class LeaderFollowerTrader(RobotBase):
     config: LeaderFollowerConfig
 
-    pair: AssetPair
-
     leader_pub: BookPub
     follower_pub: BookPub
     balance_pub: BalancePub
@@ -38,8 +35,7 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     def __post_init__(self) -> None:
-        self.balance_pub.add_asset(self.pair.base)
-        self.balance_pub.add_asset(self.pair.quote)
+        self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
 
         self.decision_api.set_credits(self.config)
 
@@ -61,6 +57,10 @@ class LeaderFollowerTrader(RobotBase):
             self.consume_leader_pub(),
             self.consume_follower_pub(),
             periodic(
+                self.update_balances,
+                sleep_seconds.poll_balance_update,
+            ),
+            periodic(
                 self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
             ),
@@ -74,6 +74,24 @@ class LeaderFollowerTrader(RobotBase):
             aws.append(self.consume_bridge_pub())
 
         await asyncio.gather(*aws)
+
+    # BALANCE
+
+    async def update_balances(self) -> None:
+        res: Optional[dict] = self.balance_pub.balances
+        if not res:
+            return
+
+        balances = self.follower_pub.api_client.parse_account_balance(
+            res, symbols=[self.pair.base.symbol, self.pair.quote.symbol]
+        )
+        base_balances: dict = balances[self.pair.base.symbol]
+        self.pair.base.free = Decimal(base_balances["free"])
+        self.pair.base.locked = Decimal(base_balances["locked"])
+
+        quote_balances: dict = balances[self.pair.quote.symbol]
+        self.pair.quote.free = Decimal(quote_balances["free"])
+        self.pair.quote.locked = Decimal(quote_balances["locked"])
 
     # BRIDGE
 
@@ -132,18 +150,16 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        bid = self.price_api.follower.bid
-        ask = self.price_api.follower.ask
-
-        if not (bid and ask):
-            return
-
         current_step = self.pair.base.free / self.base_step_qty
         mid = self.decision_api.get_risk_adjusted_mid(mid, current_step)
 
-        await self.should_sell(mid, bid)
+        bid = self.price_api.follower.bid
+        if bid:
+            await self.should_sell(mid, bid)
 
-        await self.should_buy(mid, ask, current_step)
+        ask = self.price_api.follower.ask
+        if ask:
+            await self.should_buy(mid, ask, current_step)
 
     # SELL
 
