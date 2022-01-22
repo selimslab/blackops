@@ -6,15 +6,9 @@ from src.periodic import StopwatchAPI
 
 
 @dataclass
-class Prices:
-    sell: Decimal
-    buy: Decimal
-
-
-@dataclass
-class TargetPrices:
-    maker: Optional[Prices] = None
-    taker: Optional[Prices] = None
+class Window:
+    sell: Optional[Decimal] = None
+    buy: Optional[Decimal] = None
 
 
 @dataclass
@@ -24,22 +18,12 @@ class MarketPrices:
 
 
 @dataclass
-class FeeBPS:
-    taker: Decimal = Decimal("8")
-    maker: Decimal = Decimal("4")
-
-
-@dataclass
-class CreditsBPS:
-    sell: Decimal = Decimal(0)
-    hold: Decimal = Decimal(0)
-    buy: Decimal = Decimal(0)
-
-
-@dataclass
 class Credits:
-    taker: CreditsBPS = field(default_factory=CreditsBPS)
-    maker: CreditsBPS = field(default_factory=CreditsBPS)
+    maker: Decimal = Decimal(0)
+    taker: Decimal = Decimal(0)
+    step: Decimal = Decimal(0)
+    sell: Decimal = Decimal(0)
+    buy: Decimal = Decimal(0)
 
 
 @dataclass

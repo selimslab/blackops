@@ -24,8 +24,6 @@ class OrderStats:
     cancel_fail: int = 0
     refreshed: int = 0
     refresh_fail: int = 0
-    cant_buy: int = 0
-    cant_sell: int = 0
 
 
 @dataclass
@@ -189,8 +187,6 @@ class OrderApi:
         self, side: OrderType, price: Decimal, qty: int
     ) -> Optional[OrderId]:
         try:
-            msg = f"send_order: [{side, price, qty}]"
-            logger.info(msg)
 
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
@@ -199,13 +195,11 @@ class OrderApi:
 
             if side == OrderType.BUY:
                 if not self.can_buy(price, qty):
-                    self.stats.cant_buy += 1
                     return None
                 if self.open_orders.buy:
                     return None
             elif side == OrderType.SELL:
                 if not self.can_sell(price, qty):
-                    self.stats.cant_sell += 1
                     return None
                 if self.open_orders.sell:
                     return None

@@ -1,15 +1,17 @@
 import asyncio
+import decimal
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
 from src.environment import sleep_seconds
 
-from .models import MarketPrices, stopwatches
+from .models import Credits, MarketPrices, Signals, Window, stopwatches
 
 
 @dataclass
 class PriceAPI:
+    taker: Window = field(default_factory=Window)
     bridge: Optional[Decimal] = None
     follower: MarketPrices = field(default_factory=MarketPrices)
 
@@ -31,6 +33,9 @@ class PriceAPI:
             return None
         else:
             return mid
+
+    def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
+        return price.quantize(reference, rounding=decimal.ROUND_DOWN)
 
     async def update_follower_prices(self, ask: Decimal, bid: Decimal) -> None:
         async with stopwatches.follower.stopwatch(
