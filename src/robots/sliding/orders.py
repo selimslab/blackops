@@ -24,6 +24,11 @@ class OrderStats:
     cancel_fail: int = 0
     refreshed: int = 0
     refresh_fail: int = 0
+    read_locked: int = 0
+    cant_buy: int = 0
+    cant_sell: int = 0
+    cant_buy_open_orders: int = 0
+    cant_sell_open_orders: int = 0
 
 
 @dataclass
@@ -78,6 +83,7 @@ class OrderApi:
             return None
 
         if self.locks.read.locked():
+            self.stats.read_locked += 1
             return None
 
         async with self.locks.read:
@@ -111,7 +117,7 @@ class OrderApi:
 
     async def wait_for_lock(self, lock):
         while lock.locked():
-            await asyncio.sleep(0.04)
+            await asyncio.sleep(0.05)
 
     async def cancel_order(self, order_id) -> None:
         await self.wait_for_lock(self.exchange.locks.cancel)
@@ -195,13 +201,17 @@ class OrderApi:
 
             if side == OrderType.BUY:
                 if not self.can_buy(price, qty):
+                    self.stats.cant_buy += 1
                     return None
                 if self.open_orders.buy:
+                    self.stats.cant_buy_open_orders += 1
                     return None
             elif side == OrderType.SELL:
                 if not self.can_sell(price, qty):
+                    self.stats.cant_sell += 1
                     return None
                 if self.open_orders.sell:
+                    self.stats.cant_sell_open_orders += 1
                     return None
 
             async with order_lock:

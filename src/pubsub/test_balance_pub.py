@@ -1,5 +1,4 @@
-from dataclasses import asdict, dataclass, field
-from typing import Dict
+from dataclasses import dataclass
 
 from src.domain import OrderType, create_asset_pair
 from src.domain.models import AssetPair, AssetPairSymbol
