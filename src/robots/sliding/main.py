@@ -204,7 +204,7 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.stats.start_time,
             "base credits": asdict(self.decision_api.credits),
-            "current step": asdict(self.current_step),
+            "current step": self.current_step,
             "current credits": asdict(self.stats.credits),
             "signals": asdict(self.stats.signals),
             "prices": {
