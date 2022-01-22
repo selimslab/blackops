@@ -46,8 +46,8 @@ class DecisionAPI:
     def get_target_prices(
         self, mid: Decimal, ask: Decimal, bid: Decimal, credits: Credits
     ) -> TargetPrices:
-        taker_sell = (1 + credits.taker.sell * BPS) * mid
-        taker_buy = (1 - credits.taker.buy * BPS) * mid
+        taker_sell = (Decimal(1) + credits.taker.sell * BPS) * mid
+        taker_buy = (Decimal(1) - credits.taker.buy * BPS) * mid
 
         return TargetPrices(
             taker=Prices(
