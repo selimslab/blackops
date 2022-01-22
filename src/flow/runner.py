@@ -166,7 +166,7 @@ class StatsPub(PublisherBase):
         for flowrun in flow_runner.flowruns.values():
             if not balance_pub:
                 balance_pub = flowrun.robot.balance_pub
-                stats["balance"] = balance_pub.assets.values()
+                stats["balance"] = list(balance_pub.assets.values())
 
             stat_dict = flowrun.robot.create_stats_message()
 
