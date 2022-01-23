@@ -56,7 +56,7 @@ class OrderApi:
     open_orders_fresh: bool = True
 
     orders_in_last_second: int = 0
-    max_orders_per_second: int = 3
+    max_orders_per_second: int = 4
 
     async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
@@ -204,7 +204,7 @@ class OrderApi:
                 self.stats.robot_locked += 1
                 return None
 
-            if self.orders_in_last_second > self.max_orders_per_second:
+            if self.orders_in_last_second >= self.max_orders_per_second:
                 self.stats.hit_order_limit += 1
                 return None
 
@@ -215,6 +215,7 @@ class OrderApi:
                 if self.open_orders.buy:
                     self.stats.cant_buy_open_orders += 1
                     return None
+
             elif side == OrderType.SELL:
                 if not self.can_sell(price, qty):
                     self.stats.cant_sell += 1
@@ -237,7 +238,7 @@ class OrderApi:
                             f"{self.pair} {side} {int(qty)} {price} : {order_log}"
                         )
                         await asyncio.sleep(
-                            0.17
+                            0.1
                         )  # wait a bit, maybe gets better next time
                 else:
                     self.parent_locked()
