@@ -28,9 +28,9 @@ class SleepSeconds(BaseModel):
     poll_balance_update: float = update_balances / 18
 
     refresh_open_orders: float = 0.3
-    cancel_open_orders: float = 0.05
+    cancel_open_orders: float = 0.07
 
-    broadcast_stats: float = 1
+    broadcast_stats: float = 0.8
 
 
 sleep_seconds = SleepSeconds()
