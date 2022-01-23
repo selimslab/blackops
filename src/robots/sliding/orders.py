@@ -164,7 +164,7 @@ class OrderApi:
             self.open_order_qtys[order_id] = qty
             self.open_orders.sell.add(order_id)
 
-        await asyncio.sleep(0.1)  # allow time for order to be filled
+        await asyncio.sleep(0.09)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
         await asyncio.sleep(0.1)
 
