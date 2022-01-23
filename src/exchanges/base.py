@@ -16,7 +16,7 @@ class ExchangeAPIClientBase(ABC):
     orders_in_last_second: int = 0
     max_orders_per_second: int = 6
 
-    def clear_orders_in_last_second(self):
+    async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
 
     async def get_account_balance(self) -> Optional[dict]:
