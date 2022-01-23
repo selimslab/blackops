@@ -224,6 +224,9 @@ class OrderApi:
                         logger.info(
                             f"{self.pair} {side} {int(qty)} {price} : {order_log}"
                         )
+                        await asyncio.sleep(
+                            0.1
+                        )  # wait a bit, maybe gets better next time
                 else:
                     self.parent_locked()
             return None
