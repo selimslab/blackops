@@ -26,11 +26,11 @@ class BalancePub(PublisherBase):
     async def run(self):
         coros = [
             periodic(
-                self.ask_balance,
+                self.ask_balance(),
                 sleep_seconds.update_balances,
             ),
             periodic(
-                self.exchange.clear_orders_in_last_second,
+                self.exchange.clear_orders_in_last_second(),
                 0.97,
             ),
         ]
