@@ -68,6 +68,10 @@ class LeaderFollowerTrader(RobotBase):
                 self.order_api.cancel_open_orders,
                 sleep_seconds.cancel_open_orders,
             ),
+            periodic(
+                self.order_api.clear_orders_in_last_second,
+                1,
+            ),
         ]
 
         if self.bridge_pub:

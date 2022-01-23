@@ -29,6 +29,7 @@ class OrderStats:
     cant_sell: int = 0
     cant_buy_open_orders: int = 0
     cant_sell_open_orders: int = 0
+    hit_order_limit: int = 0
 
 
 @dataclass
@@ -53,6 +54,12 @@ class OrderApi:
 
     locks: Locks = field(default_factory=Locks)
     open_orders_fresh: bool = True
+
+    orders_in_last_second: int = 0
+    max_orders_per_second: int = 5
+
+    async def clear_orders_in_last_second(self):
+        self.orders_in_last_second = 0
 
     def refresh_open_order_successful(self, orderlist: list) -> None:
         orders = {order.get("id"): order for order in orderlist}
@@ -164,9 +171,10 @@ class OrderApi:
             self.open_order_qtys[order_id] = qty
             self.open_orders.sell.add(order_id)
 
-        await asyncio.sleep(0.09)  # allow time for order to be filled
+        self.orders_in_last_second += 1
+        await asyncio.sleep(0.1)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
 
     def order_delivered_but_failed(self, order_log):
         self.stats.deliver_fail += 1
@@ -194,6 +202,10 @@ class OrderApi:
             order_lock = self.get_order_lock(side)
             if order_lock.locked():
                 self.stats.robot_locked += 1
+                return None
+
+            if self.orders_in_last_second > self.max_orders_per_second:
+                self.stats.hit_order_limit += 1
                 return None
 
             if side == OrderType.BUY:
