@@ -1,4 +1,6 @@
 import asyncio
+import collections
+import statistics
 from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any, Optional
@@ -33,6 +35,10 @@ class LeaderFollowerTrader(RobotBase):
     price_api: PriceAPI = field(default_factory=PriceAPI)
     decision_api: DecisionAPI = field(default_factory=DecisionAPI)
     stats: Stats = field(default_factory=Stats)
+
+    leader_mids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -144,7 +150,9 @@ class LeaderFollowerTrader(RobotBase):
         if not mid:
             return
 
-        await self.decide(mid)
+        self.leader_mids.append(mid)
+
+        await self.decide(statistics.median(self.leader_mids))
 
     # DECIDE
 
