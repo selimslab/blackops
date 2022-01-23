@@ -24,10 +24,18 @@ class BalancePub(PublisherBase):
     balances: Optional[dict] = None
 
     async def run(self):
-        await periodic(
-            self.ask_balance,
-            sleep_seconds.update_balances,
-        )
+        coros = [
+            periodic(
+                self.ask_balance,
+                sleep_seconds.update_balances,
+            ),
+            periodic(
+                self.exchange.clear_orders_in_last_second,
+                0.97,
+            ),
+        ]
+
+        await asyncio.gather(coros)
 
     async def ask_balance(self):
         res = await self.exchange.get_account_balance()

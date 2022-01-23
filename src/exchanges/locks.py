@@ -9,3 +9,4 @@ class Locks:
     cancel: asyncio.Lock = field(default_factory=asyncio.Lock)
     rate_limit: asyncio.Lock = field(default_factory=asyncio.Lock)
     read: asyncio.Lock = field(default_factory=asyncio.Lock)
+    order: asyncio.Lock = field(default_factory=asyncio.Lock)

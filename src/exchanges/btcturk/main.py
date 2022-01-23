@@ -118,35 +118,31 @@ class BtcturkApiClient(BtcturkBase):
         """
 
         try:
-            if side == OrderType.BUY:
-                lock = self.locks.buy
-                wait = sleep_seconds.buy_wait
-            else:
-                lock = self.locks.sell
-                wait = sleep_seconds.sell_wait
 
-            if lock.locked():
+            if self.orders_in_last_second > self.max_orders_per_second:
                 return None
 
-            if not self.session or self.session.closed:
-                self.session = aiohttp.ClientSession()
+            params = {
+                "quantity": quantity,
+                "price": price,
+                # "stopPrice": price,
+                "orderMethod": "limit",
+                "orderType": side.value,
+                "pairSymbol": pair.symbol,
+            }
 
-            async with lock_with_timeout(lock, wait) as ok:
-                if ok:
-                    params = {
-                        "quantity": quantity,
-                        "price": price,
-                        # "stopPrice": price,
-                        "orderMethod": "limit",
-                        "orderType": side.value,
-                        "pairSymbol": pair.symbol,
-                    }
-                    async with self.session.post(
-                        self.urls.order_url, headers=self._get_headers(), json=params
-                    ) as res:
-                        return await res.json(content_type=None)
+            if self.locks.order.locked():
+                return None
 
-            return None
+            async with self.locks.order:
+                if not self.session or self.session.closed:
+                    self.session = aiohttp.ClientSession()
+
+                async with self.session.post(
+                    self.urls.order_url, headers=self._get_headers(), json=params
+                ) as res:
+                    self.orders_in_last_second += 1
+                    return await res.json(content_type=None)
 
         except Exception as e:
             msg = f"submit_limit_order: {e}"
