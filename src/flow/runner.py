@@ -161,7 +161,10 @@ class StatsPub(PublisherBase):
             key: st.listeners for key, st in radio.stations.items()
         }
         for flowrun in flow_runner.flowruns.values():
-
+            if "orders_in_last_second" not in stats:
+                stats[
+                    "orders_in_last_second"
+                ] = flowrun.robot.follower_pub.api_client.orders_in_last_second
             stat_dict = flowrun.robot.create_stats_message()
 
             stats[flowrun.sha] = stat_dict
