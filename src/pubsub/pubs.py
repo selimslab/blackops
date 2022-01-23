@@ -35,7 +35,7 @@ class BalancePub(PublisherBase):
             ),
         ]
 
-        await asyncio.gather(coros)
+        await asyncio.gather(*coros)
 
     async def ask_balance(self):
         res = await self.exchange.get_account_balance()
