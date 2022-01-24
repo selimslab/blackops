@@ -18,7 +18,7 @@ class DecisionAPI:
 
         self.credits.step = Decimal("0.5")
         self.credits.sell = Decimal("8")
-        self.credits.buy = Decimal("17")
+        self.credits.buy = Decimal("16")
 
     def get_sell_signal_min(self, mid: Decimal) -> Decimal:
         return self.credits.sell * mid * BPS
