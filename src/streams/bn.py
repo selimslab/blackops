@@ -1,6 +1,7 @@
 import asyncio
 from typing import Callable
 
+import async_timeout
 from aiohttp.client_exceptions import ClientConnectionError
 from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
@@ -94,8 +95,11 @@ def create_book_stream(symbol: str):
 
 async def test_orderbook_stream(symbol):
     gen = create_book_stream(symbol)
-    async for book in gen:
-        print(book)
+    seen = 0
+    async with async_timeout.timeout(10):
+        async for book in gen:
+            print(seen, book)
+            seen += 1
 
 
 async def main():
@@ -108,5 +112,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream("ETHUSDT"))
+    asyncio.run(test_orderbook_stream("ADAUSDT"))
     # asyncio.run(main())
