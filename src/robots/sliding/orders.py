@@ -172,7 +172,7 @@ class OrderApi:
             self.open_orders.sell.add(order_id)
 
         self.orders_in_last_second += 1
-        await asyncio.sleep(0.1)  # allow time for order to be filled
+        await asyncio.sleep(0.12)  # allow time for order to be filled
         self.open_order_ids.append(order_id)
         await self.cancel_open_orders()
 
@@ -238,7 +238,7 @@ class OrderApi:
                             f"{self.pair} {side} {int(qty)} {price} : {order_log}"
                         )
                         await asyncio.sleep(
-                            0.2
+                            0.15
                         )  # wait a bit, maybe gets better next time
                 else:
                     self.parent_locked()

@@ -193,6 +193,7 @@ class LeaderFollowerTrader(RobotBase):
             await self.sell(price, qty)
 
     async def sell(self, price, qty):
+        # sell all
         if qty > self.pair.base.free:
             qty = round_decimal_floor(self.pair.base.free)
 
