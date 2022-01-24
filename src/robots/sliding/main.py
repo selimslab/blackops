@@ -40,6 +40,14 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=7)
     )
 
+    follower_asks: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=3)
+    )
+
+    follower_bids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=3)
+    )
+
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
 
@@ -131,6 +139,9 @@ class LeaderFollowerTrader(RobotBase):
                 mid = (ask + bid) / Decimal(2)
                 self.set_base_step_qty(mid)
 
+            self.follower_asks.append(ask)
+            self.follower_bids.append(bid)
+
             await self.price_api.update_follower_prices(ask, bid)
 
     # LEADER
@@ -151,6 +162,8 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         self.leader_mids.append(mid)
+        self.leader_mids.append(mid)
+        self.leader_mids.append(mid)
 
         await self.decide(statistics.median(self.leader_mids))
 
@@ -165,11 +178,13 @@ class LeaderFollowerTrader(RobotBase):
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(mid, bid)
+            await self.should_sell(mid, statistics.median(self.follower_bids))
 
         ask = self.price_api.follower.ask
         if ask:
-            await self.should_buy(mid, ask, current_step)
+            await self.should_buy(
+                mid, statistics.median(self.follower_asks), current_step
+            )
 
     # SELL
 
