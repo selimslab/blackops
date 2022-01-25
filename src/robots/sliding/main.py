@@ -2,6 +2,7 @@ import asyncio
 import collections
 import statistics
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
@@ -17,7 +18,6 @@ from src.robots.sliding.orders import OrderApi
 
 from .config import LeaderFollowerConfig
 from .prices import PriceAPI
-from .stats import Stats
 
 
 @dataclass
@@ -32,10 +32,17 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     price_api: PriceAPI = field(default_factory=PriceAPI)
-    stats: Stats = field(default_factory=Stats)
 
     leader_mids: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=16)
+    )
+
+    median_leader_mids_large_window: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
+    )
+
+    median_leader_mids_small_window: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
     )
 
     buy_signals: collections.deque = field(
@@ -45,6 +52,24 @@ class LeaderFollowerTrader(RobotBase):
     sell_signals: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=16)
     )
+
+    median_buy_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
+    )
+
+    median_sell_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
+    )
+
+    median_sell_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
+    )
+
+    median_buy_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
+    )
+
+    start_time: datetime = field(default_factory=lambda: datetime.now())
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -171,6 +196,9 @@ class LeaderFollowerTrader(RobotBase):
         large_window_mid = statistics.median(self.leader_mids)
         small_window_mid = statistics.median(list(self.leader_mids)[-5:])
 
+        self.median_leader_mids_large_window.append(large_window_mid)
+        self.median_leader_mids_small_window.append(small_window_mid)
+
         bid = self.price_api.follower.bid
         if bid:
             await self.should_sell(small_window_mid, bid, large_window_mid)
@@ -199,11 +227,10 @@ class LeaderFollowerTrader(RobotBase):
         self.sell_signals.append(signal)
         self.sell_signals.append(signal)
         signal = statistics.median(self.sell_signals)
-
         price = mid + unit_sell_signal
 
-        self.stats.taker.sell = price
-        self.stats.signals.sell = signal
+        self.median_sell_prices.append(price)
+        self.median_sell_signals.append(signal)
 
         if not self.base_step_qty:
             return
@@ -246,8 +273,8 @@ class LeaderFollowerTrader(RobotBase):
         self.buy_signals.append(signal)
         signal = statistics.median(self.buy_signals)
 
-        self.stats.taker.buy = price
-        self.stats.signals.buy = signal
+        self.median_buy_prices.append(price)
+        self.median_buy_signals.append(signal)
 
         if remaining_step < 0.3:
             return
@@ -272,7 +299,7 @@ class LeaderFollowerTrader(RobotBase):
 
     def create_stats_message(self) -> dict:
         return {
-            "start time": self.stats.start_time,
+            "start time": self.start_time,
             "step amount": self.config.quote_step_qty,
             "max_step": self.config.max_step,
             "order": {
@@ -280,11 +307,24 @@ class LeaderFollowerTrader(RobotBase):
                 "stats": asdict(self.order_api.stats),
                 "open qtys": self.order_api.open_order_qtys,
             },
-            "prices": {
-                "taker": asdict(self.stats.taker),
+            "price & signal": {
                 "market": asdict(self.price_api.follower),
                 "bridge": self.price_api.bridge,
-                "signals": asdict(self.stats.signals),
+                "signals": {
+                    "buy_signals": list(self.buy_signals),
+                    "median_buy_signals": list(self.median_buy_signals),
+                    "sell_signals": list(self.sell_signals),
+                    "median_sell_signals": list(self.median_sell_signals),
+                    "leader_mids": list(self.leader_mids),
+                    "median_leader_mids_small_window": list(
+                        self.median_leader_mids_small_window
+                    ),
+                    "median_leader_mids_large_window": list(
+                        self.median_leader_mids_large_window
+                    ),
+                    "median_sell_prices": list(self.median_sell_prices),
+                    "median_buy_prices": list(self.median_buy_prices),
+                },
             },
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),
