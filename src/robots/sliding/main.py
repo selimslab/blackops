@@ -183,20 +183,20 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        # self.price_api.leader_mids.append(mid)
-        # large_window_mid = statistics.median(self.price_api.leader_mids)
-        # small_window_mid = statistics.median(list(self.price_api.leader_mids)[-5:])
+        self.price_api.leader_mids.append(mid)
+        large_window_mid = statistics.median(self.price_api.leader_mids)
+        small_window_mid = statistics.median(list(self.price_api.leader_mids)[-5:])
 
-        # self.medians.large_window_mid = large_window_mid
-        # self.medians.small_window_mid = small_window_mid
+        self.medians.large_window_mid = large_window_mid
+        self.medians.small_window_mid = small_window_mid
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(mid, bid, mid)
+            await self.should_sell(small_window_mid, bid, large_window_mid)
 
         ask = self.price_api.follower.ask
         if ask:
-            await self.should_buy(mid, ask, mid)
+            await self.should_buy(small_window_mid, ask, large_window_mid)
 
     def get_unit_sell_signal(self, mid: Decimal) -> Decimal:
         return self.config.credits.sell * mid * BPS
