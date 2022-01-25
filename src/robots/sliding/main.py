@@ -169,7 +169,7 @@ class LeaderFollowerTrader(RobotBase):
         mid = self.get_risk_adjusted_mid(mid, current_step)
 
         large_window_mid = statistics.median(self.leader_mids)
-        small_window_mid = statistics.median(self.leader_mids[-5:])
+        small_window_mid = statistics.median(list(self.leader_mids)[-5:])
 
         bid = self.price_api.follower.bid
         if bid:
