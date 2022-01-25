@@ -33,7 +33,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
 
     credits: Credits = Credits(
         sell=Decimal(5),
-        buy=Decimal(13),
+        buy=Decimal(15),
     )
 
     input: LeaderFollowerInput

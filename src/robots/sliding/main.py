@@ -219,6 +219,7 @@ class LeaderFollowerTrader(RobotBase):
 
         price = small_window_mid + unit_sell_signal
         self.price_api.sell_prices.append(price)
+        price = statistics.median(self.price_api.sell_prices)
         self.medians.sell = price
 
         if not self.base_step_qty:
@@ -269,6 +270,7 @@ class LeaderFollowerTrader(RobotBase):
 
         price = small_window_mid - unit_buy_signal
         self.price_api.buy_prices.append(price)
+        price = statistics.median(self.price_api.buy_prices)
         self.medians.buy = price
 
         if remaining_step < 0.3:
@@ -305,6 +307,8 @@ class LeaderFollowerTrader(RobotBase):
             "medians": asdict(self.medians),
             "market": asdict(self.price_api.follower),
             "bridge": self.price_api.bridge,
+            "buy prices": list(self.price_api.buy_prices),
+            "sell prices": list(self.price_api.sell_prices),
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),
                 "books seen": self.leader_pub.books_seen,
