@@ -125,6 +125,7 @@ class LeaderFollowerTrader(RobotBase):
                 bridge = self.bridge_pub.api_client.get_mid(book)
                 if bridge:
                     await self.price_api.update_bridge(bridge)
+            await asyncio.sleep(0)
 
     # FOLLOWER
 
@@ -133,6 +134,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.update_follower_prices(book)
+            await asyncio.sleep(0)
 
     async def update_follower_prices(self, book: dict) -> None:
         ask = self.follower_pub.api_client.get_best_ask(book)
@@ -151,6 +153,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.consume_leader_book(book)
+            await asyncio.sleep(0)
 
     async def consume_leader_book(self, book: dict) -> None:
         mid = self.leader_pub.api_client.get_mid(book)
