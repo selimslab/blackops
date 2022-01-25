@@ -43,7 +43,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=24)
+        default_factory=lambda: collections.deque(maxlen=10)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -212,7 +212,9 @@ class LeaderFollowerTrader(RobotBase):
             self.taker_prices.buy = price
 
             qty = self.base_step_qty * -signal
-            max_buyable = self.config.max_base_qty - self.pair.base.total_balance
+            max_buyable = (
+                self.config.max_step * self.base_step_qty - self.pair.base.total_balance
+            )
             qty = min(qty, max_buyable)
             qty = int(qty)
             if not self.order_api.can_buy(price, qty):
