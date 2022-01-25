@@ -3,8 +3,8 @@ from src.domain.models import create_asset_pair
 from src.exchanges.factory import ExchangeType, NetworkType
 from src.monitoring import logger
 from src.pubsub import pub_factory
+from src.stgs import LeaderFollowerConfig
 
-from .config import LeaderFollowerConfig
 from .main import LeaderFollowerTrader
 
 

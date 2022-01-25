@@ -9,6 +9,9 @@ from .inputs import LeaderFollowerInput
 
 
 class Credits(BaseModel):
+    maker: Decimal = Decimal(0)
+    taker: Decimal = Decimal(0)
+    step: Decimal = Decimal(0)
     sell: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
@@ -22,18 +25,18 @@ class LeaderFollowerConfig(StrategyConfigBase):
     bridge: str = Field("USDT")
     bridge_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
-    max_step: Decimal = Decimal(6)
+    max_step: Decimal = Decimal(8)
 
-    quote_step_qty: Decimal = Decimal(8000)
+    quote_step_qty: Decimal = Decimal(6000)
 
     min_sell_qty: Decimal = Decimal(400)
-    min_buy_qty: Decimal = Decimal(3000)
+    min_buy_qty: Decimal = Decimal(2000)
 
     testnet = False
 
     credits: Credits = Credits(
-        sell=Decimal(4),
-        buy=Decimal(14),
+        sell=Decimal(5),
+        buy=Decimal(15),
     )
 
     input: LeaderFollowerInput

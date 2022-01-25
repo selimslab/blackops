@@ -14,8 +14,8 @@ from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi
+from src.stgs.sliding.config import LeaderFollowerConfig
 
-from .config import LeaderFollowerConfig
 from .prices import PriceAPI
 from .stats import Stats
 
@@ -35,15 +35,15 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=7)
     )
 
     buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=7)
     )
 
     buy_signals: collections.deque = field(
