@@ -33,12 +33,14 @@ class Medians:
 
 @dataclass
 class SignalAPI:
+    signal_n: int = 24
+
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=LeaderFollowerConfig.signal_n)
+        default_factory=lambda: collections.deque(maxlen=24)
     )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=LeaderFollowerConfig.signal_n)
+        default_factory=lambda: collections.deque(maxlen=24)
     )
 
 
