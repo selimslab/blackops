@@ -14,9 +14,10 @@ from src.periodic import periodic
 from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
-from src.robots.sliding.orders import OrderApi
 
 from .config import LeaderFollowerConfig
+from .models import MarketPrices, Window
+from .orders import OrderApi
 from .prices import PriceAPI
 
 
@@ -37,14 +38,6 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=16)
     )
 
-    median_leader_mids_large_window: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
-    )
-
-    median_leader_mids_small_window: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
-    )
-
     buy_signals: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=16)
     )
@@ -53,23 +46,15 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=16)
     )
 
-    median_buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
-    )
+    start_time: datetime = field(default_factory=lambda: datetime.now())
 
-    median_sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
+    buy_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
     sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
+        default_factory=lambda: collections.deque(maxlen=5)
     )
-
-    buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
-    )
-
-    start_time: datetime = field(default_factory=lambda: datetime.now())
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -195,9 +180,6 @@ class LeaderFollowerTrader(RobotBase):
         large_window_mid = statistics.median(self.leader_mids)
         small_window_mid = statistics.median(list(self.leader_mids)[-5:])
 
-        self.median_leader_mids_large_window.append(large_window_mid)
-        self.median_leader_mids_small_window.append(small_window_mid)
-
         bid = self.price_api.follower.bid
         if bid:
             await self.should_sell(small_window_mid, bid, large_window_mid)
@@ -224,20 +206,19 @@ class LeaderFollowerTrader(RobotBase):
         signal = (bid - median_mid) / unit_sell_signal
 
         self.sell_signals.append(signal)
-        signal = statistics.median(self.sell_signals)
-        price = mid + unit_sell_signal
+        median_signal = statistics.median(self.sell_signals)
 
+        price = mid + unit_sell_signal
         self.sell_prices.append(price)
-        self.median_sell_signals.append(signal)
 
         if not self.base_step_qty:
             return
 
-        if signal >= 1:
+        if median_signal >= 1:
 
             price = self.price_api.get_precise_price(price, bid)
 
-            qty = self.base_step_qty * signal
+            qty = self.base_step_qty * median_signal
 
             await self.sell(price, qty)
 
@@ -265,20 +246,18 @@ class LeaderFollowerTrader(RobotBase):
 
         unit_buy_signal = self.get_unit_buy_signal(median_mid)
         signal = (median_mid - ask) / unit_buy_signal
-        price = mid - unit_buy_signal
-
         self.buy_signals.append(signal)
-        signal = statistics.median(self.buy_signals)
+        median_signal = statistics.median(self.buy_signals)
 
+        price = mid - unit_buy_signal
         self.buy_prices.append(price)
-        self.median_buy_signals.append(signal)
 
         if remaining_step < 0.3:
             return
 
-        if signal >= 1:
+        if median_signal >= 1:
             price = self.price_api.get_precise_price(price, ask)
-            qty = self.base_step_qty * signal
+            qty = self.base_step_qty * median_signal
             max_buyable = remaining_step * self.base_step_qty
             if qty > max_buyable:
                 qty = max_buyable
@@ -309,16 +288,8 @@ class LeaderFollowerTrader(RobotBase):
                 "bridge": self.price_api.bridge,
                 "signals": {
                     "buy_signals": list(self.buy_signals),
-                    "median_buy_signals": list(self.median_buy_signals),
                     "sell_signals": list(self.sell_signals),
-                    "median_sell_signals": list(self.median_sell_signals),
                     "leader_mids": list(self.leader_mids),
-                    "median_leader_mids_small_window": list(
-                        self.median_leader_mids_small_window
-                    ),
-                    "median_leader_mids_large_window": list(
-                        self.median_leader_mids_large_window
-                    ),
                     "median_sell_prices": list(self.sell_prices),
                     "median_buy_prices": list(self.buy_prices),
                 },
