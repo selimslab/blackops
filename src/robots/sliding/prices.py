@@ -20,7 +20,7 @@ class PriceAPI:
     price_n: int = 5
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=16)
+        default_factory=lambda: collections.deque(maxlen=8)
     )
 
     buy_prices: collections.deque = field(

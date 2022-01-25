@@ -44,11 +44,11 @@ class SignalAPI:
     signal_n: int = 16
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=24)
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=24)
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
 
