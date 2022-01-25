@@ -14,8 +14,8 @@ from src.pubsub import create_book_consumer_generator
 from src.pubsub.pubs import BalancePub, BookPub
 from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi
-from src.stgs.sliding.config import LeaderFollowerConfig
 
+from .config import LeaderFollowerConfig
 from .prices import PriceAPI
 from .stats import Stats
 
@@ -35,7 +35,15 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
+        default_factory=lambda: collections.deque(maxlen=16)
+    )
+
+    buy_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=16)
+    )
+
+    sell_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     def __post_init__(self) -> None:
@@ -148,7 +156,6 @@ class LeaderFollowerTrader(RobotBase):
 
         self.leader_mids.append(mid)
         self.leader_mids.append(mid)
-        self.leader_mids.append(mid)
 
         await self.decide(mid)
 
@@ -161,15 +168,16 @@ class LeaderFollowerTrader(RobotBase):
         current_step = self.pair.base.total_balance / self.base_step_qty
         mid = self.get_risk_adjusted_mid(mid, current_step)
 
-        median_mid = statistics.median(self.leader_mids)
+        large_window_mid = statistics.median(self.leader_mids)
+        small_window_mid = statistics.median(self.leader_mids[-5:])
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(mid, bid, median_mid)
+            await self.should_sell(small_window_mid, bid, large_window_mid)
 
         ask = self.price_api.follower.ask
         if ask:
-            await self.should_buy(mid, ask, current_step, median_mid)
+            await self.should_buy(small_window_mid, ask, current_step, large_window_mid)
 
     def get_unit_sell_signal(self, mid: Decimal) -> Decimal:
         return self.config.credits.sell * mid * BPS
@@ -187,6 +195,10 @@ class LeaderFollowerTrader(RobotBase):
     ) -> None:
         unit_sell_signal = self.get_unit_sell_signal(median_mid)
         signal = (bid - median_mid) / unit_sell_signal
+
+        self.sell_signals.append(signal)
+        self.sell_signals.append(signal)
+        signal = statistics.median(self.sell_signals)
 
         price = mid + unit_sell_signal
 
@@ -230,13 +242,17 @@ class LeaderFollowerTrader(RobotBase):
         signal = (median_mid - ask) / unit_buy_signal
         price = mid - unit_buy_signal
 
+        self.buy_signals.append(signal)
+        self.buy_signals.append(signal)
+        signal = statistics.median(self.buy_signals)
+
         self.stats.taker.buy = price
         self.stats.signals.buy = signal
 
         if remaining_step < 0.3:
             return
 
-        if signal >= 1.2:
+        if signal >= 1:
             price = self.price_api.get_precise_price(price, ask)
             qty = self.base_step_qty * signal
             max_buyable = remaining_step * self.base_step_qty

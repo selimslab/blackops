@@ -8,10 +8,10 @@ from pydantic.json import pydantic_encoder
 
 from src.domain import Asset, AssetPair
 from src.exchanges.btcturk import btc_real_api_client_public
+from src.robots.sliding.config import LeaderFollowerConfig, LeaderFollowerInput
 from src.storage.redis import async_redis_client
 
 from .base import StrategyType
-from .sliding.config import LeaderFollowerConfig, LeaderFollowerInput
 
 StrategyInput = LeaderFollowerInput
 
