@@ -179,24 +179,26 @@ class OrderApi:
             and self.pair.quote.free >= price * qty > self.config.min_buy_qty
         )
 
-    def can_order(self, side: OrderType, price: Decimal, qty: int):
+    def can_order(self, side: OrderType, price: Decimal, qty: int) -> bool:
 
         if self.orders_in_last_second >= self.max_orders_per_second:
             self.stats.fail_counts.hit_order_limit += 1
-            return None
+            return False
 
         if self.open_orders:
             self.stats.fail_counts.open += 1
-            return None
+            return False
 
         if side == OrderType.BUY:
             if not self.can_buy(price, qty):
                 self.stats.fail_counts.buy_check += 1
-                return None
+                return False
         elif side == OrderType.SELL:
             if not self.can_sell(price, qty):
                 self.stats.fail_counts.sell_check += 1
-                return None
+                return False
+
+        return True
 
     async def deliver_ok(self, order: Order):
         if order.side == OrderType.BUY:

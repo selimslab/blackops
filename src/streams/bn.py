@@ -57,7 +57,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
                 await asyncio.sleep(0)
 
     except Exception as e:
-        client_factory.close_connection()
+        await client_factory.close_connection()
         msg = f"binance stream disconnected: {e}"
         logger.error(f"binance_stream_generator: {msg}")
         raise e
