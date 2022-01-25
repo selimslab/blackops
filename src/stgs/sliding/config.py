@@ -35,8 +35,8 @@ class LeaderFollowerConfig(StrategyConfigBase):
     testnet = False
 
     credits: Credits = Credits(
-        sell=Decimal(4),
-        buy=Decimal(14),
+        sell=Decimal(5),
+        buy=Decimal(15),
     )
 
     input: LeaderFollowerInput
