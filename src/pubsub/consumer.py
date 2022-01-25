@@ -11,4 +11,4 @@ async def create_book_consumer_generator(pub: BookPub) -> AsyncGenerator:
         if book and book != prev_book:
             yield book
             prev_book = book
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0)
