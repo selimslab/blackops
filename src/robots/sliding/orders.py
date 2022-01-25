@@ -57,7 +57,7 @@ class OrderApi:
     open_orders_fresh: bool = True
 
     orders_in_last_second: int = 0
-    max_orders_per_second: int = 4
+    max_orders_per_second: int = 2
 
     async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
