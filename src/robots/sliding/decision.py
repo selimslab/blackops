@@ -16,9 +16,9 @@ class DecisionAPI:
         #     (maker_fee_bps + taker_fee_bps) / Decimal(2)
         # ) + self.config.margin_bps
 
-        self.credits.step = Decimal("0.2")
-        self.credits.sell = Decimal("5")
-        self.credits.buy = Decimal("14")
+        self.credits.step = Decimal("0.4")
+        self.credits.sell = Decimal("6")
+        self.credits.buy = Decimal("15")
 
     def get_sell_signal_min(self, mid: Decimal) -> Decimal:
         return self.credits.sell * mid * BPS
