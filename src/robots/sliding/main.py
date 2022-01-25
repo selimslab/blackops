@@ -51,7 +51,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=16)
+        default_factory=lambda: collections.deque(maxlen=20)
     )
 
     def __post_init__(self) -> None:
