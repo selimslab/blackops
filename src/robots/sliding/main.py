@@ -162,15 +162,14 @@ class LeaderFollowerTrader(RobotBase):
         mid = self.get_risk_adjusted_mid(mid, current_step)
 
         median_mid = statistics.median(self.leader_mids)
-        unit_signal = median_mid * BPS
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(mid, bid, unit_signal)
+            await self.should_sell(mid, bid, median_mid)
 
         ask = self.price_api.follower.ask
         if ask:
-            await self.should_buy(mid, ask, current_step, unit_signal)
+            await self.should_buy(mid, ask, current_step, median_mid)
 
     def get_unit_sell_signal(self, mid: Decimal) -> Decimal:
         return self.config.credits.sell * mid * BPS
