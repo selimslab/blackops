@@ -2,6 +2,7 @@ import asyncio
 import collections
 import statistics
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
@@ -16,8 +17,8 @@ from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
+from .models import PriceWindow
 from .prices import PriceAPI
-from .stats import Stats
 
 
 @dataclass
@@ -32,7 +33,6 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     price_api: PriceAPI = field(default_factory=PriceAPI)
-    stats: Stats = field(default_factory=Stats)
 
     sell_prices: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=5)
@@ -45,6 +45,10 @@ class LeaderFollowerTrader(RobotBase):
     signals: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=24)
     )
+
+    start_time: datetime = field(default_factory=lambda: datetime.now())
+    taker_prices: PriceWindow = field(default_factory=PriceWindow)
+    signal: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -184,12 +188,15 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         signal = statistics.median(self.signals)
+        self.signal = signal
 
         if signal > 1:
             price = statistics.median(self.sell_prices)
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_bid
             )
+            self.taker_prices.sell = price
+
             qty = self.base_step_qty * signal
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
@@ -202,6 +209,8 @@ class LeaderFollowerTrader(RobotBase):
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_ask
             )
+            self.taker_prices.buy = price
+
             qty = self.base_step_qty * -signal
             max_buyable = self.config.max_base_qty - self.pair.base.total_balance
             qty = min(qty, max_buyable)
@@ -215,26 +224,18 @@ class LeaderFollowerTrader(RobotBase):
 
     def create_stats_message(self) -> dict:
         return {
-            "start time": self.stats.start_time,
-            "step amount": self.config.quote_step_qty,
-            "max_step": self.config.max_step,
+            "start time": self.start_time,
+            "pair": self.pair.dict(),
+            "signal": self.signal,
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-                "open qtys": self.order_api.open_order_qtys,
             },
             "prices": {
-                "taker": asdict(self.stats.taker),
                 "market": asdict(self.price_api.follower),
                 "bridge": self.price_api.bridge,
-                "signals": asdict(self.stats.signals),
-            },
-            "binance": {
-                "last update": self.leader_pub.last_updated.time(),
-                "books seen": self.leader_pub.books_seen,
-            },
-            "btc": {
-                "last update": self.follower_pub.last_updated.time(),
-                "books seen": self.follower_pub.books_seen,
+                "taker": asdict(self.taker_prices),
+                "bn seen": self.leader_pub.books_seen,
+                "bt seen": self.follower_pub.books_seen,
             },
         }

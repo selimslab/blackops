@@ -51,7 +51,7 @@ class BookPub(PublisherBase):
 
     book: Optional[Union[str, dict]] = None
     books_seen: int = 0
-    last_updated = datetime.now()
+    # last_updated = datetime.now()
 
     async def run(self):
         await self.consume_stream()
@@ -65,7 +65,7 @@ class BookPub(PublisherBase):
         async for book in self.stream:
             # new_quote = self.exchange.get_mid(book)
             self.book = book
-            self.last_updated = datetime.now()
+            # self.last_updated = datetime.now()
             self.books_seen += 1
             await asyncio.sleep(0)
 

@@ -6,7 +6,7 @@ from src.periodic import StopwatchAPI
 
 
 @dataclass
-class Window:
+class PriceWindow:
     sell: Optional[Decimal] = None
     buy: Optional[Decimal] = None
 
