@@ -1,4 +1,5 @@
 import asyncio
+import collections
 import decimal
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -14,6 +15,18 @@ class PriceAPI:
     taker: Window = field(default_factory=Window)
     bridge: Optional[Decimal] = None
     follower: MarketPrices = field(default_factory=MarketPrices)
+
+    leader_mids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=24)
+    )
+
+    buy_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
+
+    sell_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
 
     async def update_bridge(self, quote: Decimal):
         async with stopwatches.bridge.stopwatch(

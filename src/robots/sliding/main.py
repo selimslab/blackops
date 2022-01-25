@@ -22,6 +22,27 @@ from .prices import PriceAPI
 
 
 @dataclass
+class Medians:
+    buy: Decimal = Decimal(0)
+    sell: Decimal = Decimal(0)
+    large_window_mid: Decimal = Decimal(0)
+    small_window_mid: Decimal = Decimal(0)
+    buy_signal: Decimal = Decimal(0)
+    sell_signal: Decimal = Decimal(0)
+
+
+@dataclass
+class SignalAPI:
+    buy_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=16)
+    )
+
+    sell_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=16)
+    )
+
+
+@dataclass
 class LeaderFollowerTrader(RobotBase):
     config: LeaderFollowerConfig
 
@@ -33,28 +54,10 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     price_api: PriceAPI = field(default_factory=PriceAPI)
-
-    leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=16)
-    )
-
-    buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=16)
-    )
-
-    sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=16)
-    )
+    signal_api: SignalAPI = field(default_factory=SignalAPI)
+    medians: Medians = field(default_factory=Medians)
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
-
-    buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
-    )
-
-    sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
-    )
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -113,8 +116,6 @@ class LeaderFollowerTrader(RobotBase):
         self.pair.quote.free = Decimal(quote_balances["free"])
         self.pair.quote.locked = Decimal(quote_balances["locked"])
 
-        self.order_api.open_order_qtys = {}
-
     # BRIDGE
 
     async def consume_bridge_pub(self) -> None:
@@ -129,7 +130,6 @@ class LeaderFollowerTrader(RobotBase):
                     await self.price_api.update_bridge(bridge)
 
     # FOLLOWER
-
     async def consume_follower_pub(self) -> None:
         gen = create_book_consumer_generator(self.follower_pub)
         async for book in gen:
@@ -164,25 +164,27 @@ class LeaderFollowerTrader(RobotBase):
         if not mid:
             return
 
-        self.leader_mids.append(mid)
-
         await self.decide(mid)
 
     # DECIDE
-
     async def decide(self, mid: Decimal) -> None:
         if not self.base_step_qty:
             return
 
         current_step = self.pair.base.total_balance / self.base_step_qty
-        mid = self.get_risk_adjusted_mid(mid, current_step)
 
-        large_window_mid = statistics.median(self.leader_mids)
-        small_window_mid = statistics.median(list(self.leader_mids)[-5:])
+        self.price_api.leader_mids.append(mid)
+        large_window_mid = statistics.median(self.price_api.leader_mids)
+        small_window_mid = statistics.median(list(self.price_api.leader_mids)[-5:])
+
+        self.medians.large_window_mid = large_window_mid
+        self.medians.small_window_mid = small_window_mid
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(small_window_mid, bid, large_window_mid)
+            await self.should_sell(
+                small_window_mid, bid, current_step, large_window_mid
+            )
 
         ask = self.price_api.follower.ask
         if ask:
@@ -194,28 +196,40 @@ class LeaderFollowerTrader(RobotBase):
     def get_unit_buy_signal(self, mid: Decimal) -> Decimal:
         return self.config.credits.buy * mid * BPS
 
-    def get_risk_adjusted_mid(self, mid: Decimal, current_step: Decimal) -> Decimal:
-        hold_risk = self.config.credits.step * current_step * mid * BPS
-        return mid - hold_risk
+    # def get_risk_adjusted_mid(self, mid: Decimal, current_step: Decimal) -> Decimal:
+    #     hold_risk = self.config.credits.step * current_step * mid * BPS
+    #     return mid - hold_risk
 
     # SELL
     async def should_sell(
-        self, mid: Decimal, bid: Decimal, median_mid: Decimal
+        self,
+        small_window_mid: Decimal,
+        bid: Decimal,
+        current_step: Decimal,
+        large_window_mid: Decimal,
     ) -> None:
-        unit_sell_signal = self.get_unit_sell_signal(median_mid)
-        signal = (bid - median_mid) / unit_sell_signal
+        # mid = self.get_risk_adjusted_mid(mid, current_step)
+        unit_sell_signal = self.get_unit_sell_signal(large_window_mid)
+        signal = (bid - large_window_mid) / unit_sell_signal
 
-        self.sell_signals.append(signal)
-        median_signal = statistics.median(self.sell_signals)
+        self.signal_api.sell_signals.append(signal)
+        median_signal = statistics.median(self.signal_api.sell_signals)
 
-        price = mid + unit_sell_signal
-        self.sell_prices.append(price)
+        self.medians.sell_signal = median_signal
+
+        price = small_window_mid + unit_sell_signal
+        self.price_api.sell_prices.append(price)
+        self.medians.sell = price
 
         if not self.base_step_qty:
             return
 
-        if median_signal >= 1:
+        # if current_step>0 and self.order_api.last_buy_price:
+        #     long_term_signal = (self.order_api.last_buy_price-bid) / unit_sell_signal
+        #     self.long_term_sell_signals.append(long_term_signal)
+        #     median_signal = max(statistics.median(self.long_term_sell_signals), median_signal)
 
+        if median_signal >= 1:
             price = self.price_api.get_precise_price(price, bid)
 
             qty = self.base_step_qty * median_signal
@@ -235,22 +249,27 @@ class LeaderFollowerTrader(RobotBase):
         await self.order_api.send_order(OrderType.SELL, price, qty)
 
     # BUY
-
     async def should_buy(
-        self, mid: Decimal, ask: Decimal, current_step: Decimal, median_mid: Decimal
+        self,
+        small_window_mid: Decimal,
+        ask: Decimal,
+        current_step: Decimal,
+        large_window_mid: Decimal,
     ) -> None:
         remaining_step = self.config.max_step - current_step
 
         if not self.base_step_qty:
             return
 
-        unit_buy_signal = self.get_unit_buy_signal(median_mid)
-        signal = (median_mid - ask) / unit_buy_signal
-        self.buy_signals.append(signal)
-        median_signal = statistics.median(self.buy_signals)
+        unit_buy_signal = self.get_unit_buy_signal(large_window_mid)
+        signal = (large_window_mid - ask) / unit_buy_signal
+        self.signal_api.buy_signals.append(signal)
+        median_signal = statistics.median(self.signal_api.buy_signals)
+        self.medians.buy_signal = median_signal
 
-        price = mid - unit_buy_signal
-        self.buy_prices.append(price)
+        price = small_window_mid - unit_buy_signal
+        self.price_api.buy_prices.append(price)
+        self.medians.buy = price
 
         if remaining_step < 0.3:
             return
@@ -281,19 +300,11 @@ class LeaderFollowerTrader(RobotBase):
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-                "open qtys": self.order_api.open_order_qtys,
+                "open": list(self.order_api.open_orders),
             },
-            "price & signal": {
-                "market": asdict(self.price_api.follower),
-                "bridge": self.price_api.bridge,
-                "signals": {
-                    "buy_signals": list(self.buy_signals),
-                    "sell_signals": list(self.sell_signals),
-                    "leader_mids": list(self.leader_mids),
-                    "median_sell_prices": list(self.sell_prices),
-                    "median_buy_prices": list(self.buy_prices),
-                },
-            },
+            "medians": asdict(self.medians),
+            "market": asdict(self.price_api.follower),
+            "bridge": self.price_api.bridge,
             "binance": {
                 "last update": self.leader_pub.last_updated.time(),
                 "books seen": self.leader_pub.books_seen,

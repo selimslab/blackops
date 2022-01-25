@@ -9,9 +9,6 @@ from .inputs import LeaderFollowerInput
 
 
 class Credits(BaseModel):
-    maker: Decimal = Decimal(0)
-    taker: Decimal = Decimal(0)
-    step: Decimal = Decimal(0)
     sell: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
@@ -35,9 +32,8 @@ class LeaderFollowerConfig(StrategyConfigBase):
     testnet = False
 
     credits: Credits = Credits(
-        step=Decimal("0.25"),
-        sell=Decimal(6),
-        buy=Decimal(18),
+        sell=Decimal(5),
+        buy=Decimal(13),
     )
 
     input: LeaderFollowerInput
