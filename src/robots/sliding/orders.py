@@ -28,6 +28,7 @@ class FailCounts:
     hit_order_limit = 0
     parent: int = 0
     bad_response: int = 0
+    locked: int = 0
 
 
 @dataclass
@@ -226,6 +227,7 @@ class OrderApi:
                 return None
 
             if self.locks.order.locked():
+                self.stats.fail_counts.locked += 1
                 return None
 
             async with self.locks.order:

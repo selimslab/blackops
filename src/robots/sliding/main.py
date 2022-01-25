@@ -32,6 +32,12 @@ class Medians:
 
 
 @dataclass
+class Stats:
+    buy_possible: int = 0
+    sell_possible: int = 0
+
+
+@dataclass
 class SignalAPI:
     signal_n: int = 24
 
@@ -58,6 +64,7 @@ class LeaderFollowerTrader(RobotBase):
     price_api: PriceAPI = field(default_factory=PriceAPI)
     signal_api: SignalAPI = field(default_factory=SignalAPI)
     medians: Medians = field(default_factory=Medians)
+    stats: Stats = field(default_factory=Stats)
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
 
@@ -233,6 +240,7 @@ class LeaderFollowerTrader(RobotBase):
         #     median_signal = max(statistics.median(self.long_term_sell_signals), median_signal)
 
         if median_signal >= 1:
+            self.stats.sell_possible += 1
             price = self.price_api.get_precise_price(price, bid)
 
             qty = self.base_step_qty * median_signal
@@ -279,6 +287,7 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         if median_signal >= 1:
+            self.stats.buy_possible += 1
             price = self.price_api.get_precise_price(price, ask)
             qty = self.base_step_qty * median_signal
             max_buyable = remaining_step * self.base_step_qty
@@ -299,8 +308,7 @@ class LeaderFollowerTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.start_time,
-            "step amount": self.config.quote_step_qty,
-            "max_step": self.config.max_step,
+            "stats": asdict(self.stats),
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
