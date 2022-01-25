@@ -12,9 +12,10 @@ from .models import MarketPrices, Window, stopwatches
 
 @dataclass
 class PriceAPI:
-    taker: Window = field(default_factory=Window)
     bridge: Optional[Decimal] = None
     follower: MarketPrices = field(default_factory=MarketPrices)
+    precision_ask: Decimal = Decimal(0)
+    precision_bid: Decimal = Decimal(0)
 
     async def update_bridge(self, quote: Decimal):
         async with stopwatches.bridge.stopwatch(
@@ -44,6 +45,9 @@ class PriceAPI:
         ):
             self.follower.ask = ask
             self.follower.bid = bid
+            if not self.precision_ask:
+                self.precision_ask = ask
+                self.precision_bid = bid
 
         await asyncio.sleep(0)
 

@@ -2,16 +2,14 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from src.domain import BPS
 from src.exchanges.factory import ExchangeType
 from src.stgs.base import StrategyConfigBase, StrategyType
 
 from .inputs import LeaderFollowerInput
 
 
-class Credits(BaseModel):
-    maker: Decimal = Decimal(0)
-    taker: Decimal = Decimal(0)
-    step: Decimal = Decimal(0)
+class UnitSignalBPS(BaseModel):
     sell: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
@@ -25,18 +23,17 @@ class LeaderFollowerConfig(StrategyConfigBase):
     bridge: str = Field("USDT")
     bridge_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
-    max_step: Decimal = Decimal(4)
-
-    quote_step_qty: Decimal = Decimal(12000)
+    max_step: Decimal = Decimal(8)
+    quote_step_qty: Decimal = Decimal(6000)
+    max_base_qty: Decimal = quote_step_qty * max_step
 
     min_sell_qty: Decimal = Decimal(400)
     min_buy_qty: Decimal = Decimal(2000)
 
     testnet = False
 
-    credits: Credits = Credits(
-        sell=Decimal(3),
-        buy=Decimal(15),
+    unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
+        sell=Decimal(5) * BPS, buy=Decimal(15) * BPS
     )
 
     input: LeaderFollowerInput
