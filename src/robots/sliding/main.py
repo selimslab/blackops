@@ -191,7 +191,7 @@ class LeaderFollowerTrader(RobotBase):
         self.signal = signal
 
         if signal > 1:
-            price = statistics.median(list(self.sell_prices[-5:]))
+            price = statistics.median(list(self.sell_prices)[-5:])
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_bid
             )
@@ -205,7 +205,7 @@ class LeaderFollowerTrader(RobotBase):
                 return None
             await self.order_api.send_order(OrderType.SELL, price, qty)
         elif signal < -1:
-            price = statistics.median(list(self.buy_prices[-5:]))
+            price = statistics.median(list(self.buy_prices)[-5:])
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_ask
             )
