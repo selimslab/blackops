@@ -41,14 +41,14 @@ class Stats:
 
 @dataclass
 class SignalAPI:
-    signal_n: int = 24
+    signal_n: int = 16
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=24)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=24)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
 
@@ -164,7 +164,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.consume_leader_book(book)
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.01)
 
     async def consume_leader_book(self, book: dict) -> None:
         mid = self.leader_pub.api_client.get_mid(book)
