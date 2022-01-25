@@ -35,6 +35,8 @@ class Medians:
 class Stats:
     buy_possible: int = 0
     sell_possible: int = 0
+    can_buy_false: int = 0
+    can_sell_false: int = 0
 
 
 @dataclass
@@ -255,6 +257,7 @@ class LeaderFollowerTrader(RobotBase):
         qty = int(qty)
 
         if not self.order_api.can_sell(price, qty):
+            self.stats.can_sell_false += 1
             return None
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
@@ -297,6 +300,7 @@ class LeaderFollowerTrader(RobotBase):
 
     async def buy(self, price, qty):
         if not self.order_api.can_buy(price, qty):
+            self.stats.can_buy_false += 1
             return
 
         qty = int(qty)
