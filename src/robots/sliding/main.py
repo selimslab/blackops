@@ -61,11 +61,11 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=10)
     )
 
-    median_sell_prices: collections.deque = field(
+    sell_prices: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=10)
     )
 
-    median_buy_prices: collections.deque = field(
+    buy_prices: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=10)
     )
 
@@ -180,7 +180,6 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         self.leader_mids.append(mid)
-        self.leader_mids.append(mid)
 
         await self.decide(mid)
 
@@ -225,11 +224,10 @@ class LeaderFollowerTrader(RobotBase):
         signal = (bid - median_mid) / unit_sell_signal
 
         self.sell_signals.append(signal)
-        self.sell_signals.append(signal)
         signal = statistics.median(self.sell_signals)
         price = mid + unit_sell_signal
 
-        self.median_sell_prices.append(price)
+        self.sell_prices.append(price)
         self.median_sell_signals.append(signal)
 
         if not self.base_step_qty:
@@ -270,10 +268,9 @@ class LeaderFollowerTrader(RobotBase):
         price = mid - unit_buy_signal
 
         self.buy_signals.append(signal)
-        self.buy_signals.append(signal)
         signal = statistics.median(self.buy_signals)
 
-        self.median_buy_prices.append(price)
+        self.buy_prices.append(price)
         self.median_buy_signals.append(signal)
 
         if remaining_step < 0.3:
@@ -322,8 +319,8 @@ class LeaderFollowerTrader(RobotBase):
                     "median_leader_mids_large_window": list(
                         self.median_leader_mids_large_window
                     ),
-                    "median_sell_prices": list(self.median_sell_prices),
-                    "median_buy_prices": list(self.median_buy_prices),
+                    "median_sell_prices": list(self.sell_prices),
+                    "median_buy_prices": list(self.buy_prices),
                 },
             },
             "binance": {
