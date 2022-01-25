@@ -249,7 +249,6 @@ class LeaderFollowerTrader(RobotBase):
 
         if not self.order_api.can_sell(price, qty):
             self.stats.can_sell_false += 1
-            logger.info(f"cant_sell {self.pair.symbol} {price} {qty}")
             return None
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
@@ -294,7 +293,6 @@ class LeaderFollowerTrader(RobotBase):
     async def buy(self, price, qty):
         if not self.order_api.can_buy(price, qty):
             self.stats.can_buy_false += 1
-            logger.info(f"cant buy {self.pair.symbol} {price} {qty}")
             return
 
         qty = int(qty)
