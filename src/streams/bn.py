@@ -1,9 +1,9 @@
 import asyncio
-from typing import Callable, Optional
+from typing import Callable
 
 import async_timeout
 from aiohttp.client_exceptions import ClientConnectionError
-from binance import AsyncClient, BinanceSocketManager, Client  # type:ignore
+from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
@@ -17,31 +17,10 @@ class BinanceOverflowException(Exception):
     pass
 
 
-class ClientFactory:
-    client: Optional[AsyncClient] = None
-    socket_manager: Optional[BinanceSocketManager] = None
-
-    async def get_client(self):
-        if not self.client:
-            self.client = await AsyncClient.create()
-        return self.client
-
-    async def get_socket_manager(self):
-        client = await self.get_client()
-        if not self.socket_manager:
-            self.socket_manager = BinanceSocketManager(client)
-        return self.socket_manager
-
-    async def close_connection(self):
-        await self.client.close_connection()
-
-
-client_factory = ClientFactory()
-
-
 async def binance_stream_generator(symbol: str, stream_type: str):
+    client = await AsyncClient.create()
     try:
-        bm = await client_factory.get_socket_manager()
+        bm = BinanceSocketManager(client)
         ts = bm.multiplex_socket([f"{symbol.lower()}{stream_type}"])
 
         async with ts as tscm:
@@ -57,7 +36,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
                 await asyncio.sleep(0)
 
     except Exception as e:
-        await client_factory.close_connection()
+        await client.close_connection()
         msg = f"binance stream disconnected: {e}"
         logger.error(f"binance_stream_generator: {msg}")
         raise e
@@ -132,17 +111,6 @@ async def main():
     await client.close_connection()
 
 
-async def candle_gen(symbol: str):
-    client = await client_factory.get_client()
-
-    candles = await client.get_klines(
-        symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1
-    )
-
-    print(candles)
-
-
 if __name__ == "__main__":
-    # asyncio.run(test_orderbook_stream("ADAUSDT"))
+    asyncio.run(test_orderbook_stream("ADAUSDT"))
     # asyncio.run(main())
-    asyncio.run(candle_gen("ADAUSDT"))
