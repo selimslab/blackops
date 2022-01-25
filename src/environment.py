@@ -28,6 +28,11 @@ class SleepSeconds(BaseModel):
 
     broadcast_stats: float = 0.8
 
+    wait_before_cancel: float = 0.12
+    wait_after_failed_order: float = 0.15
+
+    poll_for_lock: float = 0.05
+
 
 sleep_seconds = SleepSeconds()
 

@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any, Optional
 
-from src.domain import OrderType, create_asset_pair
+from src.domain import BPS, OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
@@ -16,7 +16,6 @@ from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
-from .decision import DecisionAPI
 from .prices import PriceAPI
 from .stats import Stats
 
@@ -33,17 +32,14 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     price_api: PriceAPI = field(default_factory=PriceAPI)
-    decision_api: DecisionAPI = field(default_factory=DecisionAPI)
     stats: Stats = field(default_factory=Stats)
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=7)
+        default_factory=lambda: collections.deque(maxlen=12)
     )
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
-
-        self.decision_api.set_credits(self.config)
 
         self.order_api = OrderApi(
             config=self.config,
@@ -152,8 +148,9 @@ class LeaderFollowerTrader(RobotBase):
 
         self.leader_mids.append(mid)
         self.leader_mids.append(mid)
+        self.leader_mids.append(mid)
 
-        await self.decide(statistics.median(self.leader_mids))
+        await self.decide(mid)
 
     # DECIDE
 
@@ -162,22 +159,37 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         current_step = self.pair.base.total_balance / self.base_step_qty
-        mid = self.decision_api.get_risk_adjusted_mid(mid, current_step)
+        mid = self.get_risk_adjusted_mid(mid, current_step)
+
+        median_mid = statistics.median(self.leader_mids)
+        unit_signal = median_mid * BPS
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(mid, bid)
+            await self.should_sell(mid, bid, unit_signal)
 
         ask = self.price_api.follower.ask
         if ask:
-            await self.should_buy(mid, ask, current_step)
+            await self.should_buy(mid, ask, current_step, unit_signal)
+
+    def get_unit_sell_signal(self, mid: Decimal) -> Decimal:
+        return self.config.credits.sell * mid * BPS
+
+    def get_unit_buy_signal(self, mid: Decimal) -> Decimal:
+        return self.config.credits.buy * mid * BPS
+
+    def get_risk_adjusted_mid(self, mid: Decimal, current_step: Decimal) -> Decimal:
+        hold_risk = self.config.credits.step * current_step * mid * BPS
+        return mid - hold_risk
 
     # SELL
+    async def should_sell(
+        self, mid: Decimal, bid: Decimal, median_mid: Decimal
+    ) -> None:
+        unit_sell_signal = self.get_unit_sell_signal(median_mid)
+        signal = (bid - median_mid) / unit_sell_signal
 
-    async def should_sell(self, mid: Decimal, bid: Decimal) -> None:
-        sell_credit = self.decision_api.get_sell_signal_min(mid)
-        signal = (bid - mid) / sell_credit
-        price = mid + sell_credit
+        price = mid + unit_sell_signal
 
         self.stats.taker.sell = price
         self.stats.signals.sell = signal
@@ -208,24 +220,24 @@ class LeaderFollowerTrader(RobotBase):
     # BUY
 
     async def should_buy(
-        self, mid: Decimal, ask: Decimal, current_step: Decimal
+        self, mid: Decimal, ask: Decimal, current_step: Decimal, median_mid: Decimal
     ) -> None:
         remaining_step = self.config.max_step - current_step
 
         if not self.base_step_qty:
             return
 
-        buy_credit = self.decision_api.get_buy_signal_min(mid)
-        signal = (mid - ask) / buy_credit
-        price = mid - buy_credit
+        unit_buy_signal = self.get_unit_buy_signal(median_mid)
+        signal = (median_mid - ask) / unit_buy_signal
+        price = mid - unit_buy_signal
 
         self.stats.taker.buy = price
         self.stats.signals.buy = signal
 
-        if remaining_step < 0.2:
+        if remaining_step < 0.3:
             return
 
-        if signal >= 1:
+        if signal >= 1.2:
             price = self.price_api.get_precise_price(price, ask)
             qty = self.base_step_qty * signal
             max_buyable = remaining_step * self.base_step_qty
@@ -246,7 +258,8 @@ class LeaderFollowerTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.stats.start_time,
-            "credits": asdict(self.decision_api.credits),
+            "step amount": self.config.quote_step_qty,
+            "max_step": self.config.max_step,
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),

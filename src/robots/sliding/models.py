@@ -18,15 +18,6 @@ class MarketPrices:
 
 
 @dataclass
-class Credits:
-    maker: Decimal = Decimal(0)
-    taker: Decimal = Decimal(0)
-    step: Decimal = Decimal(0)
-    sell: Decimal = Decimal(0)
-    buy: Decimal = Decimal(0)
-
-
-@dataclass
 class Signals:
     buy: Decimal = Decimal(0)
     sell: Decimal = Decimal(0)

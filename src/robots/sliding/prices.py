@@ -6,7 +6,7 @@ from typing import Optional
 
 from src.environment import sleep_seconds
 
-from .models import Credits, MarketPrices, Signals, Window, stopwatches
+from .models import MarketPrices, Window, stopwatches
 
 
 @dataclass

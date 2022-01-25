@@ -3,11 +3,17 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from src.exchanges.factory import ExchangeType
-from src.idgen import dict_to_hash
-from src.numberops import round_decimal_half_up
 from src.stgs.base import StrategyConfigBase, StrategyType
 
 from .inputs import LeaderFollowerInput
+
+
+class Credits(BaseModel):
+    maker: Decimal = Decimal(0)
+    taker: Decimal = Decimal(0)
+    step: Decimal = Decimal(0)
+    sell: Decimal = Decimal(0)
+    buy: Decimal = Decimal(0)
 
 
 class LeaderFollowerConfig(StrategyConfigBase):
@@ -21,12 +27,18 @@ class LeaderFollowerConfig(StrategyConfigBase):
 
     max_step: Decimal = Decimal(5)
 
-    quote_step_qty: Decimal = Decimal(12000)
+    quote_step_qty: Decimal = Decimal(10000)
 
     min_sell_qty: Decimal = Decimal(400)
     min_buy_qty: Decimal = Decimal(3000)
 
     testnet = False
+
+    credits: Credits = Credits(
+        step=Decimal(0.4),
+        sell=Decimal(6),
+        buy=Decimal(15),
+    )
 
     input: LeaderFollowerInput
 

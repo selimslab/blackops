@@ -7,6 +7,7 @@ from typing import Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
+from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.locks import Locks
 from src.monitoring import logger
@@ -94,7 +95,7 @@ class OrderApi:
             return None
 
         async with self.locks.read:
-            await self.wait_for_lock(self.exchange.locks.read)
+            await self.poll_for_lock(self.exchange.locks.read)
 
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
             if res:
@@ -122,12 +123,12 @@ class OrderApi:
         self.open_orders_fresh = False
         self.stats.cancel_fail += 1
 
-    async def wait_for_lock(self, lock):
+    async def poll_for_lock(self, lock):
         while lock.locked():
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(sleep_seconds.poll_for_lock)
 
     async def cancel_order(self, order_id) -> None:
-        await self.wait_for_lock(self.exchange.locks.cancel)
+        await self.poll_for_lock(self.exchange.locks.cancel)
 
         ok = await self.exchange.cancel_order(order_id)
 
@@ -172,7 +173,9 @@ class OrderApi:
             self.open_orders.sell.add(order_id)
 
         self.orders_in_last_second += 1
-        await asyncio.sleep(0.1)  # allow time for order to be filled
+        await asyncio.sleep(
+            sleep_seconds.wait_before_cancel
+        )  # allow time for order to be filled
         self.open_order_ids.append(order_id)
         await self.cancel_open_orders()
 
@@ -238,7 +241,7 @@ class OrderApi:
                             f"{self.pair} {side} {int(qty)} {price} : {order_log}"
                         )
                         await asyncio.sleep(
-                            0.2
+                            sleep_seconds.wait_after_failed_order
                         )  # wait a bit, maybe gets better next time
                 else:
                     self.parent_locked()
