@@ -35,23 +35,23 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=32)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=9)
+        default_factory=lambda: collections.deque(maxlen=7)
     )
 
     buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=9)
+        default_factory=lambda: collections.deque(maxlen=7)
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=36)
+        default_factory=lambda: collections.deque(maxlen=24)
     )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=32)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     def __post_init__(self) -> None:
