@@ -7,6 +7,7 @@ from typing import Optional
 
 from src.environment import sleep_seconds
 
+from .config import LeaderFollowerConfig
 from .models import MarketPrices, Window, stopwatches
 
 
@@ -17,15 +18,15 @@ class PriceAPI:
     follower: MarketPrices = field(default_factory=MarketPrices)
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=24)
+        default_factory=lambda: collections.deque(maxlen=LeaderFollowerConfig.mid_n)
     )
 
     buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=LeaderFollowerConfig.price_n)
     )
 
     sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=LeaderFollowerConfig.price_n)
     )
 
     async def update_bridge(self, quote: Decimal):

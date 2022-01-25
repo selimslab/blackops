@@ -29,11 +29,15 @@ class LeaderFollowerConfig(StrategyConfigBase):
     min_sell_qty: Decimal = Decimal(400)
     min_buy_qty: Decimal = Decimal(3000)
 
+    mid_n: int = 16
+    signal_n: int = 24
+    price_n: int = 5
+
     testnet = False
 
     credits: Credits = Credits(
-        sell=Decimal(5),
-        buy=Decimal(15),
+        sell=Decimal(3),
+        buy=Decimal(14),
     )
 
     input: LeaderFollowerInput
