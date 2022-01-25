@@ -35,15 +35,23 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     leader_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=7)
+        default_factory=lambda: collections.deque(maxlen=12)
+    )
+
+    sell_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
+
+    buy_prices: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
+        default_factory=lambda: collections.deque(maxlen=16)
     )
 
     def __post_init__(self) -> None:
@@ -167,6 +175,7 @@ class LeaderFollowerTrader(RobotBase):
         # mid = self.get_risk_adjusted_mid(mid, current_step)
 
         median_mid = statistics.median(self.leader_mids)
+        # price_mid = statistics.median(list(self.leader_mids)[-5:])
 
         bid = self.price_api.follower.bid
         if bid:
@@ -197,6 +206,8 @@ class LeaderFollowerTrader(RobotBase):
         signal = statistics.median(self.sell_signals)
 
         price = mid + unit_sell_signal
+        self.sell_prices.append(price)
+        price = statistics.median(self.sell_prices)
 
         self.stats.taker.sell = price
         self.stats.signals.sell = signal
@@ -242,6 +253,8 @@ class LeaderFollowerTrader(RobotBase):
         self.stats.signals.buy = signal
 
         price = mid - unit_buy_signal
+        self.buy_prices.append(price)
+        price = statistics.median(self.buy_prices)
         self.stats.taker.buy = price
 
         if remaining_step < 0.3:
