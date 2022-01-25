@@ -35,15 +35,15 @@ class LeaderFollowerTrader(RobotBase):
     price_api: PriceAPI = field(default_factory=PriceAPI)
 
     sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=10)
     )
 
     buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=10)
     )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
+        default_factory=lambda: collections.deque(maxlen=20)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -163,7 +163,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_pub.books_seen % 5 == 0:
+        if self.leader_pub.books_seen % 10 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
