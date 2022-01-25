@@ -47,7 +47,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=16)
+        default_factory=lambda: collections.deque(maxlen=24)
     )
 
     sell_signals: collections.deque = field(
