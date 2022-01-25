@@ -164,7 +164,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.consume_leader_book(book)
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0)
 
     async def consume_leader_book(self, book: dict) -> None:
         mid = self.leader_pub.api_client.get_mid(book)
@@ -183,24 +183,20 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        current_step = self.pair.base.total_balance / self.base_step_qty
+        # self.price_api.leader_mids.append(mid)
+        # large_window_mid = statistics.median(self.price_api.leader_mids)
+        # small_window_mid = statistics.median(list(self.price_api.leader_mids)[-5:])
 
-        self.price_api.leader_mids.append(mid)
-        large_window_mid = statistics.median(self.price_api.leader_mids)
-        small_window_mid = statistics.median(list(self.price_api.leader_mids)[-5:])
-
-        self.medians.large_window_mid = large_window_mid
-        self.medians.small_window_mid = small_window_mid
+        # self.medians.large_window_mid = large_window_mid
+        # self.medians.small_window_mid = small_window_mid
 
         bid = self.price_api.follower.bid
         if bid:
-            await self.should_sell(
-                small_window_mid, bid, current_step, large_window_mid
-            )
+            await self.should_sell(mid, bid, mid)
 
         ask = self.price_api.follower.ask
         if ask:
-            await self.should_buy(small_window_mid, ask, current_step, large_window_mid)
+            await self.should_buy(mid, ask, mid)
 
     def get_unit_sell_signal(self, mid: Decimal) -> Decimal:
         return self.config.credits.sell * mid * BPS
@@ -217,7 +213,6 @@ class LeaderFollowerTrader(RobotBase):
         self,
         small_window_mid: Decimal,
         bid: Decimal,
-        current_step: Decimal,
         large_window_mid: Decimal,
     ) -> None:
         # mid = self.get_risk_adjusted_mid(mid, current_step)
@@ -264,9 +259,10 @@ class LeaderFollowerTrader(RobotBase):
         self,
         small_window_mid: Decimal,
         ask: Decimal,
-        current_step: Decimal,
         large_window_mid: Decimal,
     ) -> None:
+        current_step = self.pair.base.total_balance / self.base_step_qty
+
         remaining_step = self.config.max_step - current_step
 
         if not self.base_step_qty:
