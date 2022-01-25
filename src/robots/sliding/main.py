@@ -164,6 +164,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.consume_leader_book(book)
+            await asyncio.sleep(0)
 
     async def consume_leader_book(self, book: dict) -> None:
         mid = self.leader_pub.api_client.get_mid(book)
@@ -235,11 +236,6 @@ class LeaderFollowerTrader(RobotBase):
 
         if not self.base_step_qty:
             return
-
-        # if current_step>0 and self.order_api.last_buy_price:
-        #     long_term_signal = (self.order_api.last_buy_price-bid) / unit_sell_signal
-        #     self.long_term_sell_signals.append(long_term_signal)
-        #     median_signal = max(statistics.median(self.long_term_sell_signals), median_signal)
 
         if median_signal >= 1:
             self.stats.sell_possible += 1
