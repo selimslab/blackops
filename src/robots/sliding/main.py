@@ -202,21 +202,22 @@ class LeaderFollowerTrader(RobotBase):
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_bid
             )
-            self.taker_prices.sell = price
 
             qty = self.base_step_qty * signal
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
             qty = int(qty)
+
             if not self.order_api.can_sell(price, qty):
                 return None
+
             await self.order_api.send_order(OrderType.SELL, price, qty)
+
         elif signal < -1:
             price = self.taker_prices.buy
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_ask
             )
-            self.taker_prices.buy = price
 
             qty = self.base_step_qty * -signal
             max_buyable = (
@@ -224,8 +225,10 @@ class LeaderFollowerTrader(RobotBase):
             )
             qty = min(qty, max_buyable)
             qty = int(qty)
+
             if not self.order_api.can_buy(price, qty):
                 return None
+
             await self.order_api.send_order(OrderType.BUY, price, qty)
 
     async def close(self) -> None:
