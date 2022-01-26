@@ -24,10 +24,10 @@ class LeaderFollowerConfig(StrategyConfigBase):
     bridge_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
     max_step: Decimal = Decimal(4)
-    quote_step_qty: Decimal = Decimal(12000)
+    quote_step_qty: Decimal = Decimal(15000)
 
     min_sell_qty: Decimal = Decimal(400)
-    min_buy_qty: Decimal = Decimal(2000)
+    min_buy_qty: Decimal = Decimal(5000)
 
     testnet = False
 
