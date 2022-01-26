@@ -43,11 +43,11 @@ class LeaderFollowerTrader(RobotBase):
     # )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     median_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -168,7 +168,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_prices_processed % 5 == 0:
+        if self.leader_prices_processed % 3 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
