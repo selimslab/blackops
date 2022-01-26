@@ -43,7 +43,7 @@ class LeaderFollowerTrader(RobotBase):
     # )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
+        default_factory=lambda: collections.deque(maxlen=6)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -169,7 +169,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_pub.books_seen % 12 == 0:
+        if self.leader_pub.books_seen % 6 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
