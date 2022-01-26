@@ -200,7 +200,7 @@ class LeaderFollowerTrader(RobotBase):
         sell_signal = statistics.mean(self.sell_signals)
         # self.median_signals.append(sell_signal)
 
-        if sell_signal > 1 and self.sell_signals[-1] > 1:
+        if sell_signal < -1 and self.sell_signals[-1] < -1:
             price = self.price_api.get_precise_price(
                 self.taker_prices.sell, self.price_api.precision_bid
             )
