@@ -1,4 +1,5 @@
 import asyncio
+from decimal import Decimal
 from typing import Callable
 
 import async_timeout

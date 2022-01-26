@@ -11,6 +11,13 @@ class BinanceBase(ExchangeAPIClientBase):
     name: str = "Binance"
 
     @staticmethod
+    def get_mid(book: dict) -> Optional[Decimal]:
+        if book:
+            data = book.get("data", {})
+            return (Decimal(data.get("a")) + Decimal(data.get("b"))) / Decimal(2)
+        return None
+
+    @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
         if not book:
             return None

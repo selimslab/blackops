@@ -43,7 +43,7 @@ class LeaderFollowerTrader(RobotBase):
     # )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=6)
+        default_factory=lambda: collections.deque(maxlen=12)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -52,6 +52,8 @@ class LeaderFollowerTrader(RobotBase):
 
     leader_prices_processed: int = 0
     follower_prices_processed: int = 0
+
+    bridge: Optional[Decimal] = None
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -121,9 +123,9 @@ class LeaderFollowerTrader(RobotBase):
         gen = create_book_consumer_generator(self.bridge_pub)
         async for book in gen:
             if book:
-                bridge = self.bridge_pub.api_client.get_mid(book)
-                if bridge:
-                    await self.price_api.update_bridge(bridge)
+                quote = self.bridge_pub.api_client.get_mid(book)
+                if quote:
+                    self.bridge = quote
             await asyncio.sleep(0)
 
     # FOLLOWER
@@ -153,22 +155,23 @@ class LeaderFollowerTrader(RobotBase):
             if book:
                 await self.consume_leader_book(book)
                 self.leader_prices_processed += 1
-
             await asyncio.sleep(0)
 
     async def consume_leader_book(self, book: dict) -> None:
-        mid = self.leader_pub.api_client.get_mid(book)
-        if not mid:
-            return
-
-        mid = self.price_api.apply_bridge_to_price(mid, self.config.input.use_bridge)
+        data = book.get("data", {})
+        mid = (Decimal(data.get("a")) + Decimal(data.get("b"))) / Decimal(2)
 
         if not mid:
             return
+
+        if self.bridge:
+            mid *= self.bridge
+        else:
+            return None
 
         self.add_price_point(mid)
 
-        if self.leader_pub.books_seen % 6 == 0:
+        if self.leader_pub.books_seen % 12 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
