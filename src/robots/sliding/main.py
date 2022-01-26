@@ -50,6 +50,9 @@ class LeaderFollowerTrader(RobotBase):
     taker_prices: PriceWindow = field(default_factory=PriceWindow)
     signal: Decimal = Decimal("0")
 
+    leader_prices_processed: int = 0
+    follower_prices_processed: int = 0
+
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
 
@@ -130,6 +133,7 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.update_follower_prices(book)
+                self.follower_prices_processed += 1
             await asyncio.sleep(0)
 
     async def update_follower_prices(self, book: dict) -> None:
@@ -149,6 +153,8 @@ class LeaderFollowerTrader(RobotBase):
         async for book in gen:
             if book:
                 await self.consume_leader_book(book)
+                self.leader_prices_processed += 1
+
             await asyncio.sleep(0)
 
     async def consume_leader_book(self, book: dict) -> None:
@@ -239,5 +245,7 @@ class LeaderFollowerTrader(RobotBase):
                 "taker": asdict(self.taker_prices),
                 "bn seen": self.leader_pub.books_seen,
                 "bt seen": self.follower_pub.books_seen,
+                "bn proc": self.leader_prices_processed,
+                "bt proc": self.follower_prices_processed,
             },
         }
