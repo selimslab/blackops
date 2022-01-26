@@ -158,7 +158,7 @@ class LeaderFollowerTrader(RobotBase):
             if mid:
                 await self.consume_leader_book(mid)
                 self.leader_prices_processed += 1
-                await asyncio.sleep(0)
+            await asyncio.sleep(0)
 
     async def consume_leader_book(self, mid: Decimal) -> None:
         if self.bridge:
@@ -200,12 +200,12 @@ class LeaderFollowerTrader(RobotBase):
         sell_signal = statistics.mean(self.sell_signals)
         # self.median_signals.append(sell_signal)
 
-        if sell_signal < -1 and self.sell_signals[-1] < -1:
+        if sell_signal > 1 and self.sell_signals[-1] > 1:
             price = self.price_api.get_precise_price(
                 self.taker_prices.sell, self.price_api.precision_bid
             )
 
-            qty = self.base_step_qty * abs(sell_signal)
+            qty = self.base_step_qty * sell_signal
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
             qty = int(qty)
