@@ -205,7 +205,7 @@ class LeaderFollowerTrader(RobotBase):
                 self.taker_prices.sell, self.price_api.precision_bid
             )
 
-            qty = self.base_step_qty * sell_signal
+            qty = self.base_step_qty * abs(sell_signal)
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
             qty = int(qty)
