@@ -188,6 +188,8 @@ class LeaderFollowerTrader(RobotBase):
     async def decide(self) -> None:
         if not self.base_step_qty:
             return
+        if not self.signals:
+            return
 
         signal = statistics.mean(self.signals)
         self.signal = signal
