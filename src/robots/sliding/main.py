@@ -177,9 +177,9 @@ class LeaderFollowerTrader(RobotBase):
         bid = self.price_api.follower.bid
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
-            signal = (bid - mid) / unit_signal
+            signal = (mid - bid) / unit_signal
             self.sell_signals.append(signal)
-            price = mid + unit_signal
+            price = mid - unit_signal
             self.taker_prices.sell = price
 
         ask = self.price_api.follower.ask
@@ -204,7 +204,7 @@ class LeaderFollowerTrader(RobotBase):
         sell_signal = statistics.mean(self.sell_signals)
         # self.median_signals.append(sell_signal)
 
-        if sell_signal > 1 and self.sell_signals[-1] > 1:
+        if sell_signal < 1 and self.sell_signals[-1] < 1:
             price = self.price_api.get_precise_price(
                 self.taker_prices.sell, self.price_api.precision_bid
             )
