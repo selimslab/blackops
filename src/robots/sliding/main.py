@@ -220,7 +220,7 @@ class LeaderFollowerTrader(RobotBase):
             await self.order_api.send_order(OrderType.SELL, price, qty)
             return
 
-        buy_signal = statistics.mean(self.sell_signals)
+        buy_signal = statistics.mean(self.buy_signals)
 
         if buy_signal > 1 and self.buy_signals[-1] > 1:
             price = self.price_api.get_precise_price(
