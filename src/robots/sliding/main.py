@@ -165,7 +165,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_prices_processed % 3 == 0:
+        if self.leader_prices_processed % 5 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
@@ -173,7 +173,7 @@ class LeaderFollowerTrader(RobotBase):
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
             signal = (bid - mid) / unit_signal
-            self.signals.append(-signal)
+            self.signals.append(signal)
             price = mid + unit_signal
             self.taker_prices.sell = price
 
@@ -181,7 +181,7 @@ class LeaderFollowerTrader(RobotBase):
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
             signal = (mid - ask) / unit_signal
-            self.signals.append(signal)
+            self.signals.append(-signal)
             price = mid - unit_signal
             self.taker_prices.buy = price
 
@@ -192,7 +192,7 @@ class LeaderFollowerTrader(RobotBase):
         signal = statistics.mean(self.signals)
         self.signal = signal
 
-        if signal < -1:
+        if signal > 1:
             price = self.taker_prices.sell
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_bid
@@ -206,7 +206,7 @@ class LeaderFollowerTrader(RobotBase):
             if not self.order_api.can_sell(price, qty):
                 return None
             await self.order_api.send_order(OrderType.SELL, price, qty)
-        elif signal > 1:
+        elif signal < -1:
             price = self.taker_prices.buy
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_ask
