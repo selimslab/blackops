@@ -42,12 +42,12 @@ class LeaderFollowerTrader(RobotBase):
     #     default_factory=lambda: collections.deque(maxlen=6)
     # )
 
-    signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+    sell_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=4)
     )
 
-    median_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+    buy_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=4)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -133,7 +133,6 @@ class LeaderFollowerTrader(RobotBase):
             await asyncio.sleep(0)
 
     # FOLLOWER
-
     async def consume_follower_pub(self) -> None:
         gen = create_book_consumer_generator(self.follower_pub)
         async for book in gen:
@@ -169,7 +168,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_prices_processed % 5 == 0:
+        if self.leader_prices_processed % 4 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
@@ -177,7 +176,7 @@ class LeaderFollowerTrader(RobotBase):
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
             signal = (bid - mid) / unit_signal
-            self.signals.append(signal)
+            self.sell_signals.append(signal)
             price = mid + unit_signal
             self.taker_prices.sell = price
 
@@ -185,26 +184,28 @@ class LeaderFollowerTrader(RobotBase):
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
             signal = (mid - ask) / unit_signal
-            self.signals.append(-signal)
+            self.buy_signals.append(signal)
             price = mid - unit_signal
             self.taker_prices.buy = price
 
     async def decide(self) -> None:
         if not self.base_step_qty:
             return
-        if not self.signals:
+
+        if not self.sell_signals:
             return
 
-        signal = statistics.median(self.signals)
-        self.median_signals.append(signal)
+        self.decisions += 1
 
-        if signal > 1:
-            price = self.taker_prices.sell
+        sell_signal = statistics.median(self.sell_signals)
+        # self.median_signals.append(sell_signal)
+
+        if sell_signal > 1 and self.sell_signals[-1] > 1:
             price = self.price_api.get_precise_price(
-                price, self.price_api.precision_bid
+                self.taker_prices.sell, self.price_api.precision_bid
             )
 
-            qty = self.base_step_qty * signal
+            qty = self.base_step_qty * sell_signal
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
             qty = int(qty)
@@ -213,14 +214,16 @@ class LeaderFollowerTrader(RobotBase):
                 return None
 
             await self.order_api.send_order(OrderType.SELL, price, qty)
+            return
 
-        elif signal < -1:
-            price = self.taker_prices.buy
+        buy_signal = statistics.median(self.sell_signals)
+
+        if buy_signal > 1 and self.buy_signals[-1] > 1:
             price = self.price_api.get_precise_price(
-                price, self.price_api.precision_ask
+                self.taker_prices.buy, self.price_api.precision_ask
             )
 
-            qty = self.base_step_qty * -signal
+            qty = self.base_step_qty * buy_signal
             max_buyable = (
                 self.config.max_step * self.base_step_qty - self.pair.base.total_balance
             )
@@ -232,8 +235,6 @@ class LeaderFollowerTrader(RobotBase):
 
             await self.order_api.send_order(OrderType.BUY, price, qty)
 
-        self.decisions += 1
-
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
 
@@ -241,7 +242,8 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
-            "median_signals": list(self.median_signals),
+            "buy signals": list(self.buy_signals),
+            "sell signals": list(self.sell_signals),
             "decisions": self.decisions,
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
