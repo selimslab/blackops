@@ -1,4 +1,5 @@
 import asyncio
+import collections
 import decimal
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -15,6 +16,9 @@ class PriceAPI:
     follower: MarketPrices = field(default_factory=MarketPrices)
     precision_ask: Decimal = Decimal(0)
     precision_bid: Decimal = Decimal(0)
+
+    asks: collections.deque = field(default_factory=lambda: collections.deque(maxlen=5))
+    bids: collections.deque = field(default_factory=lambda: collections.deque(maxlen=5))
 
     async def update_bridge(self, quote: Decimal):
         async with stopwatches.bridge.stopwatch(
@@ -44,6 +48,8 @@ class PriceAPI:
         ):
             self.follower.ask = ask
             self.follower.bid = bid
+            self.asks.append(ask)
+            self.bids.append(bid)
             if not self.precision_ask:
                 self.precision_ask = ask
                 self.precision_bid = bid

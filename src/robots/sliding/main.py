@@ -190,7 +190,7 @@ class LeaderFollowerTrader(RobotBase):
             price = mid - unit_signal
             self.taker_prices.buy = price
 
-        self.taker_prices.brdiged_mid = mid
+        self.taker_prices.bridged_mid = mid
 
     async def decide(self) -> None:
         if not self.base_step_qty:
@@ -257,6 +257,8 @@ class LeaderFollowerTrader(RobotBase):
                 "market": asdict(self.price_api.follower),
                 "bridge": self.price_api.bridge,
                 "taker": asdict(self.taker_prices),
+                "asks": list(self.price_api.asks),
+                "bids": list(self.price_api.bids),
                 "bn seen": self.leader_pub.books_seen,
                 "bt seen": self.follower_pub.books_seen,
                 "bn proc": self.leader_prices_processed,
