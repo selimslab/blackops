@@ -43,7 +43,7 @@ class LeaderFollowerTrader(RobotBase):
     # )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
+        default_factory=lambda: collections.deque(maxlen=8)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
