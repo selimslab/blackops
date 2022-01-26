@@ -35,15 +35,15 @@ class LeaderFollowerTrader(RobotBase):
     price_api: PriceAPI = field(default_factory=PriceAPI)
 
     sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
+        default_factory=lambda: collections.deque(maxlen=6)
     )
 
     buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
+        default_factory=lambda: collections.deque(maxlen=6)
     )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=20)
+        default_factory=lambda: collections.deque(maxlen=12)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
