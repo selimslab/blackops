@@ -188,6 +188,8 @@ class LeaderFollowerTrader(RobotBase):
             price = mid - unit_signal
             self.taker_prices.buy = price
 
+        self.taker_prices.mid = mid
+
     async def decide(self) -> None:
         if not self.base_step_qty:
             return

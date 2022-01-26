@@ -8,6 +8,7 @@ from src.periodic import StopwatchAPI
 @dataclass
 class PriceWindow:
     sell: Decimal = Decimal(0)
+    mid: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
 
