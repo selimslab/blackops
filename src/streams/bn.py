@@ -1,5 +1,4 @@
 import asyncio
-from decimal import Decimal
 from typing import Callable
 
 import async_timeout
@@ -8,6 +7,7 @@ from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
+from src.pubsub.pubs import BinancePub
 
 
 class BinanceWebSocketException(Exception):
@@ -94,13 +94,24 @@ def create_book_stream(symbol: str):
     return reconnecting_binance_generator(create_new_socket_conn)
 
 
+proc = 0
+
+
+async def work():
+    global proc
+    await asyncio.sleep(0.01)
+    proc += 1
+    print("proc", proc)
+
+
 async def test_orderbook_stream(symbol):
     gen = create_book_stream(symbol)
     seen = 0
     async with async_timeout.timeout(10):
         async for book in gen:
-            print(seen, book)
             seen += 1
+            print("seen", seen)
+            await work()
 
 
 async def main():
@@ -112,6 +123,26 @@ async def main():
     await client.close_connection()
 
 
+async def consumer(pub: BinancePub):
+    proc = 0
+    while True:
+        if pub.mids:
+            proc += len(pub.mids)
+            mid = pub.get_mid()
+            print("seen", pub.books_seen, "proc", proc, "mid", mid)
+        await asyncio.sleep(0)
+
+    # async for book in create_book_consumer_generator(pub):
+    #     # await asyncio.sleep(0.00)
+    #     proc+=1
+
+
+async def test_pub(symbol):
+    bp = BinancePub(stream=create_book_stream(symbol), pubsub_key="test")
+    await asyncio.gather(bp.run(), consumer(bp))
+
+
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream("ADAUSDT"))
+    # asyncio.run(test_orderbook_stream("ETHUSDT"))
     # asyncio.run(main())
+    asyncio.run(test_pub("ETHUSDT"))

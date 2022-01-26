@@ -36,22 +36,19 @@ class BtcturkBase(ExchangeAPIClientBase):
     def parse_prices(orders: List[dict]) -> list:
         if not orders:
             return []
-
-        str_prices = [
-            order.get("P") for order in orders if order and isinstance(order, dict)
-        ]
-        prices = [Decimal(price) for price in str_prices if price]
-        return prices
+        try:
+            return [float(order["P"]) for order in orders]
+        except Exception as e:
+            return []
 
     @staticmethod
     def get_best_bid(book: dict) -> Optional[Decimal]:
         if not book:
             return None
 
-        purchase_orders = book.get("BO", [])
-        prices = BtcturkBase.parse_prices(purchase_orders)
+        prices = BtcturkBase.parse_prices(book.get("BO", []))
         if prices:
-            return max(prices)
+            return Decimal(max(prices))
 
         return None
 
@@ -60,10 +57,9 @@ class BtcturkBase(ExchangeAPIClientBase):
         if not book:
             return None
 
-        sales_orders = book.get("AO", [])
-        prices = BtcturkBase.parse_prices(sales_orders)
+        prices = BtcturkBase.parse_prices(book.get("AO", []))
         if prices:
-            return min(prices)
+            return Decimal(min(prices))
 
         return None
 

@@ -21,7 +21,7 @@ def sliding_window_factory(config: LeaderFollowerConfig):
 
     pair = create_asset_pair(stg.base, stg.quote)
 
-    follower_pub = pub_factory.create_book_pub_if_not_exists(
+    follower_pub = pub_factory.create_bt_pub_if_not_exists(
         ex_type=ExchangeType(config.follower_exchange),
         network=network,
         symbol=pair.symbol,  # eth try
@@ -33,19 +33,19 @@ def sliding_window_factory(config: LeaderFollowerConfig):
 
     bridge_pub = None
     if stg.bridge:
-        leader_pub = pub_factory.create_book_pub_if_not_exists(
+        leader_pub = pub_factory.create_binance_pub_if_not_exists(
             ex_type=ExchangeType(config.leader_exchange),
             network=network,
             symbol=stg.base + stg.bridge,  # btc usd
         )
 
-        bridge_pub = pub_factory.create_book_pub_if_not_exists(
+        bridge_pub = pub_factory.create_bt_pub_if_not_exists(
             ex_type=ExchangeType(config.bridge_exchange),
             network=network,
             symbol=stg.bridge + stg.quote,  # usd try
         )
     else:
-        leader_pub = pub_factory.create_book_pub_if_not_exists(
+        leader_pub = pub_factory.create_binance_pub_if_not_exists(
             ex_type=ExchangeType(config.leader_exchange),
             network=network,
             symbol=pair.symbol,

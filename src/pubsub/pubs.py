@@ -1,6 +1,7 @@
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 from typing import AsyncGenerator, Optional, Union
 
 from src.environment import sleep_seconds
@@ -71,4 +72,37 @@ class BookPub(PublisherBase):
             await asyncio.sleep(0)
 
 
-PubsubProducer = Union[BalancePub, BookPub]
+@dataclass
+class BinancePub(PublisherBase):
+
+    stream: AsyncGenerator
+    api_client: ExchangeAPIClientBase
+    mids: list = field(default_factory=list)
+    books_seen: int = 0
+
+    def get_mid(self):
+        if len(self.mids) == 0:
+            return None
+        mid = sum(self.mids) / len(self.mids)
+        self.mids = []
+        return Decimal(mid)
+
+    async def run(self):
+        await self.consume_stream()
+
+    async def consume_stream(self):
+        if not self.stream:
+            raise ValueError("No stream")
+
+        async for book in self.stream:
+            if book:
+                try:
+                    if "data" in book:
+                        mid = (float(book["data"]["a"]) + float(book["data"]["b"])) / 2
+                        self.mids.append(mid)
+                        self.books_seen += 1
+                except Exception as e:
+                    continue
+
+
+PubsubProducer = Union[BalancePub, BookPub, BinancePub]

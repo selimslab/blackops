@@ -5,7 +5,7 @@ import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 
-from .pubs import BalancePub, BookPub, PubsubProducer
+from .pubs import BalancePub, BinancePub, BookPub, PubsubProducer
 
 
 @dataclass
@@ -17,7 +17,26 @@ class PubFactory:
         if pubsub_key in self.PUBS:
             del self.PUBS[pubsub_key]  # type: ignore
 
-    def create_book_pub_if_not_exists(
+    def create_binance_pub_if_not_exists(
+        self, ex_type: ExchangeType, network: NetworkType, symbol: str
+    ) -> BinancePub:
+
+        pubsub_key = "_".join((ex_type.value, network.value, symbol))
+        if pubsub_key in self.PUBS:
+            return self.PUBS[pubsub_key]  # type: ignore
+
+        api_client = api_client_factory.create_api_client_if_not_exists(
+            ex_type, network
+        )
+
+        stream = bn_streams.create_book_stream(symbol)
+        pub = BinancePub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
+
+        self.PUBS[pubsub_key] = pub
+
+        return pub
+
+    def create_bt_pub_if_not_exists(
         self, ex_type: ExchangeType, network: NetworkType, symbol: str
     ) -> BookPub:
 
@@ -29,11 +48,7 @@ class PubFactory:
             ex_type, network
         )
 
-        if ex_type == ExchangeType.BINANCE:
-            stream = bn_streams.create_book_stream(symbol)
-        elif ex_type == ExchangeType.BTCTURK:
-            stream = btc_streams.create_book_stream(symbol)
-
+        stream = btc_streams.create_book_stream(symbol)
         pub = BookPub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
 
         self.PUBS[pubsub_key] = pub

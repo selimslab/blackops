@@ -11,8 +11,8 @@ from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
 from src.periodic import periodic
-from src.pubsub import create_book_consumer_generator
-from src.pubsub.pubs import BalancePub, BookPub
+from src.pubsub import create_binance_consumer_generator, create_book_consumer_generator
+from src.pubsub.pubs import BalancePub, BinancePub, BookPub
 from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
@@ -25,7 +25,7 @@ from .prices import PriceAPI
 class LeaderFollowerTrader(RobotBase):
     config: LeaderFollowerConfig
 
-    leader_pub: BookPub
+    leader_pub: BinancePub
     follower_pub: BookPub
     balance_pub: BalancePub
     bridge_pub: Optional[BookPub] = None
@@ -150,20 +150,13 @@ class LeaderFollowerTrader(RobotBase):
 
     # LEADER
     async def consume_leader_pub(self) -> None:
-        gen = create_book_consumer_generator(self.leader_pub)
-        async for book in gen:
-            if book:
-                await self.consume_leader_book(book)
-                self.leader_prices_processed += 1
+        gen = create_binance_consumer_generator(self.leader_pub)
+        async for mid in gen:
+            await self.consume_leader_book(mid)
+            self.leader_prices_processed += 1
             await asyncio.sleep(0)
 
-    async def consume_leader_book(self, book: dict) -> None:
-        data = book.get("data", {})
-        mid = (Decimal(data.get("a")) + Decimal(data.get("b"))) / Decimal(2)
-
-        if not mid:
-            return
-
+    async def consume_leader_book(self, mid: Decimal) -> None:
         if self.bridge:
             mid *= self.bridge
         else:
@@ -171,8 +164,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_pub.books_seen % 12 == 0:
-            await self.decide()
+        await self.decide()
 
     def add_price_point(self, mid: Decimal):
         bid = self.price_api.follower.bid
