@@ -43,11 +43,11 @@ class LeaderFollowerTrader(RobotBase):
     # )
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=4)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=4)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
@@ -197,7 +197,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.decisions += 1
 
-        sell_signal = statistics.median(self.sell_signals)
+        sell_signal = statistics.mean(self.sell_signals)
         # self.median_signals.append(sell_signal)
 
         if sell_signal > 1 and self.sell_signals[-1] > 1:
@@ -216,7 +216,7 @@ class LeaderFollowerTrader(RobotBase):
             await self.order_api.send_order(OrderType.SELL, price, qty)
             return
 
-        buy_signal = statistics.median(self.sell_signals)
+        buy_signal = statistics.mean(self.sell_signals)
 
         if buy_signal > 1 and self.buy_signals[-1] > 1:
             price = self.price_api.get_precise_price(
