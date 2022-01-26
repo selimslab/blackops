@@ -73,6 +73,30 @@ class BookPub(PublisherBase):
 
 
 @dataclass
+class BTPub(PublisherBase):
+    stream: AsyncGenerator
+    api_client: ExchangeAPIClientBase
+
+    books_seen: int = 0
+
+    ask: Decimal = Decimal(0)
+    bid: Decimal = Decimal(0)
+
+    async def run(self):
+        await self.consume_stream()
+
+    async def consume_stream(self):
+        if not self.stream:
+            raise ValueError("No stream")
+
+        async for book in self.stream:
+            if book:
+                self.books_seen += 1
+
+            await asyncio.sleep(0)
+
+
+@dataclass
 class BinancePub(PublisherBase):
 
     stream: AsyncGenerator
@@ -82,7 +106,7 @@ class BinancePub(PublisherBase):
 
     def get_mid(self):
         if len(self.mids) == 0:
-            return None
+            return
         mid = sum(self.mids) / len(self.mids)
         self.mids = []
         return Decimal(mid)

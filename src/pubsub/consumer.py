@@ -16,7 +16,5 @@ async def create_book_consumer_generator(pub: BookPub) -> AsyncGenerator:
 
 async def create_binance_consumer_generator(pub: BinancePub) -> AsyncGenerator:
     while True:
-        mid = pub.get_mid()
-        if mid:
-            yield mid
-        await asyncio.sleep(0.01)
+        yield pub.get_mid()
+        await asyncio.sleep(0.002)

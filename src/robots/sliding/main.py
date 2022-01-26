@@ -152,9 +152,10 @@ class LeaderFollowerTrader(RobotBase):
     async def consume_leader_pub(self) -> None:
         gen = create_binance_consumer_generator(self.leader_pub)
         async for mid in gen:
-            await self.consume_leader_book(mid)
-            self.leader_prices_processed += 1
-            await asyncio.sleep(0)
+            if mid:
+                await self.consume_leader_book(mid)
+                self.leader_prices_processed += 1
+                await asyncio.sleep(0)
 
     async def consume_leader_book(self, mid: Decimal) -> None:
         if self.bridge:
