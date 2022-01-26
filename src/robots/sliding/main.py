@@ -161,6 +161,8 @@ class LeaderFollowerTrader(RobotBase):
             await asyncio.sleep(0)
 
     async def consume_leader_book(self, mid: Decimal) -> None:
+        self.taker_prices.mid = mid
+
         if self.bridge:
             mid *= self.bridge
         else:
@@ -188,7 +190,7 @@ class LeaderFollowerTrader(RobotBase):
             price = mid - unit_signal
             self.taker_prices.buy = price
 
-        self.taker_prices.mid = mid
+        self.taker_prices.brdiged_mid = mid
 
     async def decide(self) -> None:
         if not self.base_step_qty:
