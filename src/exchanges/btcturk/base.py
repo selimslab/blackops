@@ -37,7 +37,7 @@ class BtcturkBase(ExchangeAPIClientBase):
         if not orders:
             return []
         try:
-            return [float(order["P"]) for order in orders]
+            return [Decimal(order["P"]) for order in orders]
         except Exception as e:
             return []
 
@@ -48,7 +48,7 @@ class BtcturkBase(ExchangeAPIClientBase):
 
         prices = BtcturkBase.parse_prices(book.get("BO", []))
         if prices:
-            return Decimal(max(prices))
+            return max(prices)
 
         return None
 
@@ -59,7 +59,7 @@ class BtcturkBase(ExchangeAPIClientBase):
 
         prices = BtcturkBase.parse_prices(book.get("AO", []))
         if prices:
-            return Decimal(min(prices))
+            return min(prices)
 
         return None
 
