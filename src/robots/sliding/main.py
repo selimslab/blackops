@@ -188,7 +188,7 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             return
 
-        signal = statistics.median(self.signals)
+        signal = statistics.mean(self.signals)
         self.signal = signal
 
         if signal > 1:
