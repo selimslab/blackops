@@ -34,13 +34,13 @@ class LeaderFollowerTrader(RobotBase):
 
     price_api: PriceAPI = field(default_factory=PriceAPI)
 
-    sell_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=6)
-    )
+    # sell_prices: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=6)
+    # )
 
-    buy_prices: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=6)
-    )
+    # buy_prices: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=6)
+    # )
 
     signals: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=12)
@@ -163,7 +163,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_price_point(mid)
 
-        if self.leader_pub.books_seen % 10 == 0:
+        if self.leader_pub.books_seen % 12 == 0:
             await self.decide()
 
     def add_price_point(self, mid: Decimal):
@@ -173,7 +173,7 @@ class LeaderFollowerTrader(RobotBase):
             signal = (bid - mid) / unit_signal
             self.signals.append(signal)
             price = mid + unit_signal
-            self.sell_prices.append(price)
+            self.taker_prices.sell = price
 
         ask = self.price_api.follower.ask
         if ask:
@@ -181,7 +181,7 @@ class LeaderFollowerTrader(RobotBase):
             signal = (mid - ask) / unit_signal
             self.signals.append(-signal)
             price = mid - unit_signal
-            self.buy_prices.append(price)
+            self.taker_prices.buy = price
 
     async def decide(self) -> None:
         if not self.base_step_qty:
@@ -191,7 +191,7 @@ class LeaderFollowerTrader(RobotBase):
         self.signal = signal
 
         if signal > 1:
-            price = statistics.median(list(self.sell_prices)[-3:])
+            price = self.taker_prices.sell
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_bid
             )
@@ -205,7 +205,7 @@ class LeaderFollowerTrader(RobotBase):
                 return None
             await self.order_api.send_order(OrderType.SELL, price, qty)
         elif signal < -1:
-            price = statistics.median(list(self.buy_prices)[-3:])
+            price = self.taker_prices.buy
             price = self.price_api.get_precise_price(
                 price, self.price_api.precision_ask
             )
