@@ -140,7 +140,6 @@ class LeaderFollowerTrader(RobotBase):
         ask = self.follower_pub.api_client.get_best_ask(book)
         bid = self.follower_pub.api_client.get_best_bid(book)
         if ask and bid:
-
             if not self.base_step_qty:
                 mid = (ask + bid) / Decimal(2)
                 self.set_base_step_qty(mid)
