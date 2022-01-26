@@ -64,11 +64,10 @@ class BookPub(PublisherBase):
             raise ValueError("No api_client")
 
         async for book in self.stream:
-            if book == self.prev_book:
-                continue
-            self.book = book
-            self.prev_book = book
-            self.books_seen += 1
+            if book and book != self.prev_book:
+                self.book = book
+                self.prev_book = book
+                self.books_seen += 1
             await asyncio.sleep(0)
 
 
