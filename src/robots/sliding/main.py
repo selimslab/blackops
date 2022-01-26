@@ -55,6 +55,7 @@ class LeaderFollowerTrader(RobotBase):
 
     leader_prices_processed: int = 0
     follower_prices_processed: int = 0
+    decisions: int = 0
 
     bridge: Optional[Decimal] = None
 
@@ -231,6 +232,8 @@ class LeaderFollowerTrader(RobotBase):
 
             await self.order_api.send_order(OrderType.BUY, price, qty)
 
+        self.decisions += 1
+
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
 
@@ -239,6 +242,7 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "median_signals": list(self.median_signals),
+            "decisions": self.decisions,
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
