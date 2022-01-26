@@ -43,12 +43,15 @@ class LeaderFollowerTrader(RobotBase):
     # )
 
     signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=8)
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
+
+    median_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
     taker_prices: PriceWindow = field(default_factory=PriceWindow)
-    signal: Decimal = Decimal("0")
 
     leader_prices_processed: int = 0
     follower_prices_processed: int = 0
@@ -191,8 +194,8 @@ class LeaderFollowerTrader(RobotBase):
         if not self.signals:
             return
 
-        signal = statistics.mean(self.signals)
-        self.signal = signal
+        signal = statistics.median(self.signals)
+        self.median_signals.append(signal)
 
         if signal > 1:
             price = self.taker_prices.sell
@@ -232,7 +235,7 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
-            "signal": self.signal,
+            "median_signals": list(self.median_signals),
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
