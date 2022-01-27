@@ -125,6 +125,9 @@ class LeaderFollowerTrader(RobotBase):
 
         self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
 
+        if not self.base_step_qty:
+            self.set_base_step_qty(self.taker.mid)
+
         self.add_signal()
 
         await self.decide()
@@ -158,9 +161,6 @@ class LeaderFollowerTrader(RobotBase):
         self.market.ask = self.follower_pub.ask
         self.market.bid = self.follower_pub.bid
         self.follower_seen += 1
-
-        if not self.base_step_qty:
-            self.set_base_step_qty(self.follower_pub.mid)
 
         self.add_signal()
 

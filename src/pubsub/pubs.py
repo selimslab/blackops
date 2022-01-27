@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import AsyncGenerator, Dict, Optional, Union
+from typing import AsyncGenerator, Dict, Union
 
 from src.domain.models import Asset, AssetSymbol
 from src.environment import sleep_seconds
