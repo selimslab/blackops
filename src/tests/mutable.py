@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from re import A
 
 
 @dataclass
@@ -14,5 +15,11 @@ class Asset:
 a = Asset()
 lst = [a]
 a.free = 4345
+
+print(lst)
+
+b = a
+
+b.free = 0
 
 print(lst)

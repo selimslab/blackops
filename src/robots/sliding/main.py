@@ -1,5 +1,6 @@
 import asyncio
 import collections
+import copy
 import decimal
 import statistics
 from dataclasses import asdict, dataclass, field
@@ -169,10 +170,9 @@ class LeaderFollowerTrader(RobotBase):
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
-                    signal=self.signals.sell,
-                    ask=self.follower_pub.ask,
-                    bid=self.follower_pub.bid,
-                    taker=self.taker,
+                    ask=copy(self.follower_pub.ask),
+                    bid=copy(self.follower_pub.bid),
+                    taker=copy(self.taker),
                 )
                 await self.order_api.send_order(
                     OrderType.SELL, price, qty, decision_input
@@ -183,10 +183,9 @@ class LeaderFollowerTrader(RobotBase):
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
-                    signal=self.signals.buy,
-                    ask=self.follower_pub.ask,
-                    bid=self.follower_pub.bid,
-                    taker=self.taker,
+                    ask=copy(self.follower_pub.ask),
+                    bid=copy(self.follower_pub.bid),
+                    taker=copy(self.taker),
                 )
                 await self.order_api.send_order(
                     OrderType.BUY, price, qty, decision_input

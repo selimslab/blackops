@@ -52,10 +52,9 @@ class OrderStats:
 
 @dataclass
 class OrderDecisionInput:
-    signal: Decimal = Decimal(0)
-    taker: Theo = field(default_factory=Theo)
     ask: Optional[Decimal] = None
     bid: Optional[Decimal] = None
+    taker: Theo = field(default_factory=Theo)
 
 
 @dataclass
