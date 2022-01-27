@@ -3,8 +3,7 @@ import collections
 import traceback
 from dataclasses import dataclass, field
 from decimal import Decimal
-from lib2to3.pgen2.token import OP
-from typing import Optional
+from typing import Dict, Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType
@@ -48,13 +47,12 @@ class OrderStats:
 
 @dataclass
 class OrderDecisionInput:
-    mean_signal: Decimal
-    last_signal: Decimal
-    mid: Decimal
-    ask: Decimal
-    bid: Decimal
-    theo_sell: Decimal
-    theo_buy: Decimal
+    signal: Decimal = Decimal(0)
+    mid: Decimal = Decimal(0)
+    ask: Decimal = Decimal(0)
+    bid: Decimal = Decimal(0)
+    theo_sell: Decimal = Decimal(0)
+    theo_buy: Decimal = Decimal(0)
 
 
 @dataclass
@@ -64,7 +62,7 @@ class Order:
     side: str
     price: Decimal
     qty: Decimal
-    bidask: Optional[Decimal] = None
+    input: Optional[OrderDecisionInput] = None
 
 
 @dataclass
@@ -92,7 +90,7 @@ class OrderApi:
     orders_in_last_second: int = 0
     max_orders_per_second: int = 3
 
-    market_prices: dict = field(default_factory=dict)
+    inputs: Dict[OrderId, OrderDecisionInput] = field(default_factory=dict)
 
     async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
@@ -140,8 +138,8 @@ class OrderApi:
         else:
             self.pair.base.free += order.qty
 
-        if order.order_id in self.market_prices:
-            del self.market_prices[order.order_id]
+        if order.order_id in self.inputs:
+            del self.inputs[order.order_id]
 
     def cancel_failed(self, order: Order) -> None:
         # couldn't cancel but maybe filled
@@ -186,7 +184,7 @@ class OrderApi:
                 qty=Decimal(order_dict.get("leftAmount", 0)),
                 symbol=order_dict.get("pairSymbol"),
                 side=order_dict.get("type"),
-                bidask=self.market_prices.get(order_dict.get("id")),
+                input=self.inputs.get(order_dict.get("id")),
             )
             for order_dict in orderlist
         ]
@@ -195,7 +193,7 @@ class OrderApi:
             if order.order_id not in self.cancelled_orders:
                 self.open_orders.append(order)
 
-        self.market_prices = {}
+        self.inputs = {}
         self.open_orders_fresh = True
         self.cancelled_orders = {}
         self.stats.refreshed += 1
@@ -254,7 +252,7 @@ class OrderApi:
         side: OrderType,
         price: Decimal,
         qty: int,
-        bidask: Optional[Decimal] = None,
+        input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
             if not self.can_order(side, price, qty):
@@ -277,11 +275,11 @@ class OrderApi:
                             price=price,
                             qty=Decimal(qty),
                             symbol=self.pair.symbol,
-                            bidask=bidask,
+                            input=input,
                         )
-                        self.market_prices[order_id] = bidask
+                        if input:
+                            self.inputs[order_id] = input
                         await self.deliver_ok(order)
-
                     else:
                         # delivered but failed
                         logger.info(f"{self.pair} {side} {qty} {price} : {order_log}")

@@ -175,16 +175,14 @@ class LeaderFollowerTrader(RobotBase):
             unit_signal = self.config.unit_signal_bps.sell * mid
             signal = (bid - mid) / unit_signal
             self.leader_sell_signals.append(signal)
-            price = mid + unit_signal
-            self.taker_prices.sell = price
+            self.taker_prices.sell = mid + unit_signal
 
         ask = self.bidask.ask
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
             signal = (mid - ask) / unit_signal
             self.leader_buy_signals.append(signal)
-            price = mid - unit_signal
-            self.taker_prices.buy = price
+            self.taker_prices.buy = mid - unit_signal
 
     async def decide(self):
 
@@ -199,13 +197,29 @@ class LeaderFollowerTrader(RobotBase):
         res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
         if res:
             price, qty = res
-            await self.order_api.send_order(OrderType.SELL, price, qty, self.bidask.bid)
+            decision_input = OrderDecisionInput(
+                signal=self.buy_signal,
+                mid=self.taker_prices.mid,
+                ask=self.bidask.ask,
+                bid=self.bidask.bid,
+                theo_buy=self.taker_prices.buy,
+                theo_sell=self.taker_prices.sell,
+            )
+            await self.order_api.send_order(OrderType.SELL, price, qty, decision_input)
             return
 
         res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
         if res:
             price, qty = res
-            await self.order_api.send_order(OrderType.BUY, price, qty, self.bidask.ask)
+            decision_input = OrderDecisionInput(
+                signal=self.buy_signal,
+                mid=self.taker_prices.mid,
+                ask=self.bidask.ask,
+                bid=self.bidask.bid,
+                theo_buy=self.taker_prices.buy,
+                theo_sell=self.taker_prices.sell,
+            )
+            await self.order_api.send_order(OrderType.BUY, price, qty, decision_input)
 
     def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
         return price.quantize(reference, rounding=decimal.ROUND_DOWN)
