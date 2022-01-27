@@ -1,4 +1,4 @@
-from src.robots.sliding.config import LeaderFollowerConfig, LeaderFollowerInput
+from src.stgs.sliding.config import LeaderFollowerConfig, LeaderFollowerInput
 
 from .base import StrategyType
 
