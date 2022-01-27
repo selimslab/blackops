@@ -126,7 +126,7 @@ class LeaderFollowerTrader(RobotBase):
         self.add_signal(mid)
 
         if self.follower_pub.books_seen > self.follower_seen:
-            self.follower_seen += self.follower_pub.books_seen
+            self.follower_seen = self.follower_pub.books_seen
             self.aggregate_signals()
 
     def add_signal(self, mid: Decimal):
