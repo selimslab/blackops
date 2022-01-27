@@ -50,9 +50,9 @@ class BalancePub(PublisherBase):
     async def ask_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
-            # loop = asyncio.get_event_loop()
-            # await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
-            self.update_balances(res)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
+            # self.update_balances(res)
             self.last_updated = datetime.now()
 
     def update_balances(self, balances) -> None:
@@ -155,20 +155,23 @@ class BinancePub(PublisherBase):
     async def run(self):
         await self.consume_stream()
 
+    def add_mid(self, book: dict):
+        try:
+            if "data" in book:
+                mid = (float(book["data"]["a"]) + float(book["data"]["b"])) / 2
+                self.mids.append(mid)
+                self.books_seen += 1
+        except Exception as e:
+            pass
+
     async def consume_stream(self):
         if not self.stream:
             raise ValueError("No stream")
 
+        loop = asyncio.get_running_loop()
         async for book in self.stream:
             if book:
-                try:
-                    if "data" in book:
-                        mid = (float(book["data"]["a"]) + float(book["data"]["b"])) / 2
-                        self.mids.append(mid)
-                        self.books_seen += 1
-                except Exception as e:
-                    continue
-
+                await loop.run_in_executor(thread_pool_executor, self.add_mid, book)
             await asyncio.sleep(0)
 
 
