@@ -115,17 +115,19 @@ class LeaderFollowerTrader(RobotBase):
                 # and self.leader_pub.books_seen > self.leader_seen
             ):
                 await loop.run_in_executor(
-                    thread_pool_executor, self.consume_leader_book, self.leader_pub.mid
+                    thread_pool_executor, self.consume_leader_book
                 )
                 pre = self.leader_pub.mid
                 self.leader_seen += 1
-                await self.decide()
+
+                if self.leader_seen % 5 == 0:
+                    await self.decide()
 
             await asyncio.sleep(0)
 
     def consume_leader_book(self, mid: Decimal) -> None:
         if self.bridge_pub:
-            mid *= self.bridge_pub.mid
+            mid = self.leader_pub.mid * self.bridge_pub.mid
 
         if not mid:
             return
@@ -167,18 +169,11 @@ class LeaderFollowerTrader(RobotBase):
         if self.decide_lock.locked():
             return
 
-        if not self.follower_sell_signals:
-            return
-
         async with self.decide_lock:
             res = self.should_sell()
             if res:
-                price, qty = res
-                decision_input = OrderDecisionInput(
-                    ask=copy(self.follower_pub.ask),
-                    bid=copy(self.follower_pub.bid),
-                    taker=copy(self.taker),
-                )
+                price, qty, decision_input = res
+
                 await self.order_api.send_order(
                     OrderType.SELL, price, qty, decision_input
                 )
@@ -186,12 +181,7 @@ class LeaderFollowerTrader(RobotBase):
 
             res = self.should_buy()
             if res:
-                price, qty = res
-                decision_input = OrderDecisionInput(
-                    ask=copy(self.follower_pub.ask),
-                    bid=copy(self.follower_pub.bid),
-                    taker=copy(self.taker),
-                )
+                price, qty, decision_input = res
                 await self.order_api.send_order(
                     OrderType.BUY, price, qty, decision_input
                 )
@@ -202,6 +192,9 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=rounding)
 
     def should_sell(self):
+        if not self.follower_sell_signals:
+            return
+
         self.signals.sell = statistics.mean(self.follower_sell_signals)
 
         self.taker.sell = self.taker.mid * (
@@ -220,9 +213,17 @@ class LeaderFollowerTrader(RobotBase):
             if not self.order_api.can_sell(price, qty):
                 return
 
-            return price, qty
+            decision_input = OrderDecisionInput(
+                ask=copy(self.follower_pub.ask),
+                bid=copy(self.follower_pub.bid),
+                taker=copy(self.taker),
+            )
+            return price, qty, decision_input
 
     def should_buy(self):
+        if not self.follower_buy_signals:
+            return
+
         self.signals.buy = statistics.mean(self.follower_buy_signals)
 
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
@@ -242,7 +243,12 @@ class LeaderFollowerTrader(RobotBase):
             if not self.order_api.can_buy(price, qty):
                 return None
 
-            return price, qty
+            decision_input = OrderDecisionInput(
+                ask=copy(self.follower_pub.ask),
+                bid=copy(self.follower_pub.bid),
+                taker=copy(self.taker),
+            )
+            return price, qty, decision_input
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
