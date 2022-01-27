@@ -38,7 +38,8 @@ class OrderStats:
 
     delivered_counts: DeliveredCounts = field(default_factory=DeliveredCounts)
     cancelled: int = 0
-    probably_filled: int = 0
+    sell_filled: int = 0
+    buy_filled: int = 0
 
     refreshed: int = 0
     refresh_fail: int = 0
@@ -47,12 +48,15 @@ class OrderStats:
 
 @dataclass
 class OrderDecisionInput:
-    signal: Decimal = Decimal(0)
+
+    theo_sell: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
+    theo_buy: Decimal = Decimal(0)
+
+    signal: Decimal = Decimal(0)
+
     ask: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
-    theo_sell: Decimal = Decimal(0)
-    theo_buy: Decimal = Decimal(0)
 
 
 @dataclass
@@ -144,8 +148,11 @@ class OrderApi:
     def cancel_failed(self, order: Order) -> None:
         # couldn't cancel but maybe filled
         self.open_orders_fresh = False
-        self.stats.probably_filled += 1
-        # self.probably_filled.append(order)
+        if order.side == OrderType.BUY:
+            self.stats.buy_filled += 1
+        else:
+            self.stats.sell_filled += 1
+
         self.last_filled.append(order)
 
     async def poll_for_lock(self, lock):

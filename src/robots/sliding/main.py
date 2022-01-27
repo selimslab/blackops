@@ -152,7 +152,6 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, mid
                 )
-
                 if self.follower_prices_processed % 2 == 0:
                     await self.decide()
             await asyncio.sleep(0)
@@ -199,7 +198,7 @@ class LeaderFollowerTrader(RobotBase):
             price, qty = res
             decision_input = OrderDecisionInput(
                 signal=self.buy_signal,
-                mid=self.taker_prices.mid,
+                mid=self.taker_prices.bridged_mid,
                 ask=self.bidask.ask,
                 bid=self.bidask.bid,
                 theo_buy=self.taker_prices.buy,
@@ -212,7 +211,6 @@ class LeaderFollowerTrader(RobotBase):
         if res:
             price, qty = res
             decision_input = OrderDecisionInput(
-                signal=self.buy_signal,
                 mid=self.taker_prices.mid,
                 ask=self.bidask.ask,
                 bid=self.bidask.bid,
