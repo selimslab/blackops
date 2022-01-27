@@ -23,8 +23,8 @@ class LeaderFollowerConfig(StrategyConfigBase):
     bridge: str = Field("USDT")
     bridge_exchange: ExchangeType = Field(ExchangeType.BTCTURK)
 
-    max_step: Decimal = Decimal(3)
-    quote_step_qty: Decimal = Decimal(27000)
+    max_step: Decimal = Decimal(4)
+    quote_step_qty: Decimal = Decimal(20000)
 
     min_sell_qty: Decimal = Decimal(400)
     min_buy_qty: Decimal = Decimal(4000)
@@ -32,7 +32,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
     testnet = False
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        sell=Decimal("0.5") * BPS, buy=Decimal(16) * BPS
+        sell=Decimal("1.5") * BPS, buy=Decimal("14.5") * BPS
     )
 
     input: LeaderFollowerInput
