@@ -13,7 +13,7 @@ async def leader_gen():
     while True:
         yield i
         i += 1
-        await asyncio.sleep(0.025)
+        await asyncio.sleep(0.1)
 
 
 async def f_gen():
@@ -21,7 +21,7 @@ async def f_gen():
     while True:
         yield i
         i += 1
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(1)
 
 
 class Leader:
@@ -69,6 +69,7 @@ class Q:
                 loop = asyncio.get_running_loop()
                 # self.cpu_bound(10000)
                 res = await loop.run_in_executor(thread_executor, self.cpu_bound, 10000)
+                print(res)
                 # coros = [
                 #     loop.run_in_executor(thread_executor, self.cpu_bound, 10000)
                 #     for i in range(8)

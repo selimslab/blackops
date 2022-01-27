@@ -107,17 +107,17 @@ class LeaderFollowerTrader(RobotBase):
 
     async def consume_leader_pub(self) -> None:
         loop = asyncio.get_running_loop()
+        pre = None
         while True:
-            seen = None
             if (
                 self.leader_pub.mid
-                and self.leader_pub.mid != seen
-                and self.leader_pub.books_seen > self.leader_seen
+                and self.leader_pub.mid != pre
+                # and self.leader_pub.books_seen > self.leader_seen
             ):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, self.leader_pub.mid
                 )
-                seen = self.leader_pub.mid
+                pre = self.leader_pub.mid
                 self.leader_seen += 1
                 await self.decide()
 
