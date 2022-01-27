@@ -208,10 +208,8 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_sell_signals:
             return
 
-        loop = asyncio.get_running_loop()
-
         async with self.decide_lock:
-            res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
+            res = self.should_sell()
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
@@ -227,7 +225,7 @@ class LeaderFollowerTrader(RobotBase):
                 )
                 return
 
-            res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
+            res = await self.should_buy()
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
