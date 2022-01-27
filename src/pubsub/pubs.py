@@ -143,35 +143,33 @@ class BinancePub(PublisherBase):
     books_seen: int = 0
     mid: Decimal = Decimal(0)
 
-    mids: list = field(default_factory=list)
+    # mids: list = field(default_factory=list)
 
-    def get_mid(self):
-        if len(self.mids) == 0:
-            return
-        mid = sum(self.mids) / len(self.mids)
-        self.mids = []
-        return Decimal(mid)
+    # def get_mid(self):
+    #     if len(self.mids) == 0:
+    #         return
+    #     mid = sum(self.mids) / len(self.mids)
+    #     self.mids.clear()
+    #     return Decimal(mid)
 
     async def run(self):
         await self.consume_stream()
-
-    def add_mid(self, book: dict):
-        try:
-            if "data" in book:
-                mid = (float(book["data"]["a"]) + float(book["data"]["b"])) / 2
-                self.mids.append(mid)
-                self.books_seen += 1
-        except Exception as e:
-            pass
 
     async def consume_stream(self):
         if not self.stream:
             raise ValueError("No stream")
 
-        loop = asyncio.get_running_loop()
         async for book in self.stream:
             if book:
-                await loop.run_in_executor(thread_pool_executor, self.add_mid, book)
+                try:
+                    if "data" in book:
+                        self.mid = (
+                            float(book["data"]["a"]) + float(book["data"]["b"])
+                        ) / 2
+                        # self.mids.append(mid)
+                        self.books_seen += 1
+                except Exception as e:
+                    pass
             await asyncio.sleep(0)
 
 
