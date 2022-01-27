@@ -102,6 +102,7 @@ class BTPub(PublisherBase):
     # bids: List[Decimal] = field(default_factory=list)
 
     ask: Decimal = Decimal(0)
+    mid: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
 
     async def run(self):
@@ -115,6 +116,7 @@ class BTPub(PublisherBase):
             if ask and bid:
                 self.ask = ask
                 self.bid = bid
+                self.mid = (ask + bid) / Decimal(2)
                 self.books_seen += 1
         except Exception as e:
             logger.info(f"BTPub: {e}")

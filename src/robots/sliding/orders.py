@@ -1,7 +1,7 @@
 import asyncio
 import collections
 import traceback
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Dict, Optional
 
@@ -13,6 +13,8 @@ from src.exchanges.locks import Locks
 from src.monitoring import logger
 from src.proc import process_pool_executor, thread_pool_executor
 from src.stgs import LeaderFollowerConfig
+
+from .models import BookTop, Theo
 
 
 @dataclass
@@ -50,15 +52,10 @@ class OrderStats:
 
 @dataclass
 class OrderDecisionInput:
-
-    theo_sell: Decimal = Decimal(0)
-    mid: Decimal = Decimal(0)
-    theo_buy: Decimal = Decimal(0)
-
     signal: Decimal = Decimal(0)
-
-    ask: Decimal = Decimal(0)
-    bid: Decimal = Decimal(0)
+    taker: Theo = field(default_factory=Theo)
+    ask: Optional[Decimal] = None
+    bid: Optional[Decimal] = None
 
 
 @dataclass
@@ -139,7 +136,7 @@ class OrderApi:
     def cancel_successful(self, order: Order) -> None:
         self.cancelled_orders[order.order_id] = order
         self.last_cancelled.append(order)
-        logger.info(f"cancelled: {asdict(order)}")
+        # logger.info(f"cancelled: {asdict(order)}")
 
         if order.side == OrderType.BUY:
             self.pair.base.free -= order.qty

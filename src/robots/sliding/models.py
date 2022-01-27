@@ -6,15 +6,14 @@ from src.periodic import StopwatchAPI
 
 
 @dataclass
-class PriceWindow:
+class Theo:
     sell: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
-    bridged_mid: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
 
 @dataclass
-class BidAsk:
+class BookTop:
     ask: Optional[Decimal] = None
     bid: Optional[Decimal] = None
 

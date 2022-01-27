@@ -12,14 +12,13 @@ from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
 from src.periodic import periodic
-from src.proc import process_pool_executor, thread_pool_executor
-from src.pubsub import create_binance_consumer_generator, create_bt_consumer_generator
-from src.pubsub.pubs import BalancePub, BinancePub, BookPub, BTPub
+from src.proc import thread_pool_executor
+from src.pubsub.pubs import BalancePub, BinancePub, BTPub
 from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi, OrderDecisionInput
 from src.stgs.sliding.config import LeaderFollowerConfig
 
-from .models import BidAsk, PriceWindow
+from .models import BookTop, Signals, Theo
 
 
 @dataclass
@@ -39,7 +38,6 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     leader_sell_signals: list = field(default_factory=list)
-
     leader_buy_signals: list = field(default_factory=list)
 
     follower_sell_signals: collections.deque = field(
@@ -50,29 +48,26 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=3)
     )
 
-    sell_signal: Optional[Decimal] = None
-    buy_signal: Optional[Decimal] = None
+    signals: Signals = field(default_factory=Signals)
+
+    leader_seen: int = 0
+    follower_seen: int = 0
+
+    taker: Theo = field(default_factory=Theo)
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
 
-    leader_prices_processed: int = 0
-    follower_prices_processed: int = 0
-
-    taker_prices: PriceWindow = field(default_factory=PriceWindow)
-    bridge: Optional[Decimal] = None
-    bidask: BidAsk = field(default_factory=BidAsk)
-
     decide_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-    mids_seen: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
-    )
-    bids_seen: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
-    )
-    asks_seen: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=12)
-    )
+    # mids_seen: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=12)
+    # )
+    # bids_seen: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=12)
+    # )
+    # asks_seen: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=12)
+    # )
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -95,7 +90,6 @@ class LeaderFollowerTrader(RobotBase):
     async def run_streams(self) -> None:
         aws: Any = [
             self.consume_leader_pub(),
-            self.consume_follower_pub(),
             periodic(
                 self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
@@ -106,49 +100,49 @@ class LeaderFollowerTrader(RobotBase):
             ),
         ]
 
-        if self.bridge_pub:
-            aws.append(self.consume_bridge_pub())
-
         await asyncio.gather(*aws)
 
-    # BRIDGE
+    # LEADER
 
-    async def consume_bridge_pub(self) -> None:
-        if not self.bridge_pub:
-            raise Exception("no bridge_pub")
-        gen = create_bt_consumer_generator(self.bridge_pub)
-        async for res in gen:
-            if res:
-                bid, ask = res
-                self.bridge = (bid + ask) / Decimal(2)
-            await asyncio.sleep(0)
-
-    # FOLLOWER
-    async def consume_follower_pub(self) -> None:
-        gen = create_bt_consumer_generator(self.follower_pub)
+    async def consume_leader_pub(self) -> None:
         loop = asyncio.get_running_loop()
-
-        async for res in gen:
-            if res:
-                bid, ask = res
-                self.bidask.bid = bid
-                self.bidask.ask = ask
-                self.asks_seen.append(ask)
-                self.bids_seen.append(bid)
-
-                if not self.base_step_qty:
-                    mid = (ask + bid) / Decimal(2)
-                    self.set_base_step_qty(mid)
-
+        while True:
+            if self.leader_pub.mid and self.leader_pub.books_seen > self.leader_seen:
                 await loop.run_in_executor(
-                    thread_pool_executor, self.add_follower_signal
+                    thread_pool_executor, self.consume_leader_book, self.leader_pub.mid
                 )
-                self.follower_prices_processed += 1
-
+            await self.decide()
             await asyncio.sleep(0)
 
-    def add_follower_signal(self):
+    def consume_leader_book(self, mid: Decimal) -> None:
+        if self.bridge_pub:
+            mid *= self.bridge_pub.mid
 
+        if not mid:
+            return
+
+        self.taker.mid = mid
+        self.add_signal(mid)
+
+        if self.follower_pub.books_seen > self.follower_seen:
+            self.aggregate_signals()
+
+    def add_signal(self, mid: Decimal):
+        bid = self.follower_pub.bid
+        if bid:
+            unit_signal = self.config.unit_signal_bps.sell * mid
+            self.taker.sell = mid + unit_signal
+            signal = (bid - mid) / unit_signal
+            self.leader_sell_signals.append(signal)
+
+        ask = self.follower_pub.ask
+        if ask:
+            unit_signal = self.config.unit_signal_bps.buy * mid
+            self.taker.buy = mid - unit_signal
+            signal = (mid - ask) / unit_signal
+            self.leader_buy_signals.append(signal)
+
+    def aggregate_signals(self):
         if self.leader_buy_signals:
             self.follower_buy_signals.append(statistics.mean(self.leader_buy_signals))
             self.leader_buy_signals = []
@@ -156,47 +150,6 @@ class LeaderFollowerTrader(RobotBase):
         if self.leader_sell_signals:
             self.follower_sell_signals.append(statistics.mean(self.leader_sell_signals))
             self.leader_sell_signals = []
-
-    # LEADER
-    async def consume_leader_pub(self) -> None:
-        gen = create_binance_consumer_generator(self.leader_pub)
-        loop = asyncio.get_running_loop()
-
-        async for mid in gen:
-            if mid:
-                await loop.run_in_executor(
-                    thread_pool_executor, self.consume_leader_book, mid
-                )
-                await self.decide()
-            await asyncio.sleep(0)
-
-    def consume_leader_book(self, mid: Decimal) -> None:
-        self.taker_prices.mid = mid
-
-        if self.bridge:
-            mid *= self.bridge
-
-        self.taker_prices.bridged_mid = mid
-        self.mids_seen.append(mid)
-
-        self.add_leader_signal(mid)
-
-        self.leader_prices_processed += 1
-
-    def add_leader_signal(self, mid: Decimal):
-        bid = self.bidask.bid
-        if bid:
-            unit_signal = self.config.unit_signal_bps.sell * mid
-            self.taker_prices.sell = mid + unit_signal
-            signal = (bid - mid) / unit_signal
-            self.leader_sell_signals.append(signal)
-
-        ask = self.bidask.ask
-        if ask:
-            unit_signal = self.config.unit_signal_bps.buy * mid
-            self.taker_prices.buy = mid - unit_signal
-            signal = (mid - ask) / unit_signal
-            self.leader_buy_signals.append(signal)
 
     async def decide(self):
         if self.decide_lock.locked():
@@ -213,12 +166,10 @@ class LeaderFollowerTrader(RobotBase):
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
-                    signal=self.sell_signal,
-                    mid=self.taker_prices.bridged_mid,
-                    ask=self.bidask.ask,
-                    bid=self.bidask.bid,
-                    theo_buy=self.taker_prices.buy,
-                    theo_sell=self.taker_prices.sell,
+                    signal=self.signals.sell,
+                    ask=self.follower_pub.ask,
+                    bid=self.follower_pub.bid,
+                    taker=self.taker,
                 )
                 await self.order_api.send_order(
                     OrderType.SELL, price, qty, decision_input
@@ -229,12 +180,10 @@ class LeaderFollowerTrader(RobotBase):
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
-                    signal=self.buy_signal,
-                    mid=self.taker_prices.bridged_mid,
-                    ask=self.bidask.ask,
-                    bid=self.bidask.bid,
-                    theo_buy=self.taker_prices.buy,
-                    theo_sell=self.taker_prices.sell,
+                    signal=self.signals.buy,
+                    ask=self.follower_pub.ask,
+                    bid=self.follower_pub.bid,
+                    taker=self.taker,
                 )
                 await self.order_api.send_order(
                     OrderType.BUY, price, qty, decision_input
@@ -246,19 +195,18 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=rounding)
 
     def should_sell(self):
-        mean_signal = statistics.mean(self.follower_sell_signals)
-        self.sell_signal = mean_signal
+        self.signals.sell = statistics.mean(self.follower_sell_signals)
         last_signal = self.follower_sell_signals[-1]
 
         if (
-            mean_signal > 1
+            self.signals.sell > 1
             and last_signal > 1
-            and self.taker_prices.sell <= self.bidask.bid
+            and self.taker.sell <= self.follower_pub.bid
         ):
             price = self.get_precise_price(
-                self.taker_prices.sell, self.bidask.bid, decimal.ROUND_DOWN
+                self.taker.sell, self.follower_pub.bid, decimal.ROUND_DOWN
             )
-            qty = self.base_step_qty * mean_signal
+            qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
             qty = int(qty)
@@ -269,20 +217,19 @@ class LeaderFollowerTrader(RobotBase):
             return price, qty
 
     def should_buy(self):
-        mean_signal = statistics.mean(self.follower_buy_signals)
-        self.buy_signal = mean_signal
+        self.signals.buy = statistics.mean(self.follower_buy_signals)
         last_signal = self.follower_buy_signals[-1]
 
         if (
-            mean_signal > 1
+            self.signals.buy > 1
             and last_signal > 1
-            and self.taker_prices.buy >= self.bidask.ask
+            and self.taker.buy >= self.follower_pub.ask
         ):
             price = self.get_precise_price(
-                self.taker_prices.buy, self.bidask.ask, decimal.ROUND_HALF_UP
+                self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_UP
             )
 
-            qty = self.base_step_qty * mean_signal
+            qty = self.base_step_qty * self.signals.buy
             max_buyable = (
                 self.config.max_step * self.base_step_qty - self.pair.base.total_balance
             )
@@ -301,30 +248,24 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
-            "buy signal": self.buy_signal,
-            "sell signal": self.sell_signal,
-            "buy signals": list(self.follower_buy_signals),
-            "sell signals": list(self.follower_sell_signals),
+            "signals": asdict(self.signals),
+            # "buy signals": list(self.follower_buy_signals),
+            # "sell signals": list(self.follower_sell_signals),
             "prices": {
-                "market": asdict(self.bidask),
-                "bridge": self.bridge,
-                "mids": list(self.mids_seen),
-                "bids": list(self.bids_seen),
-                "asks": list(self.asks_seen),
-                "taker": asdict(self.taker_prices),
+                "market": asdict(self.follower_pub),
+                # "mids": list(self.mids_seen),
+                # "bids": list(self.bids_seen),
+                # "asks": list(self.asks_seen),
+                "taker": asdict(self.taker),
                 "bn seen": self.leader_pub.books_seen,
-                "bn proc": self.leader_prices_processed,
+                "bn proc": self.leader_seen,
                 "bt seen": self.follower_pub.books_seen,
-                "bt proc": self.follower_prices_processed,
+                "bt proc": self.follower_seen,
             },
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-                "last 3 cancelled": list(
-                    asdict(order) for order in self.order_api.last_cancelled
-                ),
-                "last 3 filled": list(
-                    asdict(order) for order in self.order_api.last_filled
-                ),
+                "last 3 cancelled": list(self.order_api.last_cancelled),
+                "last 3 filled": list(self.order_api.last_filled),
             },
         }
