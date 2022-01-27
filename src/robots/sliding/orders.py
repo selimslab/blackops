@@ -61,7 +61,7 @@ class OrderDecisionInput:
 class Order:
     order_id: OrderId
     symbol: str
-    side: OrderType
+    side: str
     price: Decimal
     qty: Decimal
     bidask: Optional[Decimal] = None
@@ -185,7 +185,7 @@ class OrderApi:
                 price=Decimal(order_dict["price"]),
                 qty=Decimal(order_dict.get("leftAmount", 0)),
                 symbol=order_dict.get("pairSymbol"),
-                side=OrderType(order_dict.get("type")),
+                side=order_dict.get("type"),
                 bidask=self.market_prices.get(order_dict.get("id")),
             )
             for order_dict in orderlist
@@ -273,7 +273,7 @@ class OrderApi:
                     if order_id:
                         order = Order(
                             order_id=order_id,
-                            side=side,
+                            side=side.value,
                             price=price,
                             qty=Decimal(qty),
                             symbol=self.pair.symbol,
