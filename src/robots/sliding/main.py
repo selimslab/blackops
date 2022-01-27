@@ -64,6 +64,16 @@ class LeaderFollowerTrader(RobotBase):
 
     decide_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
+    mids_seen: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=12)
+    )
+    bids_seen: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=12)
+    )
+    asks_seen: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=12)
+    )
+
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
         self.pair.base = self.balance_pub.get_asset(self.config.input.base)
@@ -123,6 +133,8 @@ class LeaderFollowerTrader(RobotBase):
                 bid, ask = res
                 self.bidask.bid = bid
                 self.bidask.ask = ask
+                self.asks_seen.append(ask)
+                self.bids_seen.append(bid)
 
                 if not self.base_step_qty:
                     mid = (ask + bid) / Decimal(2)
@@ -165,6 +177,7 @@ class LeaderFollowerTrader(RobotBase):
             mid *= self.bridge
 
         self.taker_prices.bridged_mid = mid
+        self.mids_seen.append(mid)
 
         self.add_leader_signal(mid)
 
@@ -294,6 +307,18 @@ class LeaderFollowerTrader(RobotBase):
             "sell signal": self.sell_signal,
             "buy signals": list(self.follower_buy_signals),
             "sell signals": list(self.follower_sell_signals),
+            "prices": {
+                "market": asdict(self.bidask),
+                "bridge": self.bridge,
+                "mids": list(self.mids_seen),
+                "bids": list(self.bids_seen),
+                "asks": list(self.asks_seen),
+                "taker": asdict(self.taker_prices),
+                "bn seen": self.leader_pub.books_seen,
+                "bn proc": self.leader_prices_processed,
+                "bt seen": self.follower_pub.books_seen,
+                "bt proc": self.follower_prices_processed,
+            },
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
@@ -303,14 +328,5 @@ class LeaderFollowerTrader(RobotBase):
                 "last 3 filled": list(
                     asdict(order) for order in self.order_api.last_filled
                 ),
-            },
-            "prices": {
-                "market": asdict(self.bidask),
-                "bridge": self.bridge,
-                "taker": asdict(self.taker_prices),
-                "bn seen": self.leader_pub.books_seen,
-                "bn proc": self.leader_prices_processed,
-                "bt seen": self.follower_pub.books_seen,
-                "bt proc": self.follower_prices_processed,
             },
         }
