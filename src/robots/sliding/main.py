@@ -134,6 +134,9 @@ class LeaderFollowerTrader(RobotBase):
 
     def add_signal(self):
         mid = self.taker.mid
+        if not mid:
+            return
+
         bid = self.follower_pub.bid
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
@@ -178,6 +181,13 @@ class LeaderFollowerTrader(RobotBase):
     # DECIDE
     async def decide(self):
         if self.decide_lock.locked():
+            return
+
+        if (
+            not self.leader_pub.mid
+            or not self.follower_pub.bid
+            or not self.follower_pub.ask
+        ):
             return
 
         async with self.decide_lock:
