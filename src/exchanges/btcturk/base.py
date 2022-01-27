@@ -151,7 +151,7 @@ class BtcturkBase(ExchangeAPIClientBase):
             if ok:
                 cancelled.append(order_id)
             await asyncio.sleep(sleep_seconds.cancel_wait)
-            await asyncio.sleep(0.01)  #  allow others to cancel too
+            await asyncio.sleep(0)  #  allow others to cancel too
         return cancelled
 
     @staticmethod

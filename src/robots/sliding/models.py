@@ -9,6 +9,7 @@ from src.periodic import StopwatchAPI
 class Theo:
     sell: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
+    usdt: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
 

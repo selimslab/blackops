@@ -52,9 +52,8 @@ class OrderStats:
 
 @dataclass
 class OrderDecisionInput:
-    ask: Optional[Decimal] = None
-    bid: Optional[Decimal] = None
     taker: Theo = field(default_factory=Theo)
+    market: BookTop = field(default_factory=BookTop)
 
 
 @dataclass
@@ -173,9 +172,10 @@ class OrderApi:
             await self.poll_for_lock(self.exchange.locks.read)
 
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
-            loop = asyncio.get_event_loop()
+            # loop = asyncio.get_event_loop()
             if res:
-                loop.run_in_executor(thread_pool_executor, self.get_and_refresh, res)
+                # loop.run_in_executor(thread_pool_executor, self.get_and_refresh, res)
+                self.get_and_refresh(res)
             else:
                 self.stats.refresh_fail += 1
 
@@ -222,7 +222,7 @@ class OrderApi:
             self.stats.fail_counts.hit_order_limit += 1
             return False
 
-        if self.open_orders:
+        if len(self.open_orders) > 0:
             self.stats.fail_counts.open_orders += 1
             return False
 

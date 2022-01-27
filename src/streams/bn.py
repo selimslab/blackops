@@ -111,7 +111,7 @@ async def test_orderbook_stream(symbol):
     async with async_timeout.timeout(10):
         async for book in gen:
             seen += 1
-            print("seen", seen)
+            print(book)
             await work()
 
 
@@ -125,5 +125,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream("ETHUSDT"))
+    asyncio.run(test_orderbook_stream("SHIBUSDT"))
     # asyncio.run(main())

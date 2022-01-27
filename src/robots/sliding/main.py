@@ -42,11 +42,11 @@ class LeaderFollowerTrader(RobotBase):
     leader_buy_signals: list = field(default_factory=list)
 
     follower_sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+        default_factory=lambda: collections.deque(maxlen=2)
     )
 
     follower_buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+        default_factory=lambda: collections.deque(maxlen=2)
     )
 
     signals: Signals = field(default_factory=Signals)
@@ -59,6 +59,8 @@ class LeaderFollowerTrader(RobotBase):
     start_time: datetime = field(default_factory=lambda: datetime.now())
 
     decide_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    market: BookTop = field(default_factory=BookTop)
 
     # mids_seen: collections.deque = field(
     #     default_factory=lambda: collections.deque(maxlen=12)
@@ -91,8 +93,6 @@ class LeaderFollowerTrader(RobotBase):
     async def run_streams(self) -> None:
         aws: Any = [
             self.consume_leader_pub(),
-            self.consume_follower_pub(),
-            self.trigger_decide(),
             periodic(
                 self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
@@ -106,33 +106,19 @@ class LeaderFollowerTrader(RobotBase):
         await asyncio.gather(*aws)
 
     # LEADER
-    async def trigger_decide(self):
-        while True:
-            if self.leader_seen % 3 == 0:
-                await self.decide()
-            await asyncio.sleep(0.001)
-
     async def consume_leader_pub(self) -> None:
-        loop = asyncio.get_running_loop()
         pre = None
         while True:
             if self.leader_pub.mid != pre:
-                await loop.run_in_executor(
-                    thread_pool_executor, self.consume_leader_book
-                )
+                self.consume_leader_book()
                 pre = self.leader_pub.mid
-            await asyncio.sleep(0)
-
-    async def consume_follower_pub(self):
-        loop = asyncio.get_event_loop()
-        while True:
-            if self.follower_pub.books_seen > self.follower_seen:
-                self.follower_seen = self.follower_pub.books_seen
-                await loop.run_in_executor(thread_pool_executor, self.aggregate_signals)
-
+                await self.decide()
             await asyncio.sleep(0)
 
     def consume_leader_book(self) -> None:
+
+        self.taker.usdt = self.leader_pub.mid
+
         mid = None
         if self.bridge_pub:
             mid = self.leader_pub.mid * self.bridge_pub.mid
@@ -162,6 +148,16 @@ class LeaderFollowerTrader(RobotBase):
             signal = (mid - ask) / unit_signal
             self.leader_buy_signals.append(signal)
 
+    def check_follower_update(self):
+        if (
+            self.follower_pub.bid != self.market.bid
+            or self.follower_pub.ask != self.market.ask
+        ):
+            self.market.ask = self.follower_pub.ask
+            self.market.bid = self.follower_pub.bid
+            self.aggregate_signals()
+            self.follower_seen += 1
+
     def aggregate_signals(self):
         if self.leader_buy_signals:
             self.follower_buy_signals.append(statistics.mean(self.leader_buy_signals))
@@ -171,11 +167,21 @@ class LeaderFollowerTrader(RobotBase):
             self.follower_sell_signals.append(statistics.mean(self.leader_sell_signals))
             self.leader_sell_signals = []
 
+    # async def trigger_decide(self):
+    #     while True:
+    #         if self.leader_seen % 2 == 0:
+    #             # self.aggregate_signals()
+    #             await self.decide()
+    #         await asyncio.sleep(0)
+
+    # DECIDE
     async def decide(self):
         if self.decide_lock.locked():
             return
 
         async with self.decide_lock:
+            self.check_follower_update()
+
             res = self.should_sell()
             if res:
                 price, qty, decision_input = res
@@ -222,8 +228,7 @@ class LeaderFollowerTrader(RobotBase):
                 return
 
             decision_input = OrderDecisionInput(
-                ask=copy(self.follower_pub.ask),
-                bid=copy(self.follower_pub.bid),
+                market=copy(self.market),
                 taker=copy(self.taker),
             )
             return price, qty, decision_input
@@ -256,8 +261,7 @@ class LeaderFollowerTrader(RobotBase):
                 return None
 
             decision_input = OrderDecisionInput(
-                ask=copy(self.follower_pub.ask),
-                bid=copy(self.follower_pub.bid),
+                market=copy(self.market),
                 taker=copy(self.taker),
             )
             return price, qty, decision_input

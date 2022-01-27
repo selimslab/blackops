@@ -49,8 +49,9 @@ class BalancePub(PublisherBase):
     async def publish_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
+            # loop = asyncio.get_event_loop()
+            # await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
+            self.update_balances(res)
             # self.update_balances(res)
             self.last_updated = datetime.now()
 
@@ -82,7 +83,7 @@ class BTPub(PublisherBase):
             ask = self.api_client.get_best_ask(book)
             bid = self.api_client.get_best_bid(book)
 
-            if ask and bid:
+            if ask and bid and (ask != self.ask or bid != self.bid):
                 self.ask = ask
                 self.bid = bid
                 self.mid = (ask + bid) / Decimal(2)
@@ -98,7 +99,8 @@ class BTPub(PublisherBase):
         loop = asyncio.get_event_loop()
         async for book in self.stream:
             if book:
-                await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
+                self.parse_book(book)
+                # await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 
@@ -129,10 +131,23 @@ class BinancePub(PublisherBase):
         if not self.stream:
             raise ValueError("No stream")
 
-        loop = asyncio.get_event_loop()
+        # loop = asyncio.get_event_loop()
         async for book in self.stream:
             if book:
-                await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
+                try:
+                    if "data" in book:
+                        mid = (
+                            Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
+                        ) / Decimal(2)
+
+                        if mid != self.mid:
+                            self.mid = mid
+                            self.books_seen += 1
+                            # logger.info(mid)
+                except Exception as e:
+                    pass
+
+                # await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 
