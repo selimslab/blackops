@@ -98,7 +98,7 @@ class BTPub(PublisherBase):
         loop = asyncio.get_event_loop()
         async for book in self.stream:
             if book:
-                await loop.run_in_executor(self.parse_book, book)
+                await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 
@@ -132,7 +132,7 @@ class BinancePub(PublisherBase):
         loop = asyncio.get_event_loop()
         async for book in self.stream:
             if book:
-                await loop.run_in_executor(self.parse_book, book)
+                await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 
