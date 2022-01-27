@@ -121,7 +121,6 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_bt_price, res
                 )
-                await self.decide()
             await asyncio.sleep(0)
 
     def consume_bt_price(self, res):
@@ -153,6 +152,7 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, mid
                 )
+                await self.decide()
             await asyncio.sleep(0)
 
     def consume_leader_book(self, mid: Decimal) -> None:
@@ -223,7 +223,6 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=decimal.ROUND_HALF_DOWN)
 
     def should_sell(self):
-        self.update_signals(self.taker_prices.bridged_mid)
         mean_signal = statistics.mean(self.follower_sell_signals)
         self.sell_signal = mean_signal
         last_signal = self.follower_sell_signals[-1]
@@ -241,7 +240,6 @@ class LeaderFollowerTrader(RobotBase):
             return price, qty
 
     def should_buy(self):
-        self.update_signals(self.taker_prices.bridged_mid)
         mean_signal = statistics.mean(self.follower_buy_signals)
         self.buy_signal = mean_signal
         last_signal = self.follower_buy_signals[-1]
