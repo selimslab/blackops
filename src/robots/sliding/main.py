@@ -261,8 +261,8 @@ class LeaderFollowerTrader(RobotBase):
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-                # "recently cancelled": list(self.order_api.last_cancelled),
-                # "recently filled": list(self.order_api.last_filled),
+                "recently cancelled": list(self.order_api.last_cancelled),
+                "recently filled": list(self.order_api.last_filled),
             },
             "prices": {
                 "market": asdict(self.bidask),

@@ -3,6 +3,7 @@ import collections
 import traceback
 from dataclasses import dataclass, field
 from decimal import Decimal
+from lib2to3.pgen2.token import OP
 from typing import Optional
 
 import src.pubsub.log_pub as log_pub
@@ -11,6 +12,7 @@ from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.locks import Locks
 from src.monitoring import logger
+from src.proc import process_pool_executor, thread_pool_executor
 from src.stgs import LeaderFollowerConfig
 
 
@@ -62,7 +64,7 @@ class Order:
     side: OrderType
     price: Decimal
     qty: Decimal
-    input: Optional[OrderDecisionInput] = None
+    bidask: Optional[Decimal] = None
 
 
 @dataclass
@@ -89,6 +91,8 @@ class OrderApi:
 
     orders_in_last_second: int = 0
     max_orders_per_second: int = 3
+
+    market_prices: dict = field(default_factory=dict)
 
     async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
@@ -130,10 +134,14 @@ class OrderApi:
         self.cancelled_orders[order.order_id] = order
         self.last_cancelled.append(order)
         self.stats.cancelled += 1
+
         if order.side == OrderType.BUY:
             self.pair.base.free -= order.qty
         else:
             self.pair.base.free += order.qty
+
+        if order.order_id in self.market_prices:
+            del self.market_prices[order.order_id]
 
     def cancel_failed(self, order: Order) -> None:
         # couldn't cancel but maybe filled
@@ -158,13 +166,17 @@ class OrderApi:
             await self.poll_for_lock(self.exchange.locks.read)
 
             res: Optional[dict] = await self.exchange.get_open_orders(self.pair)
+            loop = asyncio.get_event_loop()
             if res:
-                orderlist = self.exchange.get_sorted_order_list(res)
-                self.refresh_open_order_successful(orderlist)
+                loop.run_in_executor(thread_pool_executor, self.get_and_refresh, res)
             else:
                 self.stats.refresh_fail += 1
 
         await self.cancel_open_orders()
+
+    def get_and_refresh(self, res):
+        orderlist = self.exchange.get_sorted_order_list(res)
+        self.refresh_open_order_successful(orderlist)
 
     def refresh_open_order_successful(self, orderlist: list) -> None:
         orders = [
@@ -174,6 +186,7 @@ class OrderApi:
                 qty=Decimal(order_dict.get("leftAmount", 0)),
                 symbol=order_dict.get("pairSymbol"),
                 side=OrderType(order_dict.get("type")),
+                bidask=self.market_prices.get(order_dict.get("id")),
             )
             for order_dict in orderlist
         ]
@@ -182,6 +195,7 @@ class OrderApi:
             if order.order_id not in self.cancelled_orders:
                 self.open_orders.append(order)
 
+        self.market_prices = {}
         self.open_orders_fresh = True
         self.cancelled_orders = {}
         self.stats.refreshed += 1
@@ -240,7 +254,7 @@ class OrderApi:
         side: OrderType,
         price: Decimal,
         qty: int,
-        input: Optional[OrderDecisionInput] = None,
+        bidask: Optional[Decimal] = None,
     ) -> Optional[OrderId]:
         try:
             if not self.can_order(side, price, qty):
@@ -263,8 +277,9 @@ class OrderApi:
                             price=price,
                             qty=Decimal(qty),
                             symbol=self.pair.symbol,
-                            input=input,
+                            bidask=bidask,
                         )
+                        self.market_prices[order_id] = bidask
                         await self.deliver_ok(order)
 
                     else:
