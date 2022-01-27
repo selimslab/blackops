@@ -44,6 +44,9 @@ class BalancePub(PublisherBase):
         if asset.symbol not in self.assets:
             self.assets[asset.symbol] = asset
 
+    def get_asset(self, symbol: AssetSymbol):
+        return self.assets.get(symbol)
+
     async def ask_balance(self):
         res = await self.exchange.get_account_balance()
         if res:

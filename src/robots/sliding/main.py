@@ -64,6 +64,8 @@ class LeaderFollowerTrader(RobotBase):
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
+        self.pair.base = self.balance_pub.get_asset(self.config.input.base)
+        self.pair.quote = self.balance_pub.get_asset(self.config.input.quote)
 
         self.order_api = OrderApi(
             config=self.config,
