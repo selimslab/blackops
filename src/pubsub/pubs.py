@@ -164,8 +164,8 @@ class BinancePub(PublisherBase):
                 try:
                     if "data" in book:
                         self.mid = (
-                            float(book["data"]["a"]) + float(book["data"]["b"])
-                        ) / 2
+                            Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
+                        ) / Decimal(2)
                         # self.mids.append(mid)
                         self.books_seen += 1
                 except Exception as e:
