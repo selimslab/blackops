@@ -138,15 +138,15 @@ class LeaderFollowerTrader(RobotBase):
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
             self.taker.sell = mid + unit_signal
-            self.signals.sell = (bid - mid) / unit_signal
-            self.leader_sell_signals.append(self.signals.sell)
+            signal = (bid - mid) / unit_signal
+            self.leader_sell_signals.append(signal)
 
         ask = self.follower_pub.ask
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
             self.taker.buy = mid - unit_signal
-            self.signals.buy = (mid - ask) / unit_signal
-            self.leader_buy_signals.append(self.signals.buy)
+            signal = (mid - ask) / unit_signal
+            self.leader_buy_signals.append(signal)
 
     def aggregate_signals(self):
         if self.leader_buy_signals:
@@ -259,7 +259,11 @@ class LeaderFollowerTrader(RobotBase):
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-                "last 3 cancelled": list(self.order_api.last_cancelled),
-                "last 3 filled": list(self.order_api.last_filled),
+                "last 3 cancelled": list(
+                    asdict(order) for order in self.order_api.last_cancelled
+                ),
+                "last 3 filled": list(
+                    asdict(order) for order in self.order_api.last_filled
+                ),
             },
         }
