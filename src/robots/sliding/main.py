@@ -163,11 +163,11 @@ class LeaderFollowerTrader(RobotBase):
 
         self.taker_prices.bridged_mid = mid
 
-        self.add_price_point(mid)
+        self.update_signals(mid)
 
         self.leader_prices_processed += 1
 
-    def add_price_point(self, mid: Decimal):
+    def update_signals(self, mid: Decimal):
         bid = self.bidask.bid
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
@@ -222,6 +222,7 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=decimal.ROUND_HALF_DOWN)
 
     def should_sell(self):
+        self.update_signals(self.taker_prices.bridged_mid)
         mean_signal = statistics.mean(self.follower_sell_signals)
         self.sell_signal = mean_signal
         last_signal = self.follower_sell_signals[-1]
@@ -239,6 +240,7 @@ class LeaderFollowerTrader(RobotBase):
             return price, qty
 
     def should_buy(self):
+        self.update_signals(self.taker_prices.bridged_mid)
         mean_signal = statistics.mean(self.follower_buy_signals)
         self.buy_signal = mean_signal
         last_signal = self.follower_buy_signals[-1]
