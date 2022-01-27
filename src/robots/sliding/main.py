@@ -121,6 +121,7 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_bt_price, res
                 )
+                await self.decide()
             await asyncio.sleep(0)
 
     def consume_bt_price(self, res):
@@ -152,8 +153,6 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, mid
                 )
-                if self.follower_prices_processed % 2 == 0:
-                    await self.decide()
             await asyncio.sleep(0)
 
     def consume_leader_book(self, mid: Decimal) -> None:
