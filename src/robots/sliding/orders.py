@@ -222,7 +222,7 @@ class OrderApi:
             self.stats.fail_counts.hit_order_limit += 1
             return False
 
-        if len(self.open_orders) > 0:
+        if len(self.open_orders) > 0 or not self.open_orders_fresh:
             self.stats.fail_counts.open_orders += 1
             return False
 
@@ -249,7 +249,6 @@ class OrderApi:
         )  # allow time for order to be filled
         self.open_orders.append(order)
         await self.cancel_open_orders()
-        await asyncio.sleep(0.1)
 
     async def deliver_fail(self):
         self.stats.fail_counts.bad_response += 1
