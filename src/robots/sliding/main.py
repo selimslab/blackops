@@ -199,13 +199,13 @@ class LeaderFollowerTrader(RobotBase):
         res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
         if res:
             price, qty = res
-            await self.order_api.send_order(OrderType.SELL, price, qty)
+            await self.order_api.send_order(OrderType.SELL, price, qty, self.bidask.bid)
             return
 
         res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
         if res:
             price, qty = res
-            await self.order_api.send_order(OrderType.BUY, price, qty)
+            await self.order_api.send_order(OrderType.BUY, price, qty, self.bidask.ask)
 
     def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
         return price.quantize(reference, rounding=decimal.ROUND_DOWN)
