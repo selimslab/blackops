@@ -1,8 +1,8 @@
 import asyncio
 import collections
-import copy
 import decimal
 import statistics
+from copy import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import Decimal
