@@ -110,7 +110,7 @@ class LeaderFollowerTrader(RobotBase):
     async def consume_leader_pub(self) -> None:
         pre = None
         while True:
-            if self.leader_pub.mid != pre:
+            if self.leader_pub.mid and self.leader_pub.mid != pre:
                 await self.update_mid()
                 pre = self.leader_pub.mid
                 self.leader_seen += 1
@@ -120,10 +120,10 @@ class LeaderFollowerTrader(RobotBase):
 
         self.taker.usdt = self.leader_pub.mid
 
-        if not self.bridge_pub or not self.bridge_pub.mid:
+        if self.bridge_pub and self.bridge_pub.mid:
+            self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
+        else:
             return
-
-        self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
 
         if not self.base_step_qty:
             self.set_base_step_qty(self.taker.mid)
