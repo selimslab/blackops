@@ -134,15 +134,15 @@ class LeaderFollowerTrader(RobotBase):
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
             self.taker.sell = mid + unit_signal
-            signal = (bid - mid) / unit_signal
-            self.leader_sell_signals.append(signal)
+            self.signals.sell = (bid - mid) / unit_signal
+            self.leader_sell_signals.append(self.signals.sell)
 
         ask = self.follower_pub.ask
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
             self.taker.buy = mid - unit_signal
-            signal = (mid - ask) / unit_signal
-            self.leader_buy_signals.append(signal)
+            self.signals.buy = (mid - ask) / unit_signal
+            self.leader_buy_signals.append(self.signals.buy)
 
     def aggregate_signals(self):
         if self.leader_buy_signals:
