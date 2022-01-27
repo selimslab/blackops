@@ -123,6 +123,10 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         self.taker.mid = mid
+
+        if not self.base_step_qty:
+            self.set_base_step_qty(self.taker.mid)
+
         self.add_signal(mid)
 
         if self.follower_pub.books_seen > self.follower_seen:
@@ -155,9 +159,6 @@ class LeaderFollowerTrader(RobotBase):
 
     async def decide(self):
         if self.decide_lock.locked():
-            return
-
-        if not self.base_step_qty:
             return
 
         if not self.follower_sell_signals:
