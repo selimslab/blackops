@@ -20,7 +20,7 @@ async def create_binance_consumer_generator(pub: BinancePub) -> AsyncGenerator:
         if pub.mid and pub.books_seen > seen:
             seen = pub.books_seen
             yield pub.mid
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.004)
 
 
 async def create_bt_consumer_generator(pub: BTPub) -> AsyncGenerator:
@@ -29,4 +29,4 @@ async def create_bt_consumer_generator(pub: BTPub) -> AsyncGenerator:
         if pub.bid and pub.ask and pub.books_seen > seen:
             seen = pub.books_seen
             yield pub.bid, pub.ask
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.020)
