@@ -267,11 +267,12 @@ class OrderApi:
         input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
-            if not self.can_order(side, price, qty):
-                return None
 
             if self.locks.order.locked():
                 self.stats.fail_counts.locked += 1
+                return None
+
+            if not self.can_order(side, price, qty):
                 return None
 
             async with self.locks.order:
