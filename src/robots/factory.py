@@ -1,3 +1,4 @@
+import traceback
 from dataclasses import dataclass
 
 import src.pubsub.log_pub as log_pub
@@ -26,7 +27,7 @@ class RobotFactory:
             factory_func = self.FACTORIES[StrategyType(stg.type)]
             return factory_func(stg)
         except Exception as e:
-            msg = f"create_trader_from_strategy: {e}"
+            msg = f"create_trader_from_strategy: {e}, {traceback.format_exc()}"
             logger.error(msg)
             log_pub.publish_error(msg)
             raise e
