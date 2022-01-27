@@ -107,7 +107,7 @@ class LeaderFollowerTrader(RobotBase):
     # LEADER
     async def trigger_decide(self):
         while True:
-            if self.leader_seen % 5 == 0:
+            if self.leader_seen % 3 == 0:
                 await self.decide()
             await asyncio.sleep(0)
 
