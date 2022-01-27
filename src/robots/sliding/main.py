@@ -125,7 +125,9 @@ class LeaderFollowerTrader(RobotBase):
 
             await asyncio.sleep(0)
 
-    def consume_leader_book(self, mid: Decimal) -> None:
+    def consume_leader_book(self) -> None:
+
+        mid = None
         if self.bridge_pub:
             mid = self.leader_pub.mid * self.bridge_pub.mid
 
