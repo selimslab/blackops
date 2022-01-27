@@ -121,10 +121,12 @@ class BinancePub(PublisherBase):
             if book:
                 try:
                     if "data" in book:
-                        self.mid = (
+                        mid = (
                             Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
                         ) / Decimal(2)
-                        self.books_seen += 1
+                        if mid != self.mid:
+                            self.mid = mid
+                            self.books_seen += 1
                 except Exception as e:
                     pass
             await asyncio.sleep(0)
