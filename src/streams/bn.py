@@ -54,6 +54,7 @@ async def reconnecting_binance_generator(generator_factory: Callable):
             async for data in gen:
                 if data:
                     yield data
+                await asyncio.sleep(0)
         except (
             ConnectionAbortedError,
             ConnectionResetError,
@@ -123,26 +124,6 @@ async def main():
     await client.close_connection()
 
 
-async def consumer(pub: BinancePub):
-    proc = 0
-    while True:
-        if pub.mids:
-            proc += len(pub.mids)
-            mid = pub.get_mid()
-            print("seen", pub.books_seen, "proc", proc, "mid", mid)
-        await asyncio.sleep(0)
-
-    # async for book in create_book_consumer_generator(pub):
-    #     # await asyncio.sleep(0.00)
-    #     proc+=1
-
-
-async def test_pub(symbol):
-    bp = BinancePub(stream=create_book_stream(symbol), pubsub_key="test")
-    await asyncio.gather(bp.run(), consumer(bp))
-
-
 if __name__ == "__main__":
-    # asyncio.run(test_orderbook_stream("ETHUSDT"))
+    asyncio.run(test_orderbook_stream("ETHUSDT"))
     # asyncio.run(main())
-    asyncio.run(test_pub("ETHUSDT"))

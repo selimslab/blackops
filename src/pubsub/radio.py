@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
+from src.proc import process_pool_executor, thread_pool_executor
 from src.pubsub import PublisherBase, pub_factory
 
 

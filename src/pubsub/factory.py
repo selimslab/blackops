@@ -5,7 +5,7 @@ import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 
-from .pubs import BalancePub, BinancePub, BookPub, PubsubProducer
+from .pubs import BalancePub, BinancePub, BookPub, BTPub, PubsubProducer
 
 
 @dataclass
@@ -38,7 +38,7 @@ class PubFactory:
 
     def create_bt_pub_if_not_exists(
         self, ex_type: ExchangeType, network: NetworkType, symbol: str
-    ) -> BookPub:
+    ) -> BTPub:
 
         pubsub_key = "_".join((ex_type.value, network.value, symbol))
         if pubsub_key in self.PUBS:
@@ -49,7 +49,7 @@ class PubFactory:
         )
 
         stream = btc_streams.create_book_stream(symbol)
-        pub = BookPub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
+        pub = BTPub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
 
         self.PUBS[pubsub_key] = pub
 

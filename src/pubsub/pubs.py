@@ -2,12 +2,14 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import AsyncGenerator, Optional, Union
+from typing import AsyncGenerator, Dict, Optional, Union
 
+from src.domain.models import Asset, AssetSymbol
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
-from src.periodic import periodic
+from src.periodic import StopwatchAPI, periodic
+from src.proc import process_pool_executor, thread_pool_executor
 
 
 @dataclass
@@ -23,6 +25,7 @@ class BalancePub(PublisherBase):
     exchange: ExchangeAPIClientBase
     last_updated = datetime.now()
     balances: Optional[dict] = None
+    assets: Dict[AssetSymbol, Asset] = field(default_factory=dict)
 
     async def run(self):
         coros = [
@@ -38,11 +41,24 @@ class BalancePub(PublisherBase):
 
         await asyncio.gather(*coros)
 
+    def add_asset(self, asset: Asset):
+        if asset.symbol not in self.assets:
+            self.assets[asset.symbol] = asset
+
     async def ask_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
-            self.balances = res
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
             self.last_updated = datetime.now()
+
+    def update_balances(self, balances) -> None:
+        balances = self.exchange.parse_account_balance(balances)
+        for symbol, asset in self.assets.items():
+            if symbol in balances:
+                balance = balances[symbol]
+                asset.free = Decimal(balance["free"])
+                asset.locked = Decimal(balance["locked"])
 
 
 @dataclass
@@ -78,6 +94,10 @@ class BTPub(PublisherBase):
     api_client: ExchangeAPIClientBase
 
     books_seen: int = 0
+    stopwatch: StopwatchAPI = field(default_factory=StopwatchAPI)
+
+    # asks: List[Decimal] = field(default_factory=list)
+    # bids: List[Decimal] = field(default_factory=list)
 
     ask: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
@@ -85,14 +105,31 @@ class BTPub(PublisherBase):
     async def run(self):
         await self.consume_stream()
 
+    def parse_book(self, book):
+        try:
+            ask = self.api_client.get_best_ask(book)
+            bid = self.api_client.get_best_bid(book)
+
+            if ask and bid:
+                self.ask = ask
+                self.bid = bid
+                self.books_seen += 1
+        except Exception as e:
+            logger.info(f"BTPub: {e}")
+            return
+
+    # def clear_prices(self):
+    #     self.ask = None
+    #     self.bid = None
+
     async def consume_stream(self):
         if not self.stream:
             raise ValueError("No stream")
 
+        loop = asyncio.get_running_loop()
         async for book in self.stream:
             if book:
-                self.books_seen += 1
-
+                await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 
@@ -101,15 +138,17 @@ class BinancePub(PublisherBase):
 
     stream: AsyncGenerator
     api_client: ExchangeAPIClientBase
-    mids: list = field(default_factory=list)
     books_seen: int = 0
+    mid: Decimal = Decimal(0)
 
-    def get_mid(self):
-        if len(self.mids) == 0:
-            return
-        mid = sum(self.mids) / len(self.mids)
-        self.mids = []
-        return Decimal(mid)
+    # mids: list = field(default_factory=list)
+
+    # def get_mid(self):
+    #     if len(self.mids) == 0:
+    #         return
+    #     mid = sum(self.mids) / len(self.mids)
+    #     self.mids = []
+    #     return Decimal(mid)
 
     async def run(self):
         await self.consume_stream()
@@ -123,10 +162,13 @@ class BinancePub(PublisherBase):
                 try:
                     if "data" in book:
                         mid = (float(book["data"]["a"]) + float(book["data"]["b"])) / 2
-                        self.mids.append(mid)
+                        # self.mids.append(mid)
+                        self.mid = Decimal(mid)
                         self.books_seen += 1
                 except Exception as e:
                     continue
 
+            await asyncio.sleep(0)
 
-PubsubProducer = Union[BalancePub, BookPub, BinancePub]
+
+PubsubProducer = Union[BalancePub, BookPub, BinancePub, BTPub]

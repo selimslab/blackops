@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Callable, Optional
@@ -6,14 +7,19 @@ from typing import Callable, Optional
 import async_timeout
 
 from src.monitoring import logger
+from src.proc import thread_pool_executor
 
 
 async def periodic(func: Callable, sleep_seconds: float) -> None:
+    loop = asyncio.get_running_loop()
     while True:
         try:
-            await func()
+            if asyncio.iscoroutinefunction(func):
+                await func()
+            else:
+                await loop.run_in_executor(thread_pool_executor, func)
         except Exception as e:
-            logger.error(f"periodic: {e}")
+            logger.error(f"periodic: {e}, {traceback.format_exc()}")
         finally:
             await asyncio.sleep(sleep_seconds)
 

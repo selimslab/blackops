@@ -45,12 +45,24 @@ class OrderStats:
 
 
 @dataclass
+class OrderDecisionInput:
+    mean_signal: Decimal
+    last_signal: Decimal
+    mid: Decimal
+    ask: Decimal
+    bid: Decimal
+    theo_sell: Decimal
+    theo_buy: Decimal
+
+
+@dataclass
 class Order:
     order_id: OrderId
     symbol: str
     side: OrderType
     price: Decimal
     qty: Decimal
+    input: Optional[OrderDecisionInput] = None
 
 
 @dataclass
@@ -224,7 +236,11 @@ class OrderApi:
         await asyncio.sleep(sleep_seconds.wait_after_failed_order)
 
     async def send_order(
-        self, side: OrderType, price: Decimal, qty: int
+        self,
+        side: OrderType,
+        price: Decimal,
+        qty: int,
+        input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
             if not self.can_order(side, price, qty):
@@ -247,8 +263,10 @@ class OrderApi:
                             price=price,
                             qty=Decimal(qty),
                             symbol=self.pair.symbol,
+                            input=input,
                         )
                         await self.deliver_ok(order)
+
                     else:
                         # delivered but failed
                         logger.info(f"{self.pair} {side} {qty} {price} : {order_log}")

@@ -12,6 +12,7 @@ import src.pubsub.log_pub as log_pub
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.periodic import periodic
+from src.proc import process_pool_executor, thread_pool_executor
 from src.pubsub.pubs import PublisherBase
 from src.pubsub.radio import radio
 from src.robots import robot_factory
@@ -153,7 +154,7 @@ flow_runner = FlowRunner()
 
 @dataclass
 class StatsPub(PublisherBase):
-    async def broadcast_stats(self):
+    def broadcast_stats(self):
         stats: Dict[str, Any] = {}
 
         stats["time"] = datetime.now()
@@ -173,7 +174,6 @@ class StatsPub(PublisherBase):
         log_pub.publish_stats(message=stats_msg)
 
     async def run(self):
-
         await periodic(self.broadcast_stats, sleep_seconds.broadcast_stats)
 
 

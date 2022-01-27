@@ -29,6 +29,7 @@ class ResilientGenerator:
                 async for data in gen:
                     if data:
                         yield data
+                    await asyncio.sleep(0)
             except (
                 ConnectionClosedError,
                 ConnectionAbortedError,

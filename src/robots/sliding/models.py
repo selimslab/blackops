@@ -14,9 +14,13 @@ class PriceWindow:
 
 
 @dataclass
-class MarketPrices:
+class BidAsk:
     ask: Optional[Decimal] = None
     bid: Optional[Decimal] = None
+
+    @property
+    def mid(self):
+        return (self.ask + self.bid) / Decimal(2)
 
 
 @dataclass

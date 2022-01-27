@@ -20,6 +20,8 @@ def sliding_window_factory(config: LeaderFollowerConfig):
     )
 
     pair = create_asset_pair(stg.base, stg.quote)
+    balance_pub.add_asset(pair.base)
+    balance_pub.add_asset(pair.quote)
 
     follower_pub = pub_factory.create_bt_pub_if_not_exists(
         ex_type=ExchangeType(config.follower_exchange),

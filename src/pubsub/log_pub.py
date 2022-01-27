@@ -1,9 +1,10 @@
 from datetime import datetime
 
+from src.environment import LOG_RADIO
 from src.monitoring import logger
 from src.pubsub.pusher_client import pusher_client
 
-DEFAULT_CHANNEL = "LOG_RADIO"
+DEFAULT_CHANNEL = LOG_RADIO
 
 ERROR = "ERROR"
 MESSAGE = "MESSAGE"
