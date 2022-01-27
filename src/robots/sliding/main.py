@@ -111,6 +111,7 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, self.leader_pub.mid
                 )
+                self.leader_seen += 1
             await self.decide()
             await asyncio.sleep(0)
 
@@ -125,6 +126,7 @@ class LeaderFollowerTrader(RobotBase):
         self.add_signal(mid)
 
         if self.follower_pub.books_seen > self.follower_seen:
+            self.follower_seen += self.follower_pub.books_seen
             self.aggregate_signals()
 
     def add_signal(self, mid: Decimal):
