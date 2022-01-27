@@ -141,14 +141,14 @@ class BinancePub(PublisherBase):
     books_seen: int = 0
     mid: Decimal = Decimal(0)
 
-    # mids: list = field(default_factory=list)
+    mids: list = field(default_factory=list)
 
-    # def get_mid(self):
-    #     if len(self.mids) == 0:
-    #         return
-    #     mid = sum(self.mids) / len(self.mids)
-    #     self.mids = []
-    #     return Decimal(mid)
+    def get_mid(self):
+        if len(self.mids) == 0:
+            return
+        mid = sum(self.mids) / len(self.mids)
+        self.mids = []
+        return Decimal(mid)
 
     async def run(self):
         await self.consume_stream()
@@ -162,8 +162,7 @@ class BinancePub(PublisherBase):
                 try:
                     if "data" in book:
                         mid = (float(book["data"]["a"]) + float(book["data"]["b"])) / 2
-                        # self.mids.append(mid)
-                        self.mid = Decimal(mid)
+                        self.mids.append(mid)
                         self.books_seen += 1
                 except Exception as e:
                     continue
