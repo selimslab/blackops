@@ -38,7 +38,6 @@ class BalancePub(PublisherBase):
                 0.97,
             ),
         ]
-
         await asyncio.gather(*coros)
 
     def add_asset(self, asset: Asset):
@@ -48,17 +47,17 @@ class BalancePub(PublisherBase):
     async def ask_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
+            # loop = asyncio.get_event_loop()
+            # await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
+            self.update_balances(res)
             self.last_updated = datetime.now()
 
     def update_balances(self, balances) -> None:
-        balances = self.exchange.parse_account_balance(balances)
+        balance_dict: dict = self.exchange.parse_account_balance(balances)
         for symbol, asset in self.assets.items():
-            if symbol in balances:
-                balance = balances[symbol]
-                asset.free = Decimal(balance["free"])
-                asset.locked = Decimal(balance["locked"])
+            data = balance_dict[symbol]
+            asset.free = Decimal(data["free"])
+            asset.locked = Decimal(data["locked"])
 
 
 @dataclass
