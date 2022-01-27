@@ -128,10 +128,11 @@ class BTPub(PublisherBase):
         if not self.stream:
             raise ValueError("No stream")
 
-        loop = asyncio.get_running_loop()
+        # loop = asyncio.get_running_loop()
         async for book in self.stream:
             if book:
-                await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
+                # await loop.run_in_executor(thread_pool_executor, )
+                self.parse_book(book)
             await asyncio.sleep(0)
 
 

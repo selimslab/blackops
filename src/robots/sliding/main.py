@@ -120,20 +120,23 @@ class LeaderFollowerTrader(RobotBase):
 
         async for res in gen:
             if res:
+                bid, ask = res
+                self.bidask.bid = bid
+                self.bidask.ask = ask
+
+                if not self.base_step_qty:
+                    mid = (ask + bid) / Decimal(2)
+                    self.set_base_step_qty(mid)
+
                 await loop.run_in_executor(
-                    thread_pool_executor, self.consume_bt_price, res
+                    thread_pool_executor, self.add_follower_signal
                 )
+                self.follower_prices_processed += 1
+
             await asyncio.sleep(0)
 
-    def consume_bt_price(self, res):
-        bid, ask = res
+    def add_follower_signal(self):
 
-        if not self.base_step_qty:
-            mid = (ask + bid) / Decimal(2)
-            self.set_base_step_qty(mid)
-
-        self.bidask.bid = bid
-        self.bidask.ask = ask
         if self.leader_buy_signals:
             self.follower_buy_signals.append(statistics.mean(self.leader_buy_signals))
             self.leader_buy_signals = []
@@ -141,8 +144,6 @@ class LeaderFollowerTrader(RobotBase):
         if self.leader_sell_signals:
             self.follower_sell_signals.append(statistics.mean(self.leader_sell_signals))
             self.leader_sell_signals = []
-
-        self.follower_prices_processed += 1
 
     # LEADER
     async def consume_leader_pub(self) -> None:
@@ -165,27 +166,26 @@ class LeaderFollowerTrader(RobotBase):
 
         self.taker_prices.bridged_mid = mid
 
-        self.update_signals(mid)
+        self.add_leader_signal(mid)
 
         self.leader_prices_processed += 1
 
-    def update_signals(self, mid: Decimal):
+    def add_leader_signal(self, mid: Decimal):
         bid = self.bidask.bid
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
+            self.taker_prices.sell = mid + unit_signal
             signal = (bid - mid) / unit_signal
             self.leader_sell_signals.append(signal)
-            self.taker_prices.sell = mid + unit_signal
 
         ask = self.bidask.ask
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
+            self.taker_prices.buy = mid - unit_signal
             signal = (mid - ask) / unit_signal
             self.leader_buy_signals.append(signal)
-            self.taker_prices.buy = mid - unit_signal
 
     async def decide(self):
-
         if self.decide_lock.locked():
             return
 
@@ -239,7 +239,11 @@ class LeaderFollowerTrader(RobotBase):
         self.sell_signal = mean_signal
         last_signal = self.follower_sell_signals[-1]
 
-        if mean_signal > 1 and last_signal > 1:
+        if (
+            mean_signal > 1
+            and last_signal > 1
+            and self.taker_prices.sell <= self.bidask.bid
+        ):
             price = self.get_precise_price(
                 self.taker_prices.sell, self.bidask.bid, decimal.ROUND_DOWN
             )
@@ -258,7 +262,11 @@ class LeaderFollowerTrader(RobotBase):
         self.buy_signal = mean_signal
         last_signal = self.follower_buy_signals[-1]
 
-        if mean_signal > 1 and last_signal > 1:
+        if (
+            mean_signal > 1
+            and last_signal > 1
+            and self.taker_prices.buy >= self.bidask.ask
+        ):
             price = self.get_precise_price(
                 self.taker_prices.buy, self.bidask.ask, decimal.ROUND_HALF_UP
             )
