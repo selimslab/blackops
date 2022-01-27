@@ -225,7 +225,7 @@ class LeaderFollowerTrader(RobotBase):
                 )
                 return
 
-            res = await self.should_buy()
+            res = self.should_buy()
             if res:
                 price, qty = res
                 decision_input = OrderDecisionInput(
