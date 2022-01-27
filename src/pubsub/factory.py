@@ -5,7 +5,7 @@ import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 
-from .pubs import BalancePub, BinancePub, BookPub, BTPub, PubsubProducer
+from .pubs import BalancePub, BinancePub, BTPub, PubsubProducer
 
 
 @dataclass

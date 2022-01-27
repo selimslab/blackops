@@ -64,42 +64,12 @@ class BalancePub(PublisherBase):
 
 
 @dataclass
-class BookPub(PublisherBase):
-    stream: AsyncGenerator
-    api_client: ExchangeAPIClientBase
-
-    book: Optional[Union[str, dict]] = None
-    books_seen: int = 0
-    prev_book: Optional[Union[str, dict]] = None
-    # last_updated = datetime.now()
-
-    async def run(self):
-        await self.consume_stream()
-
-    async def consume_stream(self):
-        if not self.stream:
-            raise ValueError("No stream")
-        if not self.api_client:
-            raise ValueError("No api_client")
-
-        async for book in self.stream:
-            if book and book != self.prev_book:
-                self.book = book
-                self.prev_book = book
-                self.books_seen += 1
-            await asyncio.sleep(0)
-
-
-@dataclass
 class BTPub(PublisherBase):
     stream: AsyncGenerator
     api_client: ExchangeAPIClientBase
 
     books_seen: int = 0
     stopwatch: StopwatchAPI = field(default_factory=StopwatchAPI)
-
-    # asks: List[Decimal] = field(default_factory=list)
-    # bids: List[Decimal] = field(default_factory=list)
 
     ask: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
@@ -122,18 +92,12 @@ class BTPub(PublisherBase):
             logger.info(f"BTPub: {e}")
             return
 
-    # def clear_prices(self):
-    #     self.ask = None
-    #     self.bid = None
-
     async def consume_stream(self):
         if not self.stream:
             raise ValueError("No stream")
 
-        # loop = asyncio.get_running_loop()
         async for book in self.stream:
             if book:
-                # await loop.run_in_executor(thread_pool_executor, )
                 self.parse_book(book)
             await asyncio.sleep(0)
 
@@ -145,15 +109,6 @@ class BinancePub(PublisherBase):
     api_client: ExchangeAPIClientBase
     books_seen: int = 0
     mid: Decimal = Decimal(0)
-
-    # mids: list = field(default_factory=list)
-
-    # def get_mid(self):
-    #     if len(self.mids) == 0:
-    #         return
-    #     mid = sum(self.mids) / len(self.mids)
-    #     self.mids.clear()
-    #     return Decimal(mid)
 
     async def run(self):
         await self.consume_stream()
@@ -169,11 +124,10 @@ class BinancePub(PublisherBase):
                         self.mid = (
                             Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
                         ) / Decimal(2)
-                        # self.mids.append(mid)
                         self.books_seen += 1
                 except Exception as e:
                     pass
             await asyncio.sleep(0)
 
 
-PubsubProducer = Union[BalancePub, BookPub, BinancePub, BTPub]
+PubsubProducer = Union[BalancePub, BinancePub, BTPub]
