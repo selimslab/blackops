@@ -252,8 +252,8 @@ class LeaderFollowerTrader(RobotBase):
             # "buy signals": list(self.follower_buy_signals),
             # "sell signals": list(self.follower_sell_signals),
             "prices": {
-                "ask": asdict(self.follower_pub.ask),
-                "bid": asdict(self.follower_pub.bid),
+                "ask": self.follower_pub.ask,
+                "bid": self.follower_pub.bid,
                 # "mids": list(self.mids_seen),
                 # "bids": list(self.bids_seen),
                 # "asks": list(self.asks_seen),
