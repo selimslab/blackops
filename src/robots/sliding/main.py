@@ -220,7 +220,7 @@ class LeaderFollowerTrader(RobotBase):
             await self.order_api.send_order(OrderType.BUY, price, qty, decision_input)
 
     def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
-        return price.quantize(reference, rounding=decimal.ROUND_DOWN)
+        return price.quantize(reference, rounding=decimal.ROUND_HALF_DOWN)
 
     def should_sell(self):
         mean_signal = statistics.mean(self.follower_sell_signals)

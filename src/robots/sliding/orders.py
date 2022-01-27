@@ -37,7 +37,9 @@ class OrderStats:
     fail_counts: FailCounts = field(default_factory=FailCounts)
 
     delivered_counts: DeliveredCounts = field(default_factory=DeliveredCounts)
-    cancelled: int = 0
+    sell_cancelled: int = 0
+    buy_cancelled: int = 0
+
     sell_filled: int = 0
     buy_filled: int = 0
 
@@ -135,12 +137,13 @@ class OrderApi:
     def cancel_successful(self, order: Order) -> None:
         self.cancelled_orders[order.order_id] = order
         self.last_cancelled.append(order)
-        self.stats.cancelled += 1
 
         if order.side == OrderType.BUY:
             self.pair.base.free -= order.qty
+            self.stats.buy_cancelled += 1
         else:
             self.pair.base.free += order.qty
+            self.stats.sell_cancelled += 1
 
         if order.order_id in self.inputs:
             del self.inputs[order.order_id]

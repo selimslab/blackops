@@ -10,6 +10,10 @@ from .main import (
 )
 
 
+def get_precise_price(price: Decimal, reference: Decimal) -> Decimal:
+    return price.quantize(reference, rounding=decimal.ROUND_HALF_DOWN)
+
+
 def test_round():
     shib = Decimal("0.00041596")
     btc = Decimal("793648")
@@ -25,6 +29,9 @@ def test_round():
 
     d = Decimal("0.0037850200")
     assert float(d) == 0.00378502
+    assert get_precise_price(Decimal("0.0037850200"), Decimal("0.0037")) == Decimal(
+        "0.0038"
+    )
 
     assert Decimal("43.23313072").quantize(
         Decimal("11.547"), rounding=decimal.ROUND_DOWN
@@ -48,3 +55,6 @@ def test_round():
     assert one_bps_lower(Decimal("5456")) == Decimal("5455")
     assert one_bps_lower(Decimal("5456000")) == Decimal("5455999")
     assert one_bps_lower(Decimal("0.00378000")) == Decimal("0.00377999")
+
+    assert get_precise_price(Decimal("2.834567"), Decimal("2.833")) == Decimal("2.835")
+    assert get_precise_price(Decimal("2.863937"), Decimal("2.833")) == Decimal("2.864")
