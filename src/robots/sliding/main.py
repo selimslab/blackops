@@ -38,16 +38,20 @@ class LeaderFollowerTrader(RobotBase):
 
     base_step_qty: Optional[Decimal] = None
 
-    leader_sell_signals: list = field(default_factory=list)
-    leader_buy_signals: list = field(default_factory=list)
-
-    follower_sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=2)
+    leader_sell_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
+    leader_buy_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
-    follower_buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=2)
-    )
+    # follower_sell_signals: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=2)
+    # )
+
+    # follower_buy_signals: collections.deque = field(
+    #     default_factory=lambda: collections.deque(maxlen=2)
+    # )
 
     signals: Signals = field(default_factory=Signals)
 
@@ -167,16 +171,16 @@ class LeaderFollowerTrader(RobotBase):
 
         self.add_signal()
 
-        self.aggregate_signals()
+        # self.aggregate_signals()
 
-    def aggregate_signals(self):
-        if self.leader_buy_signals:
-            self.follower_buy_signals.append(statistics.mean(self.leader_buy_signals))
-            self.leader_buy_signals = []
+    # def aggregate_signals(self):
+    #     if self.leader_buy_signals:
+    #         self.follower_buy_signals.append(statistics.mean(self.leader_buy_signals))
+    #         self.leader_buy_signals = []
 
-        if self.leader_sell_signals:
-            self.follower_sell_signals.append(statistics.mean(self.leader_sell_signals))
-            self.leader_sell_signals = []
+    #     if self.leader_sell_signals:
+    #         self.follower_sell_signals.append(statistics.mean(self.leader_sell_signals))
+    #         self.leader_sell_signals = []
 
     # DECIDE
     async def decide(self):
@@ -194,7 +198,6 @@ class LeaderFollowerTrader(RobotBase):
             res = self.should_sell()
             if res:
                 price, qty, decision_input = res
-
                 await self.order_api.send_order(
                     OrderType.SELL, price, qty, decision_input
                 )
@@ -213,10 +216,10 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=rounding)
 
     def should_sell(self):
-        if not self.follower_sell_signals:
+        if not self.leader_sell_signals:
             return
 
-        self.signals.sell = statistics.mean(self.follower_sell_signals)
+        self.signals.sell = statistics.mean(self.leader_sell_signals)
 
         self.taker.sell = (
             self.leader_pub.mid
@@ -243,10 +246,10 @@ class LeaderFollowerTrader(RobotBase):
             return price, qty, decision_input
 
     def should_buy(self):
-        if not self.follower_buy_signals:
+        if not self.leader_buy_signals:
             return
 
-        self.signals.buy = statistics.mean(self.follower_buy_signals)
+        self.signals.buy = statistics.mean(self.leader_buy_signals)
 
         self.taker.buy = (
             self.leader_pub.mid
