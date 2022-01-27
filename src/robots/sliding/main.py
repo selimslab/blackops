@@ -62,6 +62,8 @@ class LeaderFollowerTrader(RobotBase):
     bridge: Optional[Decimal] = None
     bidask: BidAsk = field(default_factory=BidAsk)
 
+    decide_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
         self.pair.base = self.balance_pub.get_asset(self.config.input.base)
@@ -147,15 +149,12 @@ class LeaderFollowerTrader(RobotBase):
         gen = create_binance_consumer_generator(self.leader_pub)
         loop = asyncio.get_running_loop()
 
-        follower_seen = 0
         async for mid in gen:
             if mid:
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, mid
                 )
-                if self.follower_prices_processed > follower_seen:
-                    follower_seen = self.follower_prices_processed
-                    await self.decide()
+                await self.decide()
             await asyncio.sleep(0)
 
     def consume_leader_book(self, mid: Decimal) -> None:
@@ -187,6 +186,9 @@ class LeaderFollowerTrader(RobotBase):
 
     async def decide(self):
 
+        if self.decide_lock.locked():
+            return
+
         if not self.base_step_qty:
             return
 
@@ -195,35 +197,42 @@ class LeaderFollowerTrader(RobotBase):
 
         loop = asyncio.get_running_loop()
 
-        res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
-        if res:
-            price, qty = res
-            decision_input = OrderDecisionInput(
-                signal=self.sell_signal,
-                mid=self.taker_prices.bridged_mid,
-                ask=self.bidask.ask,
-                bid=self.bidask.bid,
-                theo_buy=self.taker_prices.buy,
-                theo_sell=self.taker_prices.sell,
-            )
-            await self.order_api.send_order(OrderType.SELL, price, qty, decision_input)
-            return
+        async with self.decide_lock:
+            res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
+            if res:
+                price, qty = res
+                decision_input = OrderDecisionInput(
+                    signal=self.sell_signal,
+                    mid=self.taker_prices.bridged_mid,
+                    ask=self.bidask.ask,
+                    bid=self.bidask.bid,
+                    theo_buy=self.taker_prices.buy,
+                    theo_sell=self.taker_prices.sell,
+                )
+                await self.order_api.send_order(
+                    OrderType.SELL, price, qty, decision_input
+                )
+                return
 
-        res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
-        if res:
-            price, qty = res
-            decision_input = OrderDecisionInput(
-                signal=self.buy_signal,
-                mid=self.taker_prices.bridged_mid,
-                ask=self.bidask.ask,
-                bid=self.bidask.bid,
-                theo_buy=self.taker_prices.buy,
-                theo_sell=self.taker_prices.sell,
-            )
-            await self.order_api.send_order(OrderType.BUY, price, qty, decision_input)
+            res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
+            if res:
+                price, qty = res
+                decision_input = OrderDecisionInput(
+                    signal=self.buy_signal,
+                    mid=self.taker_prices.bridged_mid,
+                    ask=self.bidask.ask,
+                    bid=self.bidask.bid,
+                    theo_buy=self.taker_prices.buy,
+                    theo_sell=self.taker_prices.sell,
+                )
+                await self.order_api.send_order(
+                    OrderType.BUY, price, qty, decision_input
+                )
 
-    def get_precise_price(self, price: Decimal, reference: Decimal) -> Decimal:
-        return price.quantize(reference, rounding=decimal.ROUND_HALF_DOWN)
+    def get_precise_price(
+        self, price: Decimal, reference: Decimal, rounding
+    ) -> Decimal:
+        return price.quantize(reference, rounding=rounding)
 
     def should_sell(self):
         mean_signal = statistics.mean(self.follower_sell_signals)
@@ -231,7 +240,9 @@ class LeaderFollowerTrader(RobotBase):
         last_signal = self.follower_sell_signals[-1]
 
         if mean_signal > 1 and last_signal > 1:
-            price = self.get_precise_price(self.taker_prices.sell, self.bidask.bid)
+            price = self.get_precise_price(
+                self.taker_prices.sell, self.bidask.bid, decimal.ROUND_DOWN
+            )
             qty = self.base_step_qty * mean_signal
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
@@ -248,7 +259,9 @@ class LeaderFollowerTrader(RobotBase):
         last_signal = self.follower_buy_signals[-1]
 
         if mean_signal > 1 and last_signal > 1:
-            price = self.get_precise_price(self.taker_prices.buy, self.bidask.ask)
+            price = self.get_precise_price(
+                self.taker_prices.buy, self.bidask.ask, decimal.ROUND_HALF_UP
+            )
 
             qty = self.base_step_qty * mean_signal
             max_buyable = (
