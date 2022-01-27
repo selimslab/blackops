@@ -91,6 +91,7 @@ class LeaderFollowerTrader(RobotBase):
     async def run_streams(self) -> None:
         aws: Any = [
             self.consume_leader_pub(),
+            self.trigger_decide(),
             periodic(
                 self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
@@ -104,24 +105,22 @@ class LeaderFollowerTrader(RobotBase):
         await asyncio.gather(*aws)
 
     # LEADER
+    async def trigger_decide(self):
+        while True:
+            if self.leader_seen % 5 == 0:
+                await self.decide()
+            await asyncio.sleep(0)
 
     async def consume_leader_pub(self) -> None:
         loop = asyncio.get_running_loop()
         pre = None
         while True:
-            if (
-                self.leader_pub.mid
-                and self.leader_pub.mid != pre
-                # and self.leader_pub.books_seen > self.leader_seen
-            ):
+            if self.leader_pub.mid != pre:
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book
                 )
                 pre = self.leader_pub.mid
                 self.leader_seen += 1
-
-                if self.leader_seen % 5 == 0:
-                    await self.decide()
 
             await asyncio.sleep(0)
 
