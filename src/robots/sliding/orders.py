@@ -111,10 +111,9 @@ class OrderApi:
 
             async with self.locks.cancel:
                 while self.open_orders:
-                    order: Order = self.open_orders.popleft()
-                    if order.order_id in self.cancelled_orders:
-                        continue
+                    order: Order = self.open_orders[0]
                     await self.cancel_order(order)
+                    self.open_orders.popleft()
 
                 if self.open_orders_fresh:
                     self.cancelled_orders = {}
@@ -125,6 +124,9 @@ class OrderApi:
             log_pub.publish_error(message=msg)
 
     async def cancel_order(self, order: Order) -> None:
+        if order.order_id in self.cancelled_orders:
+            return
+
         await self.poll_for_lock(self.exchange.locks.cancel)
 
         ok = await self.exchange.cancel_order(order.order_id)
