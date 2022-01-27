@@ -203,8 +203,10 @@ class LeaderFollowerTrader(RobotBase):
 
         self.signals.sell = statistics.mean(self.follower_sell_signals)
 
-        self.taker.sell = self.taker.mid * (
-            Decimal(1) + self.config.unit_signal_bps.sell
+        self.taker.sell = (
+            self.leader_pub.mid
+            * self.bridge_pub.mid
+            * (Decimal(1) + self.config.unit_signal_bps.sell)
         )
 
         if self.signals.sell > 1 and self.taker.sell <= self.follower_pub.bid:
@@ -232,7 +234,11 @@ class LeaderFollowerTrader(RobotBase):
 
         self.signals.buy = statistics.mean(self.follower_buy_signals)
 
-        self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
+        self.taker.buy = (
+            self.leader_pub.mid
+            * self.bridge_pub.mid
+            * (Decimal(1) - self.config.unit_signal_bps.buy)
+        )
 
         if self.signals.buy > 1 and self.taker.buy >= self.follower_pub.ask:
             price = self.get_precise_price(

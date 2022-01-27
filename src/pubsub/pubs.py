@@ -24,13 +24,12 @@ class PublisherBase:
 class BalancePub(PublisherBase):
     exchange: ExchangeAPIClientBase
     last_updated = datetime.now()
-    balances: Optional[dict] = None
     assets: Dict[AssetSymbol, Asset] = field(default_factory=dict)
 
     async def run(self):
         coros = [
             periodic(
-                self.ask_balance,
+                self.publish_balance,
                 sleep_seconds.update_balances,
             ),
             periodic(
@@ -47,7 +46,7 @@ class BalancePub(PublisherBase):
     def get_asset(self, symbol: AssetSymbol):
         return self.assets.get(symbol)
 
-    async def ask_balance(self):
+    async def publish_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
             loop = asyncio.get_event_loop()
@@ -76,7 +75,7 @@ class BTPub(PublisherBase):
     bid: Decimal = Decimal(0)
 
     async def run(self):
-        await self.consume_stream()
+        await self.publish_stream()
 
     def parse_book(self, book):
         try:
@@ -92,13 +91,14 @@ class BTPub(PublisherBase):
             logger.info(f"BTPub: {e}")
             return
 
-    async def consume_stream(self):
+    async def publish_stream(self):
         if not self.stream:
             raise ValueError("No stream")
 
+        loop = asyncio.get_event_loop()
         async for book in self.stream:
             if book:
-                self.parse_book(book)
+                await loop.run_in_executor(self.parse_book, book)
             await asyncio.sleep(0)
 
 
@@ -111,24 +111,28 @@ class BinancePub(PublisherBase):
     mid: Decimal = Decimal(0)
 
     async def run(self):
-        await self.consume_stream()
+        await self.publish_stream()
 
-    async def consume_stream(self):
+    def parse_book(self, book):
+        try:
+            if "data" in book:
+                mid = (
+                    Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
+                ) / Decimal(2)
+                if mid != self.mid:
+                    self.mid = mid
+                    self.books_seen += 1
+        except Exception as e:
+            pass
+
+    async def publish_stream(self):
         if not self.stream:
             raise ValueError("No stream")
 
+        loop = asyncio.get_event_loop()
         async for book in self.stream:
             if book:
-                try:
-                    if "data" in book:
-                        mid = (
-                            Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
-                        ) / Decimal(2)
-                        if mid != self.mid:
-                            self.mid = mid
-                            self.books_seen += 1
-                except Exception as e:
-                    pass
+                await loop.run_in_executor(self.parse_book, book)
             await asyncio.sleep(0)
 
 
