@@ -211,7 +211,7 @@ class LeaderFollowerTrader(RobotBase):
             price, qty = res
             decision_input = OrderDecisionInput(
                 signal=self.buy_signal,
-                mid=self.taker_prices.mid,
+                mid=self.taker_prices.bridged_mid,
                 ask=self.bidask.ask,
                 bid=self.bidask.bid,
                 theo_buy=self.taker_prices.buy,
