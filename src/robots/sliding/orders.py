@@ -1,7 +1,7 @@
 import asyncio
 import collections
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Dict, Optional
 
@@ -139,6 +139,7 @@ class OrderApi:
     def cancel_successful(self, order: Order) -> None:
         self.cancelled_orders[order.order_id] = order
         self.last_cancelled.append(order)
+        logger.info(f"cancelled: {asdict(order)}")
 
         if order.side == OrderType.BUY:
             self.pair.base.free -= order.qty
