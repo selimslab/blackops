@@ -150,9 +150,8 @@ class LeaderFollowerTrader(RobotBase):
                 await loop.run_in_executor(
                     thread_pool_executor, self.consume_leader_book, mid
                 )
-                self.leader_prices_processed += 1
 
-                if self.leader_prices_processed % 5 == 0:
+                if self.follower_prices_processed % 2 == 0:
                     await self.decide()
             await asyncio.sleep(0)
 
@@ -165,6 +164,8 @@ class LeaderFollowerTrader(RobotBase):
         self.taker_prices.bridged_mid = mid
 
         self.add_price_point(mid)
+
+        self.leader_prices_processed += 1
 
     def add_price_point(self, mid: Decimal):
         bid = self.bidask.bid
@@ -241,6 +242,8 @@ class LeaderFollowerTrader(RobotBase):
 
             if not self.order_api.can_buy(price, qty):
                 return None
+
+            return price, qty
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
