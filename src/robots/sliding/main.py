@@ -109,7 +109,7 @@ class LeaderFollowerTrader(RobotBase):
         while True:
             if self.leader_seen % 3 == 0:
                 await self.decide()
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.001)
 
     async def consume_leader_pub(self) -> None:
         loop = asyncio.get_running_loop()
@@ -120,12 +120,9 @@ class LeaderFollowerTrader(RobotBase):
                     thread_pool_executor, self.consume_leader_book
                 )
                 pre = self.leader_pub.mid
-                self.leader_seen += 1
-
             await asyncio.sleep(0)
 
     def consume_leader_book(self) -> None:
-
         mid = None
         if self.bridge_pub:
             mid = self.leader_pub.mid * self.bridge_pub.mid
@@ -143,6 +140,8 @@ class LeaderFollowerTrader(RobotBase):
         if self.follower_pub.books_seen > self.follower_seen:
             self.follower_seen = self.follower_pub.books_seen
             self.aggregate_signals()
+
+        self.leader_seen += 1
 
     def add_signal(self, mid: Decimal):
         bid = self.follower_pub.bid
