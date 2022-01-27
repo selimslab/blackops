@@ -113,7 +113,8 @@ class LeaderFollowerTrader(RobotBase):
                     thread_pool_executor, self.consume_leader_book, self.leader_pub.mid
                 )
                 self.leader_seen += 1
-            await self.decide()
+                await self.decide()
+
             await asyncio.sleep(0)
 
     def consume_leader_book(self, mid: Decimal) -> None:

@@ -264,15 +264,14 @@ class OrderApi:
         input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
-
             if self.locks.order.locked():
                 self.stats.fail_counts.locked += 1
                 return None
 
-            if not self.can_order(side, price, qty):
-                return None
-
             async with self.locks.order:
+                if not self.can_order(side, price, qty):
+                    return None
+
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
                     self.pair, side, float(price), qty
                 )
@@ -291,7 +290,6 @@ class OrderApi:
                             self.inputs[order_id] = input
                         await self.deliver_ok(order)
                     else:
-                        # delivered but failed
                         logger.info(f"{self.pair} {side} {qty} {price} : {order_log}")
                         await self.deliver_fail()
                 else:
