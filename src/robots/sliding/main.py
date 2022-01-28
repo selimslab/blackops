@@ -24,7 +24,17 @@ from .models import BookTop, Signals, Theo
 
 @dataclass
 class Stats:
-    pass
+    leader_seen: int = 0
+    follower_seen: int = 0
+    decisions: int = 0
+    decision_locked: int = 0
+    missing_data: int = 0
+    cant_buy: int = 0
+    cant_sell: int = 0
+    sell_tried: int = 0
+    buy_tried: int = 0
+    buy_not_needed: int = 0
+    sell_not_needed: int = 0
 
 
 @dataclass
@@ -45,19 +55,7 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=7)
     )
 
-    # follower_sell_signals: collections.deque = field(
-    #     default_factory=lambda: collections.deque(maxlen=2)
-    # )
-
-    # follower_buy_signals: collections.deque = field(
-    #     default_factory=lambda: collections.deque(maxlen=2)
-    # )
-
     signals: Signals = field(default_factory=Signals)
-
-    leader_seen: int = 0
-    follower_seen: int = 0
-    decisions: int = 0
 
     taker: Theo = field(default_factory=Theo)
 
@@ -67,15 +65,7 @@ class LeaderFollowerTrader(RobotBase):
 
     market: BookTop = field(default_factory=BookTop)
 
-    # mids_seen: collections.deque = field(
-    #     default_factory=lambda: collections.deque(maxlen=12)
-    # )
-    # bids_seen: collections.deque = field(
-    #     default_factory=lambda: collections.deque(maxlen=12)
-    # )
-    # asks_seen: collections.deque = field(
-    #     default_factory=lambda: collections.deque(maxlen=12)
-    # )
+    stats: Stats = field(default_factory=Stats)
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -119,11 +109,10 @@ class LeaderFollowerTrader(RobotBase):
             if self.leader_pub.mid and self.leader_pub.mid != pre:
                 self.update_mid()
                 pre = self.leader_pub.mid
-                self.leader_seen += 1
+                self.stats.leader_seen += 1
             await asyncio.sleep(0)
 
     def update_mid(self) -> None:
-
         self.taker.usdt = self.leader_pub.mid
 
         if self.bridge_pub and self.bridge_pub.mid:
@@ -136,11 +125,10 @@ class LeaderFollowerTrader(RobotBase):
     async def trigger_decide(self) -> None:
         proc = 0
         while True:
-            seen = self.leader_seen + self.follower_seen
+            seen = self.stats.leader_seen + self.stats.follower_seen
             if seen > proc:
                 proc = seen
                 await self.decide()
-                self.decisions += 1
             await asyncio.sleep(0)
 
     def add_signal(self):
@@ -173,13 +161,14 @@ class LeaderFollowerTrader(RobotBase):
                 self.market.ask = self.follower_pub.ask
                 self.market.bid = self.follower_pub.bid
                 self.add_signal()
-                self.follower_seen += 1
+                self.stats.follower_seen += 1
 
             await asyncio.sleep(0)
 
     # DECIDE
     async def decide(self):
         if self.decide_lock.locked():
+            self.stats.decision_locked += 1
             return
 
         if (
@@ -187,9 +176,11 @@ class LeaderFollowerTrader(RobotBase):
             or not self.follower_pub.bid
             or not self.follower_pub.ask
         ):
+            self.stats.missing_data += 1
             return
 
         async with self.decide_lock:
+            self.stats.decisions += 1
             loop = asyncio.get_event_loop()
 
             res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
@@ -198,6 +189,7 @@ class LeaderFollowerTrader(RobotBase):
                 await self.order_api.send_order(
                     OrderType.SELL, price, qty, decision_input
                 )
+                self.stats.sell_tried += 1
                 return
 
             res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
@@ -206,6 +198,7 @@ class LeaderFollowerTrader(RobotBase):
                 await self.order_api.send_order(
                     OrderType.BUY, price, qty, decision_input
                 )
+                self.stats.buy_tried += 1
 
     def get_precise_price(
         self, price: Decimal, reference: Decimal, rounding
@@ -234,6 +227,7 @@ class LeaderFollowerTrader(RobotBase):
             qty = int(qty)
 
             if not self.order_api.can_sell(price, qty):
+                self.stats.cant_sell += 1
                 return
 
             decision_input = OrderDecisionInput(
@@ -241,6 +235,10 @@ class LeaderFollowerTrader(RobotBase):
                 taker=copy(self.taker),
             )
             return price, qty, decision_input
+
+        else:
+            self.stats.sell_not_needed += 1
+            return
 
     def should_buy(self):
         if not self.buy_signals:
@@ -267,6 +265,7 @@ class LeaderFollowerTrader(RobotBase):
             qty = int(qty)
 
             if not self.order_api.can_buy(price, qty):
+                self.stats.cant_buy += 1
                 return None
 
             decision_input = OrderDecisionInput(
@@ -274,6 +273,9 @@ class LeaderFollowerTrader(RobotBase):
                 taker=copy(self.taker),
             )
             return price, qty, decision_input
+        else:
+            self.stats.buy_not_needed += 1
+            return
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
@@ -293,10 +295,8 @@ class LeaderFollowerTrader(RobotBase):
                 # "asks": list(self.asks_seen),
                 "taker": asdict(self.taker),
                 "bn seen": self.leader_pub.books_seen,
-                "bn proc": self.leader_seen,
                 "bt seen": self.follower_pub.books_seen,
-                "bt proc": self.follower_seen,
-                "decisions": self.decisions,
+                "stats": asdict(self.stats),
             },
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
