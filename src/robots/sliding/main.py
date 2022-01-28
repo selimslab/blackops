@@ -268,12 +268,14 @@ class LeaderFollowerTrader(RobotBase):
             )
             price = n_bps_higher(price, Decimal(2))
 
-            qty = int(self.base_step_qty)
-
             current_step = self.pair.base.total_balance / self.base_step_qty
             remaining_step = self.config.max_step - current_step
             if remaining_step < 1:
-                qty = int(self.base_step_qty * remaining_step)
+                qty = remaining_step * self.base_step_qty
+            else:
+                qty = self.base_step_qty
+
+            qty = int(qty)
 
             if not self.order_api.can_buy(price, qty):
                 self.stats.buy_not_needed += 1
