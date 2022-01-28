@@ -57,7 +57,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     bn_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+        default_factory=lambda: collections.deque(maxlen=2)
     )
 
     signals: Signals = field(default_factory=Signals)
@@ -146,7 +146,7 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             self.set_base_step_qty(mid)
 
-        if len(self.bn_mids) < 3:
+        if len(self.bn_mids) < 2:
             self.bn_mids.append(mid)
             return
 
