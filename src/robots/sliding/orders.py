@@ -91,7 +91,7 @@ class OrderApi:
     orders_in_last_second: int = 0
     max_orders_per_second: int = 3
 
-    inputs: Dict[OrderId, OrderDecisionInput] = field(default_factory=dict)
+    decision_inputs: Dict[OrderId, OrderDecisionInput] = field(default_factory=dict)
 
     async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
@@ -143,8 +143,8 @@ class OrderApi:
             self.pair.base.free += order.qty
             self.stats.sell_cancelled += 1
 
-        if order.order_id in self.inputs:
-            del self.inputs[order.order_id]
+        if order.order_id in self.decision_inputs:
+            del self.decision_inputs[order.order_id]
 
     def cancel_failed(self, order: Order) -> None:
         # couldn't cancel but maybe filled
@@ -193,7 +193,7 @@ class OrderApi:
                 qty=Decimal(order_dict.get("leftAmount", 0)),
                 symbol=order_dict.get("pairSymbol"),
                 side=order_dict.get("type"),
-                input=self.inputs.get(order_dict.get("id")),
+                input=self.decision_inputs.get(order_dict.get("id")),
             )
             for order_dict in orderlist
         ]
@@ -202,7 +202,7 @@ class OrderApi:
             if order.order_id not in self.cancelled_orders:
                 self.open_orders.append(order)
 
-        self.inputs = {}
+        self.decision_inputs = {}
         self.open_orders_fresh = True
         self.cancelled_orders = {}
         self.stats.refreshed += 1
@@ -249,7 +249,7 @@ class OrderApi:
         )  # allow time for order to be filled
         self.open_orders.append(order)
         await self.cancel_open_orders()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(sleep_seconds.wait_after_deliver)
 
     async def deliver_fail(self):
         self.stats.fail_counts.bad_response += 1
@@ -257,12 +257,37 @@ class OrderApi:
         # wait a bit, maybe gets better next time
         await asyncio.sleep(sleep_seconds.wait_after_failed_order)
 
+    async def submit_ok(
+        self,
+        order_log: dict,
+        side: OrderType,
+        price: Decimal,
+        qty: int,
+        decision_input: Optional[OrderDecisionInput] = None,
+    ):
+        order_id = self.parse_order_id(order_log)
+        if order_id:
+            order = Order(
+                order_id=order_id,
+                side=side.value,
+                price=price,
+                qty=Decimal(qty),
+                symbol=self.pair.symbol,
+                input=decision_input,
+            )
+            if decision_input:
+                self.decision_inputs[order_id] = decision_input
+            await self.deliver_ok(order)
+        else:
+            logger.info(f"{self.pair} {side} {qty} {price} : {order_log}")
+            await self.deliver_fail()
+
     async def send_order(
         self,
         side: OrderType,
         price: Decimal,
         qty: int,
-        input: Optional[OrderDecisionInput] = None,
+        decision_input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
             if self.locks.order.locked():
@@ -277,22 +302,7 @@ class OrderApi:
                     self.pair, side, float(price), qty
                 )
                 if order_log:
-                    order_id = self.parse_order_id(order_log)
-                    if order_id:
-                        order = Order(
-                            order_id=order_id,
-                            side=side.value,
-                            price=price,
-                            qty=Decimal(qty),
-                            symbol=self.pair.symbol,
-                            input=input,
-                        )
-                        if input:
-                            self.inputs[order_id] = input
-                        await self.deliver_ok(order)
-                    else:
-                        logger.info(f"{self.pair} {side} {qty} {price} : {order_log}")
-                        await self.deliver_fail()
+                    await self.submit_ok(order_log, side, price, qty, decision_input)
                 else:
                     self.stats.fail_counts.parent += 1
             return None
