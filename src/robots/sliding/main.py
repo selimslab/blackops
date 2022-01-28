@@ -53,7 +53,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     bn_mids: collections.deque = field(
@@ -120,7 +120,8 @@ class LeaderFollowerTrader(RobotBase):
                     self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
                 else:
                     return
-                await loop.run_in_executor(thread_pool_executor, self.add_signals)
+                # await loop.run_in_executor(thread_pool_executor, )
+                self.add_signals()
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
             await asyncio.sleep(0)
@@ -192,9 +193,10 @@ class LeaderFollowerTrader(RobotBase):
 
         async with self.decide_lock:
             self.stats.decisions += 1
-            loop = asyncio.get_event_loop()
+            # loop = asyncio.get_event_loop()
 
-            res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
+            # res = await loop.run_in_executor(thread_pool_executor, )
+            res = self.should_sell()
             if res:
                 price, qty, decision_input = res
                 await self.order_api.send_order(
@@ -203,7 +205,8 @@ class LeaderFollowerTrader(RobotBase):
                 self.stats.sell_tried += 1
                 return
 
-            res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
+            # res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
+            res = self.should_buy()
             if res:
                 price, qty, decision_input = res
                 await self.order_api.send_order(
