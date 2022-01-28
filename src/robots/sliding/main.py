@@ -122,14 +122,12 @@ class LeaderFollowerTrader(RobotBase):
                 if not self.base_step_qty:
                     self.set_base_step_qty(self.taker.mid)
 
-                self.add_signals()
+                self.add_sell_signal()
+                self.add_buy_signal()
+
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
             await asyncio.sleep(0)
-
-    def add_signals(self):
-        self.add_sell_signal()
-        self.add_buy_signal()
 
     async def trigger_decide(self) -> None:
         proc = 0
@@ -144,19 +142,19 @@ class LeaderFollowerTrader(RobotBase):
         """
         Not even looking at bridge
         """
-        mid = self.taker.usdt
-        if not mid:
+        usdt_mid = self.taker.usdt
+        if not usdt_mid:
             return
 
         if len(self.bn_mids) < 3:
-            self.bn_mids.append(mid)
+            self.bn_mids.append(usdt_mid)
             return
 
         median_of_last_n_bids = statistics.median(self.bn_mids)
-        self.bn_mids.append(mid)
+        self.bn_mids.append(usdt_mid)
         unit_signal = self.config.unit_signal_bps.sell * median_of_last_n_bids
         # sell if median_of_last_n_bids > 1bips of mid
-        signal = (median_of_last_n_bids - mid) / unit_signal
+        signal = (median_of_last_n_bids - usdt_mid) / unit_signal
         self.sell_signals.append(signal)
 
     def add_buy_signal(self):
@@ -194,7 +192,9 @@ class LeaderFollowerTrader(RobotBase):
         async with self.decide_lock:
             self.stats.decisions += 1
 
-            await self.check_sell()
+            sell = await self.check_sell()
+            if sell:
+                return
             await self.check_buy()
 
     async def check_sell(self):
@@ -203,6 +203,7 @@ class LeaderFollowerTrader(RobotBase):
             price, qty, decision_input = res
             await self.order_api.send_order(OrderType.SELL, price, qty, decision_input)
             self.stats.sell_tried += 1
+            return True
 
     async def check_buy(self):
         res = self.should_buy()
@@ -266,7 +267,6 @@ class LeaderFollowerTrader(RobotBase):
             price = self.get_precise_price(
                 self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
             )
-            price = n_bps_higher(price, Decimal(2))
 
             qty = self.base_step_qty
 
