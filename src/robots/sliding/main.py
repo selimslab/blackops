@@ -119,6 +119,9 @@ class LeaderFollowerTrader(RobotBase):
                 else:
                     return
 
+                if not self.base_step_qty:
+                    self.set_base_step_qty(self.taker.mid)
+
                 self.add_signals()
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
@@ -144,9 +147,6 @@ class LeaderFollowerTrader(RobotBase):
         mid = self.taker.usdt
         if not mid:
             return
-
-        if not self.base_step_qty:
-            self.set_base_step_qty(mid)
 
         if len(self.bn_mids) < 3:
             self.bn_mids.append(mid)
@@ -268,12 +268,12 @@ class LeaderFollowerTrader(RobotBase):
             )
             price = n_bps_higher(price, Decimal(2))
 
+            qty = self.base_step_qty
+
             current_step = self.pair.base.total_balance / self.base_step_qty
             remaining_step = self.config.max_step - current_step
             if remaining_step < 1:
                 qty = remaining_step * self.base_step_qty
-            else:
-                qty = self.base_step_qty
 
             qty = int(qty)
 
