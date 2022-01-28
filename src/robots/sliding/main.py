@@ -228,7 +228,7 @@ class LeaderFollowerTrader(RobotBase):
         self.taker.sell = (
             self.leader_pub.mid
             * self.bridge_pub.mid
-            * (Decimal(1) + self.config.unit_signal_bps.sell)
+            # (Decimal(1) + self.config.unit_signal_bps.sell)
         )
 
         if self.signals.sell > 1:
