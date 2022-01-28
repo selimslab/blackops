@@ -118,6 +118,7 @@ class LeaderFollowerTrader(RobotBase):
                     self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
                 else:
                     return
+
                 self.add_signals()
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
@@ -137,6 +138,9 @@ class LeaderFollowerTrader(RobotBase):
             await asyncio.sleep(0)
 
     def add_sell_signal(self):
+        """
+        Not even looking at bridge
+        """
         mid = self.taker.usdt
         if not mid:
             return
@@ -151,7 +155,7 @@ class LeaderFollowerTrader(RobotBase):
         median_of_last_n_bids = statistics.median(self.bn_mids)
         self.bn_mids.append(mid)
         unit_signal = self.config.unit_signal_bps.sell * median_of_last_n_bids
-        # sell if median_of_last_n_bids > 5bips of mid
+        # sell if median_of_last_n_bids > 1bips of mid
         signal = (median_of_last_n_bids - mid) / unit_signal
         self.sell_signals.append(signal)
 
@@ -225,7 +229,11 @@ class LeaderFollowerTrader(RobotBase):
         #     # (Decimal(1) + self.config.unit_signal_bps.sell)
         # )
 
-        self.signals.sell = statistics.mean(self.sell_signals)
+        self.taker.sell = self.taker.mid * (
+            Decimal(1) + self.config.unit_signal_bps.sell
+        )
+
+        self.signals.sell = max(self.sell_signals)
 
         if (
             self.signals.sell > 1
@@ -233,12 +241,10 @@ class LeaderFollowerTrader(RobotBase):
             and self.taker.mid <= self.follower_pub.bid
         ):
 
-            price = n_bps_lower(self.taker.mid, Decimal(3))
-            self.taker.sell = price
-
             price = self.get_precise_price(
-                price, self.follower_pub.bid, decimal.ROUND_DOWN
+                self.taker.sell, self.follower_pub.bid, decimal.ROUND_HALF_DOWN
             )
+            price = n_bps_lower(price, Decimal(3))
 
             qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
@@ -262,18 +268,14 @@ class LeaderFollowerTrader(RobotBase):
 
         self.signals.buy = statistics.mean(self.buy_signals)
 
-        price = n_bps_higher(self.follower_pub.ask, Decimal(3))
-        self.taker.buy = price
-        # (
-        #     self.leader_pub.mid
-        #     * self.bridge_pub.mid
-        #     # (Decimal(1) - self.config.unit_signal_bps.buy)
-        # )
+        self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
-        if self.signals.buy > 1:
-            # price = self.get_precise_price(
-            #     self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
-            # )
+        if self.signals.buy > 1 and self.buy_signals[-1] > 1:
+
+            price = self.get_precise_price(
+                self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
+            )
+            price = n_bps_higher(price, Decimal(2))
 
             signal_qty = self.base_step_qty * self.signals.buy
             max_buyable = (
