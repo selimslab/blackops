@@ -38,11 +38,11 @@ class LeaderFollowerTrader(RobotBase):
 
     base_step_qty: Optional[Decimal] = None
 
-    leader_sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+    sell_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=7)
     )
-    leader_buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+    buy_signals: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=7)
     )
 
     # follower_sell_signals: collections.deque = field(
@@ -57,6 +57,7 @@ class LeaderFollowerTrader(RobotBase):
 
     leader_seen: int = 0
     follower_seen: int = 0
+    decisions: int = 0
 
     taker: Theo = field(default_factory=Theo)
 
@@ -139,6 +140,7 @@ class LeaderFollowerTrader(RobotBase):
             if seen > proc:
                 proc = seen
                 await self.decide()
+                self.decisions += 1
             await asyncio.sleep(0)
 
     def add_signal(self):
@@ -153,13 +155,13 @@ class LeaderFollowerTrader(RobotBase):
         if bid:
             unit_signal = self.config.unit_signal_bps.sell * mid
             signal = (bid - mid) / unit_signal
-            self.leader_sell_signals.append(signal)
+            self.sell_signals.append(signal)
 
         ask = self.follower_pub.ask
         if ask:
             unit_signal = self.config.unit_signal_bps.buy * mid
             signal = (mid - ask) / unit_signal
-            self.leader_buy_signals.append(signal)
+            self.buy_signals.append(signal)
 
     # FOLLOWER
     async def check_follower_update(self):
@@ -188,7 +190,9 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         async with self.decide_lock:
-            res = self.should_sell()
+            loop = asyncio.get_event_loop()
+
+            res = await loop.run_in_executor(thread_pool_executor, self.should_sell)
             if res:
                 price, qty, decision_input = res
                 await self.order_api.send_order(
@@ -196,7 +200,7 @@ class LeaderFollowerTrader(RobotBase):
                 )
                 return
 
-            res = self.should_buy()
+            res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
             if res:
                 price, qty, decision_input = res
                 await self.order_api.send_order(
@@ -209,10 +213,10 @@ class LeaderFollowerTrader(RobotBase):
         return price.quantize(reference, rounding=rounding)
 
     def should_sell(self):
-        if not self.leader_sell_signals:
+        if not self.sell_signals:
             return
 
-        self.signals.sell = statistics.mean(self.leader_sell_signals)
+        self.signals.sell = statistics.mean(self.sell_signals)
 
         self.taker.sell = (
             self.leader_pub.mid
@@ -239,10 +243,10 @@ class LeaderFollowerTrader(RobotBase):
             return price, qty, decision_input
 
     def should_buy(self):
-        if not self.leader_buy_signals:
+        if not self.buy_signals:
             return
 
-        self.signals.buy = statistics.mean(self.leader_buy_signals)
+        self.signals.buy = statistics.mean(self.buy_signals)
 
         self.taker.buy = (
             self.leader_pub.mid
@@ -279,8 +283,8 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "signals": asdict(self.signals),
-            # "buy signals": list(self.follower_buy_signals),
-            # "sell signals": list(self.follower_sell_signals),
+            "buy signals": list(self.buy_signals),
+            "sell signals": list(self.sell_signals),
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,
@@ -292,6 +296,7 @@ class LeaderFollowerTrader(RobotBase):
                 "bn proc": self.leader_seen,
                 "bt seen": self.follower_pub.books_seen,
                 "bt proc": self.follower_seen,
+                "decisions": self.decisions,
             },
             "order": {
                 "fresh": self.order_api.open_orders_fresh,

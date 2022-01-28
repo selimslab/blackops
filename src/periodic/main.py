@@ -11,14 +11,13 @@ from src.proc import thread_pool_executor
 
 
 async def periodic(func: Callable, sleep_seconds: float) -> None:
-    # loop = asyncio.get_running_loop()
+    loop = asyncio.get_running_loop()
     while True:
         try:
             if asyncio.iscoroutinefunction(func):
                 await func()
             else:
-                func()
-                # await loop.run_in_executor(thread_pool_executor, func)
+                await loop.run_in_executor(thread_pool_executor, func)
         except Exception as e:
             logger.error(f"periodic: {e}, {traceback.format_exc()}")
         finally:

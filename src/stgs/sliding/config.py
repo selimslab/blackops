@@ -32,7 +32,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
     testnet = False
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        sell=Decimal("1.5") * BPS, buy=Decimal("14.5") * BPS
+        sell=Decimal("1.5") * BPS, buy=Decimal("15.5") * BPS
     )
 
     input: LeaderFollowerInput
