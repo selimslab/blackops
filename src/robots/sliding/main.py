@@ -11,7 +11,7 @@ from typing import Any, Optional
 from src.domain import BPS, OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.numberops import round_decimal_floor, round_decimal_half_up
+from src.numberops import n_bps_higher, round_decimal_floor, round_decimal_half_up
 from src.periodic import periodic
 from src.proc import thread_pool_executor
 from src.pubsub.pubs import BalancePub, BinancePub, BTPub
@@ -261,10 +261,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.signals.buy = statistics.mean(self.buy_signals)
 
-        self.taker.buy = self.follower_pub.ask * (
-            Decimal(1) + self.config.unit_signal_bps.sell
-        )  # ask + 2bps
-
+        self.taker.buy = n_bps_higher(self.follower_pub.ask, Decimal(2))
         # (
         #     self.leader_pub.mid
         #     * self.bridge_pub.mid
@@ -276,11 +273,11 @@ class LeaderFollowerTrader(RobotBase):
                 self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
             )
 
-            qty = self.base_step_qty * self.signals.buy
+            signal_qty = self.base_step_qty * self.signals.buy
             max_buyable = (
                 self.config.max_step * self.base_step_qty - self.pair.base.total_balance
             )
-            qty = min(qty, max_buyable)
+            qty = min(signal_qty, max_buyable)
             qty = int(qty)
 
             if not self.order_api.can_buy(price, qty):

@@ -42,3 +42,13 @@ def one_bps_lower(d: Decimal) -> Decimal:
 def one_bps_higher(d: Decimal) -> Decimal:
     bps = get_bps(d)
     return d + bps
+
+
+def n_bps_higher(d: Decimal, n: Decimal) -> Decimal:
+    bps = get_bps(d)
+    return d + n * bps
+
+
+def n_bps_lower(d: Decimal, n: Decimal) -> Decimal:
+    bps = get_bps(d)
+    return d - n * bps
