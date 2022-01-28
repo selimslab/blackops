@@ -148,6 +148,10 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             self.set_base_step_qty(mid)
 
+        if len(self.bn_mids) < 3:
+            self.bn_mids.append(mid)
+            return
+
         median_of_last_n_bids = statistics.median(self.bn_mids)
         self.bn_mids.append(mid)
         unit_signal = self.config.unit_signal_bps.sell * mid
