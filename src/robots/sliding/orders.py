@@ -238,10 +238,10 @@ class OrderApi:
     async def deliver_ok(self, order: Order):
         if order.side == OrderType.BUY:
             self.stats.delivered_counts.buy += 1
-            self.pair.base.free += order.qty
+            # self.pair.base.free += order.qty
         else:
             self.stats.delivered_counts.sell += 1
-            self.pair.base.free -= order.qty
+            # self.pair.base.free -= order.qty
 
         self.orders_in_last_second += 1
         await asyncio.sleep(

@@ -167,9 +167,8 @@ class LeaderFollowerTrader(RobotBase):
         # loop = asyncio.get_event_loop()
         while True:
             if (
-                # self.follower_pub.bid != self.market.bid
-                self.follower_pub.ask
-                != self.market.ask
+                self.follower_pub.bid != self.market.bid
+                or self.follower_pub.ask != self.market.ask
             ):
 
                 self.market.ask = self.follower_pub.ask
@@ -233,6 +232,10 @@ class LeaderFollowerTrader(RobotBase):
             price = self.get_precise_price(
                 self.taker.sell, self.follower_pub.bid, decimal.ROUND_DOWN
             )
+            # why try to sell if bid < your offer
+            if self.follower_pub.bid and self.follower_pub.bid < price:
+                return
+
             qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
