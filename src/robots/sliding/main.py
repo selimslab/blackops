@@ -152,7 +152,7 @@ class LeaderFollowerTrader(RobotBase):
 
         median_of_last_n_bids = statistics.median(self.bn_mids)
         self.bn_mids.append(mid)
-        unit_signal = self.config.unit_signal_bps.sell * mid
+        unit_signal = self.config.unit_signal_bps.sell * median_of_last_n_bids
         # sell if median_of_last_n_bids > 5bips of mid
         signal = (median_of_last_n_bids - mid) / unit_signal
         self.sell_signals.append(signal)
