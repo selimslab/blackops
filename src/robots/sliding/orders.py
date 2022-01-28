@@ -137,10 +137,10 @@ class OrderApi:
         # logger.info(f"cancelled: {asdict(order)}")
 
         if order.side == OrderType.BUY:
-            self.pair.base.free -= order.qty
+            # self.pair.base.free -= order.qty
             self.stats.buy_cancelled += 1
         else:
-            self.pair.base.free += order.qty
+            # self.pair.base.free += order.qty
             self.stats.sell_cancelled += 1
 
         if order.order_id in self.decision_inputs:
