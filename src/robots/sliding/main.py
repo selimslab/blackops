@@ -49,10 +49,17 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=9)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=9)
+        default_factory=lambda: collections.deque(maxlen=7)
+    )
+
+    bn_mids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=3)
+    )
+    bn_candles: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     signals: Signals = field(default_factory=Signals)
@@ -105,14 +112,15 @@ class LeaderFollowerTrader(RobotBase):
     # LEADER
     async def consume_leader_pub(self) -> None:
         pre = None
+        loop = asyncio.get_event_loop()
         while True:
             if self.leader_pub.mid and self.leader_pub.mid != pre:
-                self.update_mid()
+                await loop.run_in_executor(thread_pool_executor, self.update_mid)
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
             await asyncio.sleep(0)
 
-    def update_mid(self) -> None:
+    def update_mid(self):
         self.taker.usdt = self.leader_pub.mid
 
         if self.bridge_pub and self.bridge_pub.mid:
@@ -120,7 +128,8 @@ class LeaderFollowerTrader(RobotBase):
         else:
             return
 
-        self.add_signal()
+        self.add_sell_signal()
+        self.add_buy_signal()
 
     async def trigger_decide(self) -> None:
         proc = 0
@@ -131,7 +140,7 @@ class LeaderFollowerTrader(RobotBase):
                 await self.decide()
             await asyncio.sleep(0)
 
-    def add_signal(self):
+    def add_sell_signal(self):
         mid = self.taker.mid
         if not mid:
             return
@@ -139,28 +148,32 @@ class LeaderFollowerTrader(RobotBase):
         if not self.base_step_qty:
             self.set_base_step_qty(mid)
 
-        bid = self.follower_pub.bid
-        if bid:
-            unit_signal = self.config.unit_signal_bps.sell * mid
-            signal = (bid - mid) / unit_signal
-            self.sell_signals.append(signal)
+        median_of_last_n_bids = statistics.median(self.bn_mids)
+        self.bn_mids.append(mid)
+        unit_signal = self.config.unit_signal_bps.sell * mid
+        # sell if median_of_last_n_bids > 5bips of mid
+        signal = (median_of_last_n_bids - mid) / unit_signal
+        self.sell_signals.append(signal)
 
-        ask = self.follower_pub.ask
-        if ask:
-            unit_signal = self.config.unit_signal_bps.buy * mid
-            signal = (mid - ask) / unit_signal
+    def add_buy_signal(self):
+        if self.taker.mid and self.follower_pub.ask:
+            unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
+            signal = (self.taker.mid - self.follower_pub.ask) / unit_signal
             self.buy_signals.append(signal)
 
     # FOLLOWER
     async def check_follower_update(self):
+        # loop = asyncio.get_event_loop()
         while True:
             if (
-                self.follower_pub.bid != self.market.bid
-                or self.follower_pub.ask != self.market.ask
+                # self.follower_pub.bid != self.market.bid
+                self.follower_pub.ask
+                != self.market.ask
             ):
+
                 self.market.ask = self.follower_pub.ask
                 self.market.bid = self.follower_pub.bid
-                self.add_signal()
+                self.add_buy_signal()
                 self.stats.follower_seen += 1
 
             await asyncio.sleep(0)
@@ -171,11 +184,7 @@ class LeaderFollowerTrader(RobotBase):
             self.stats.decision_locked += 1
             return
 
-        if (
-            not self.leader_pub.mid
-            or not self.follower_pub.bid
-            or not self.follower_pub.ask
-        ):
+        if not self.leader_pub.mid:
             self.stats.missing_data += 1
             return
 
@@ -217,7 +226,7 @@ class LeaderFollowerTrader(RobotBase):
             * (Decimal(1) + self.config.unit_signal_bps.sell)
         )
 
-        if self.signals.sell > 1 and self.taker.sell <= self.follower_pub.bid:
+        if self.signals.sell > 1:
             price = self.get_precise_price(
                 self.taker.sell, self.follower_pub.bid, decimal.ROUND_DOWN
             )
@@ -241,7 +250,7 @@ class LeaderFollowerTrader(RobotBase):
             return
 
     def should_buy(self):
-        if not self.buy_signals:
+        if not self.buy_signals or not self.follower_pub.ask:
             return
 
         self.signals.buy = statistics.mean(self.buy_signals)
@@ -254,7 +263,7 @@ class LeaderFollowerTrader(RobotBase):
 
         if self.signals.buy > 1 and self.taker.buy >= self.follower_pub.ask:
             price = self.get_precise_price(
-                self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_UP
+                self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
             )
 
             qty = self.base_step_qty * self.signals.buy
