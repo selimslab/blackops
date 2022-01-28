@@ -49,16 +49,14 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+        default_factory=lambda: collections.deque(maxlen=2)
     )
+
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=7)
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
     bn_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
-    )
-    bn_candles: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=3)
     )
 
@@ -297,9 +295,10 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
-            "signals": asdict(self.signals),
-            # "buy signals": list(self.buy_signals),
-            # "sell signals": list(self.sell_signals),
+            "mids": list(self.bn_mids),
+            "buy signals": list(self.buy_signals),
+            "sell signals": list(self.sell_signals),
+            "sma signals": asdict(self.signals),
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,
