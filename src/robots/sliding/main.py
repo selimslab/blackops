@@ -113,19 +113,19 @@ class LeaderFollowerTrader(RobotBase):
         loop = asyncio.get_event_loop()
         while True:
             if self.leader_pub.mid and self.leader_pub.mid != pre:
-                await loop.run_in_executor(thread_pool_executor, self.update_mid)
+
+                self.taker.usdt = self.leader_pub.mid
+
+                if self.bridge_pub and self.bridge_pub.mid:
+                    self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
+                else:
+                    return
+                await loop.run_in_executor(thread_pool_executor, self.add_signals)
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
             await asyncio.sleep(0)
 
-    def update_mid(self):
-        self.taker.usdt = self.leader_pub.mid
-
-        if self.bridge_pub and self.bridge_pub.mid:
-            self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
-        else:
-            return
-
+    def add_signals(self):
         self.add_sell_signal()
         self.add_buy_signal()
 
@@ -139,7 +139,7 @@ class LeaderFollowerTrader(RobotBase):
             await asyncio.sleep(0)
 
     def add_sell_signal(self):
-        mid = self.taker.mid
+        mid = self.taker.usdt
         if not mid:
             return
 
