@@ -193,26 +193,23 @@ class LeaderFollowerTrader(RobotBase):
 
         async with self.decide_lock:
             self.stats.decisions += 1
-            # loop = asyncio.get_event_loop()
 
-            # res = await loop.run_in_executor(thread_pool_executor, )
-            res = self.should_sell()
-            if res:
-                price, qty, decision_input = res
-                await self.order_api.send_order(
-                    OrderType.SELL, price, qty, decision_input
-                )
-                self.stats.sell_tried += 1
-                return
+            await self.check_sell()
+            await self.check_buy()
 
-            # res = await loop.run_in_executor(thread_pool_executor, self.should_buy)
-            res = self.should_buy()
-            if res:
-                price, qty, decision_input = res
-                await self.order_api.send_order(
-                    OrderType.BUY, price, qty, decision_input
-                )
-                self.stats.buy_tried += 1
+    async def check_sell(self):
+        res = self.should_sell()
+        if res:
+            price, qty, decision_input = res
+            await self.order_api.send_order(OrderType.SELL, price, qty, decision_input)
+            self.stats.sell_tried += 1
+
+    async def check_buy(self):
+        res = self.should_buy()
+        if res:
+            price, qty, decision_input = res
+            await self.order_api.send_order(OrderType.BUY, price, qty, decision_input)
+            self.stats.buy_tried += 1
 
     def get_precise_price(
         self, price: Decimal, reference: Decimal, rounding
@@ -222,12 +219,6 @@ class LeaderFollowerTrader(RobotBase):
     def should_sell(self):
         if not self.sell_signals:
             return
-
-        # price = (
-        #     self.leader_pub.mid
-        #     * self.bridge_pub.mid
-        #     # (Decimal(1) + self.config.unit_signal_bps.sell)
-        # )
 
         self.taker.sell = self.taker.mid * (
             Decimal(1) + self.config.unit_signal_bps.sell
@@ -277,12 +268,12 @@ class LeaderFollowerTrader(RobotBase):
             )
             price = n_bps_higher(price, Decimal(2))
 
-            signal_qty = self.base_step_qty * self.signals.buy
-            max_buyable = (
-                self.config.max_step * self.base_step_qty - self.pair.base.total_balance
-            )
-            qty = min(signal_qty, max_buyable)
-            qty = int(qty)
+            qty = int(self.base_step_qty)
+
+            current_step = self.pair.base.total_balance / self.base_step_qty
+            remaining_step = self.config.max_step - current_step
+            if remaining_step < 1:
+                qty = int(self.base_step_qty * remaining_step)
 
             if not self.order_api.can_buy(price, qty):
                 self.stats.buy_not_needed += 1
