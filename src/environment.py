@@ -18,18 +18,17 @@ class SleepSeconds(BaseModel):
 
     rate_limit: float = 5
 
-    read_wait: float = 0.16  # 300/min
-    cancel_wait: float = 0.16  # 300/min
+    read_wait: float = 0.15  # 300/min
+    cancel_wait: float = 0.15  # 300/min
 
     update_balances: float = 0.72  # 90/min
-    poll_balance_update: float = update_balances / 16
 
-    refresh_open_orders: float = 0.4
+    refresh_open_orders: float = 0.2
 
     broadcast_stats: float = 0.9
 
-    wait_before_cancel: float = 0.1
-    wait_after_deliver: float = 0.1
+    wait_before_cancel: float = 0.12
+    wait_after_deliver: float = 0.14
     wait_after_failed_order: float = 0.2
 
     poll_for_lock: float = 0.05
