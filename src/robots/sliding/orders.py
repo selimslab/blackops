@@ -249,6 +249,7 @@ class OrderApi:
         )  # allow time for order to be filled
         self.open_orders.append(order)
         await self.cancel_open_orders()
+        await asyncio.sleep(0.1)
 
     async def deliver_fail(self):
         self.stats.fail_counts.bad_response += 1
