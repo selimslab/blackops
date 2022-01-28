@@ -12,6 +12,7 @@ from src.domain import BPS, OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import n_bps_higher, round_decimal_floor, round_decimal_half_up
+from src.numberops.main import n_bps_lower
 from src.periodic import periodic
 from src.proc import thread_pool_executor
 from src.pubsub.pubs import BalancePub, BinancePub, BTPub
@@ -228,13 +229,14 @@ class LeaderFollowerTrader(RobotBase):
             # (Decimal(1) + self.config.unit_signal_bps.sell)
         )
 
+        # why try to sell if bid < your offer
+        if self.follower_pub.bid and self.follower_pub.bid < self.taker.sell:
+            self.taker.sell = n_bps_lower(self.follower_pub.bid, Decimal(2))
+
         if self.signals.sell > 1:
             price = self.get_precise_price(
                 self.taker.sell, self.follower_pub.bid, decimal.ROUND_DOWN
             )
-            # why try to sell if bid < your offer
-            if self.follower_pub.bid and self.follower_pub.bid < price:
-                return
 
             qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
