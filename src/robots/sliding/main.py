@@ -52,7 +52,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     bn_mids: collections.deque = field(
@@ -219,21 +219,23 @@ class LeaderFollowerTrader(RobotBase):
         if not self.sell_signals:
             return
 
+        # price = (
+        #     self.leader_pub.mid
+        #     * self.bridge_pub.mid
+        #     # (Decimal(1) + self.config.unit_signal_bps.sell)
+        # )
+
         self.signals.sell = statistics.mean(self.sell_signals)
 
-        price = (
-            self.leader_pub.mid
-            * self.bridge_pub.mid
-            # (Decimal(1) + self.config.unit_signal_bps.sell)
-        )
+        if (
+            self.signals.sell > 1
+            and self.follower_pub.bid
+            and self.taker.mid <= self.follower_pub.bid
+        ):
 
-        # why try to sell if bid < your offer
-        if self.follower_pub.bid and self.follower_pub.bid < price:
-            price = n_bps_lower(self.follower_pub.bid, Decimal(2))
+            price = n_bps_lower(self.taker.mid, Decimal(3))
+            self.taker.sell = price
 
-        self.taker.sell = price
-
-        if self.signals.sell > 1:
             price = self.get_precise_price(
                 price, self.follower_pub.bid, decimal.ROUND_DOWN
             )
@@ -241,6 +243,7 @@ class LeaderFollowerTrader(RobotBase):
             qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
+
             qty = int(qty)
 
             if not self.order_api.can_sell(price, qty):
@@ -259,7 +262,7 @@ class LeaderFollowerTrader(RobotBase):
 
         self.signals.buy = statistics.mean(self.buy_signals)
 
-        price = n_bps_higher(self.follower_pub.ask, Decimal(1))
+        price = n_bps_higher(self.follower_pub.ask, Decimal(3))
         self.taker.buy = price
         # (
         #     self.leader_pub.mid
