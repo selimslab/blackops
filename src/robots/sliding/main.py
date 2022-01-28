@@ -110,7 +110,6 @@ class LeaderFollowerTrader(RobotBase):
     # LEADER
     async def consume_leader_pub(self) -> None:
         pre = None
-        loop = asyncio.get_event_loop()
         while True:
             if self.leader_pub.mid and self.leader_pub.mid != pre:
 
@@ -120,7 +119,6 @@ class LeaderFollowerTrader(RobotBase):
                     self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
                 else:
                     return
-                # await loop.run_in_executor(thread_pool_executor, )
                 self.add_signals()
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
@@ -260,15 +258,19 @@ class LeaderFollowerTrader(RobotBase):
 
         self.signals.buy = statistics.mean(self.buy_signals)
 
-        self.taker.buy = (
-            self.leader_pub.mid
-            * self.bridge_pub.mid
-            * (Decimal(1) - self.config.unit_signal_bps.buy)
-        )
+        self.taker.buy = self.follower_pub.ask * (
+            Decimal(1) + self.config.unit_signal_bps.sell
+        )  # ask + 2bps
 
-        if self.signals.buy > 1 and self.taker.buy >= self.follower_pub.ask:
+        # (
+        #     self.leader_pub.mid
+        #     * self.bridge_pub.mid
+        #     # (Decimal(1) - self.config.unit_signal_bps.buy)
+        # )
+
+        if self.signals.buy > 1:
             price = self.get_precise_price(
-                self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
+                self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
             )
 
             qty = self.base_step_qty * self.signals.buy
