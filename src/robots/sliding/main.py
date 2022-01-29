@@ -225,7 +225,7 @@ class LeaderFollowerTrader(RobotBase):
             Decimal(1) + self.config.unit_signal_bps.sell
         )
 
-        self.signals.sell = max(self.sell_signals)
+        self.signals.sell = statistics.median(self.sell_signals)
 
         if (
             self.signals.sell > 1
