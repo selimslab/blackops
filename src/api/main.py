@@ -29,7 +29,7 @@ app.include_router(home_router, tags=["Home"])
 
 
 @app.exception_handler(Exception)
-async def validation_exception_handler(request, exc: Exception):
+async def global_exception_handler(request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"error": str(exc)},

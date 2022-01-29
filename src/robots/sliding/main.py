@@ -238,7 +238,7 @@ class LeaderFollowerTrader(RobotBase):
             )
             price = n_bps_lower(price, Decimal(2))
 
-            qty = self.base_step_qty * self.signals.sell
+            qty = self.base_step_qty * self.signals.sell * Decimal("1.5")  # sell more
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
 
