@@ -25,7 +25,7 @@ class SleepSeconds(BaseModel):
 
     refresh_open_orders: float = 0.2
 
-    broadcast_stats: float = 0.9
+    broadcast_stats: float = 1
 
     wait_before_cancel: float = 0.14
     wait_after_deliver: float = 0.12

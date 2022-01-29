@@ -17,7 +17,8 @@ async def periodic(func: Callable, sleep_seconds: float) -> None:
             if asyncio.iscoroutinefunction(func):
                 await func()
             else:
-                await loop.run_in_executor(thread_pool_executor, func)
+                # await loop.run_in_executor(thread_pool_executor, func)
+                func()
         except Exception as e:
             logger.error(f"periodic: {e}, {traceback.format_exc()}")
         finally:
