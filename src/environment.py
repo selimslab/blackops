@@ -18,8 +18,8 @@ class SleepSeconds(BaseModel):
 
     rate_limit: float = 5
 
-    read_wait: float = 0.15  # 300/min
-    cancel_wait: float = 0.15  # 300/min
+    read_wait: float = 0.16  # 300/min
+    cancel_wait: float = 0.16  # 300/min
 
     update_balances: float = 0.72  # 90/min
 
