@@ -236,7 +236,7 @@ class LeaderFollowerTrader(RobotBase):
             price = self.get_precise_price(
                 self.taker.sell, self.follower_pub.bid, decimal.ROUND_HALF_DOWN
             )
-            price = n_bps_lower(price, Decimal(3))
+            price = n_bps_lower(price, Decimal(2))
 
             qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
@@ -294,6 +294,9 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
+            "max_step": self.config.max_step,
+            "quote_step_qty": self.config.quote_step_qty,
+            "base_step_qty": self.base_step_qty,
             "mids": list(self.bn_mids),
             "buy signals": list(self.buy_signals),
             "sell signals": list(self.sell_signals),

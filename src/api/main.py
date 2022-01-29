@@ -10,7 +10,7 @@ from src.api.routers.stg import router as stg_router
 from src.flow import flow_api
 from src.monitoring import logger
 
-app = FastAPI(title="BlackOps API", docs_url="/docs", redoc_url="/redoc")
+app = FastAPI(title="BlackOps API", docs_url="/ctrl", redoc_url="/redoc")
 
 app.mount("/panel", StaticFiles(directory="static", html=True), name="panel")
 
