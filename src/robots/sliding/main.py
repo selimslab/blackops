@@ -230,7 +230,7 @@ class LeaderFollowerTrader(RobotBase):
         if (
             self.signals.sell > 1
             and self.follower_pub.bid
-            and self.taker.mid <= self.follower_pub.bid
+            and self.taker.mid <= self.follower_pub.bid * (Decimal("1.0002"))
         ):
 
             price = self.get_precise_price(
