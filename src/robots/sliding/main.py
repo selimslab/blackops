@@ -52,7 +52,7 @@ class LeaderFollowerTrader(RobotBase):
     )
 
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=5)
+        default_factory=lambda: collections.deque(maxlen=3)
     )
 
     bn_mids: collections.deque = field(
