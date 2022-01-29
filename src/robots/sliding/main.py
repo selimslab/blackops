@@ -48,7 +48,7 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+        default_factory=lambda: collections.deque(maxlen=10)
     )
 
     buy_signals: collections.deque = field(
@@ -225,7 +225,7 @@ class LeaderFollowerTrader(RobotBase):
             Decimal(1) + self.config.unit_signal_bps.sell
         )
 
-        self.signals.sell = statistics.median(self.sell_signals)
+        self.signals.sell = statistics.max(self.sell_signals)
 
         if (
             self.signals.sell > 1
