@@ -147,7 +147,7 @@ class BinancePub(PublisherBase):
                             self.bid = bid
                             mid = (ask + bid) / DECIMAL_2
 
-                            self.spread_bps = (ask - bid) / mid
+                            self.spread_bps = (ask - bid) / mid / BPS
 
                             if mid != self.mid:
                                 self.mid = mid
