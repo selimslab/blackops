@@ -127,12 +127,13 @@ class BinancePub(PublisherBase):
     kline_stream: Optional[AsyncGenerator] = None
 
     ma5: Decimal = Decimal(0)
+    is_klines_ok: bool = False
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 20))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 10))
 
     def parse_book(self, book):
         try:
@@ -150,7 +151,9 @@ class BinancePub(PublisherBase):
         try:
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=5)
             if klines:
-                self.ma5 = statistics.mean([Decimal(k[4]) for k in klines])
+                close = [Decimal(k[4]) for k in klines]
+                self.ma5 = statistics.mean(close)
+                self.is_klines_ok = bool(close[-1] > self.ma5)
         except Exception as e:
             pass
 

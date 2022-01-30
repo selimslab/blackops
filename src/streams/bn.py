@@ -150,14 +150,9 @@ async def test_stream(symbol):
 
 
 async def main():
-    client = await AsyncClient.create()
-
-    res = await client.get_exchange_info()
-    print(client.response.headers)
-
-    await client.close_connection()
+    print(await get_klines("MANAUSDT", "1m"))
 
 
 if __name__ == "__main__":
-    asyncio.run(test_stream("MANAUSDT"))
-    # asyncio.run(get_klines_1m())
+    # asyncio.run(test_stream("MANAUSDT"))
+    asyncio.run(main())

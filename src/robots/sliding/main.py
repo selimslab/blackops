@@ -279,7 +279,7 @@ class LeaderFollowerTrader(RobotBase):
                 self.stats.dont_buy_max_spread_bps += 1
                 return
 
-            if self.leader_pub.ma5 and self.leader_pub.mid < self.leader_pub.ma5:
+            if not self.leader_pub.is_klines_ok:
                 self.stats.ma5_dont_buy += 1
                 return
 
