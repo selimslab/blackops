@@ -165,7 +165,6 @@ class LeaderFollowerTrader(RobotBase):
         return hold_risk
 
     def add_buy_signal(self):
-
         if self.taker.mid and self.follower_pub.ask:
             hold_risk = self.get_hold_risk()
             unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
