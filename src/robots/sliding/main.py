@@ -51,6 +51,8 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=10)
     )
 
+    # single_bt_price_buy_signals: list = field(default_factory=list)
+
     buy_signals: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=3)
     )
@@ -157,10 +159,17 @@ class LeaderFollowerTrader(RobotBase):
         signal = (median_of_last_n_bids - usdt_mid) / unit_signal
         self.sell_signals.append(signal)
 
+    def get_hold_risk(self):
+        current_step = self.pair.base.total_balance / self.base_step_qty
+        hold_risk = Decimal(1) + current_step * self.config.unit_signal_bps.hold
+        return hold_risk
+
     def add_buy_signal(self):
+
         if self.taker.mid and self.follower_pub.ask:
+            hold_risk = self.get_hold_risk()
             unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
-            signal = (self.taker.mid - self.follower_pub.ask) / unit_signal
+            signal = (self.taker.mid - self.follower_pub.ask * hold_risk) / unit_signal
             self.buy_signals.append(signal)
 
     # FOLLOWER
@@ -185,28 +194,28 @@ class LeaderFollowerTrader(RobotBase):
             self.stats.decision_locked += 1
             return
 
-        if not self.leader_pub.mid:
+        if not self.leader_pub.mid or not self.follower_pub.bid:
             self.stats.missing_data += 1
             return
 
         async with self.decide_lock:
             self.stats.decisions += 1
 
-            sell = await self.check_sell()
+            sell = await self.should_sell()
             if sell:
                 return
-            await self.check_buy()
+            await self.should_buy()
 
-    async def check_sell(self):
-        res = self.should_sell()
+    async def should_sell(self):
+        res = self.get_sell_order()
         if res:
             price, qty, decision_input = res
             await self.order_api.send_order(OrderType.SELL, price, qty, decision_input)
             self.stats.sell_tried += 1
             return True
 
-    async def check_buy(self):
-        res = self.should_buy()
+    async def should_buy(self):
+        res = self.get_buy_order()
         if res:
             price, qty, decision_input = res
             await self.order_api.send_order(OrderType.BUY, price, qty, decision_input)
@@ -217,7 +226,7 @@ class LeaderFollowerTrader(RobotBase):
     ) -> Decimal:
         return price.quantize(reference, rounding=rounding)
 
-    def should_sell(self):
+    def get_sell_order(self):
         if not self.sell_signals:
             return
 
@@ -226,11 +235,12 @@ class LeaderFollowerTrader(RobotBase):
         )
 
         self.signals.sell = max(self.sell_signals)
+        hold_risk = self.get_hold_risk()
 
         if (
             self.signals.sell > 1
             and self.follower_pub.bid
-            and self.taker.mid <= (self.follower_pub.bid * (Decimal("1.0001")))
+            and self.taker.mid <= (self.follower_pub.bid) * hold_risk
         ):
 
             price = self.get_precise_price(
@@ -238,7 +248,7 @@ class LeaderFollowerTrader(RobotBase):
             )
             price = n_bps_lower(price, Decimal(4))
 
-            qty = self.base_step_qty * self.signals.sell * Decimal("1.5")  # sell more
+            qty = self.base_step_qty * self.signals.sell
             if qty > self.pair.base.free:
                 qty = round_decimal_floor(self.pair.base.free)
 
@@ -254,7 +264,7 @@ class LeaderFollowerTrader(RobotBase):
             )
             return price, qty, decision_input
 
-    def should_buy(self):
+    def get_buy_order(self):
         if not self.buy_signals or not self.follower_pub.ask:
             return
 

@@ -12,6 +12,7 @@ from .inputs import LeaderFollowerInput
 class UnitSignalBPS(BaseModel):
     sell: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
+    hold: Decimal = Decimal(0)
 
 
 class LeaderFollowerConfig(StrategyConfigBase):
@@ -32,7 +33,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
     testnet = False
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        sell=Decimal(2) * BPS, buy=Decimal(27) * BPS
+        sell=Decimal(2) * BPS, hold=Decimal("0.5") * BPS, buy=Decimal(27) * BPS
     )
 
     input: LeaderFollowerInput
