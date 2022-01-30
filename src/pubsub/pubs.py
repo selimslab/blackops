@@ -81,6 +81,10 @@ class BTPub(PublisherBase):
 
     book_stream: Optional[AsyncGenerator] = None
 
+    # asks: collections.deque = field(default_factory=lambda:collections.deque(maxlen=10))
+    # mids: collections.deque = field(default_factory=lambda:collections.deque(maxlen=10))
+    # bids: collections.deque = field(default_factory=lambda:collections.deque(maxlen=10))
+
     def __post_init__(self):
         self.book_stream = btc_streams.create_book_stream(self.symbol)
 
@@ -95,6 +99,10 @@ class BTPub(PublisherBase):
             if ask and bid and (ask != self.ask or bid != self.bid):
                 self.ask = ask
                 self.bid = bid
+
+                # self.bids.append(bid)
+                # self.asks.append(ask)
+
                 self.mid = (ask + bid) / DECIMAL_2
                 self.books_seen += 1
         except Exception as e:
@@ -112,21 +120,39 @@ class BTPub(PublisherBase):
 
 
 @dataclass
+class BBands:
+    up: Decimal = Decimal(0)
+    down: Decimal = Decimal(0)
+
+
+@dataclass
 class BinancePub(PublisherBase):
 
     symbol: str
     api_client: ExchangeAPIClientBase
     books_seen: int = 0
     ask: Decimal = Decimal(0)
-    mid: Decimal = Decimal(0)
+    usdt_mid: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
     spread_bps: Decimal = Decimal(0)
 
-    # mids: collections.deque = field(default_factory=lambda:collections.deque(maxlen=300))
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
     ma5: Decimal = Decimal(0)
+    mean: Decimal = Decimal(0)
+    std: Decimal = Decimal(0)
+    bolinger: BBands = field(default_factory=BBands)
+
+    asks: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=20)
+    )
+    mids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=20)
+    )
+    bids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=20)
+    )
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
@@ -134,23 +160,13 @@ class BinancePub(PublisherBase):
     async def run(self):
         await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 20))
 
-    def parse_book(self, book):
-        try:
-            if "data" in book:
-                mid = (
-                    Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
-                ) / DECIMAL_2
-                if mid != self.mid:
-                    self.mid = mid
-                    self.books_seen += 1
-        except Exception as e:
-            pass
-
     async def publish_klines(self):
         try:
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=5)
             if klines:
-                self.ma5 = statistics.mean([Decimal(k[4]) for k in klines])
+                close = [Decimal(k[4]) for k in klines]
+                self.ma5 = statistics.mean(close)
+                self.std = statistics.stdev(close)
         except Exception as e:
             pass
 
@@ -173,9 +189,16 @@ class BinancePub(PublisherBase):
 
                             self.spread_bps = (ask - bid) / mid / BPS
 
-                            if mid != self.mid:
-                                self.mid = mid
+                            self.mean = statistics.mean(self.mids)
+                            self.std = statistics.stdev(self.mids)
+                            # self.bolinger.up = self.mean + (self.std * 2)
+                            # self.bolinger.down = self.mean - (self.std * 2)
+
+                            if mid != self.usdt_mid:
+                                self.usdt_mid = mid
                                 self.books_seen += 1
+                                self.mids.append(mid)
+
                 except Exception as e:
                     pass
 

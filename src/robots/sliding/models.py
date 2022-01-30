@@ -11,6 +11,7 @@ class Theo:
     mid: Decimal = Decimal(0)
     usdt: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
+    std: Decimal = Decimal(0)
 
 
 @dataclass

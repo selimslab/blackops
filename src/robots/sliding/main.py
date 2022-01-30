@@ -6,6 +6,7 @@ from copy import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from itertools import _Step
 from typing import Any, Optional
 
 from src.domain import BPS, OrderType, create_asset_pair
@@ -34,8 +35,13 @@ class Stats:
     buy_tried: int = 0
     buy_not_needed: int = 0
     sell_not_needed: int = 0
+
+    cant_sell: int = 0
+    cant_buy: int = 0
+
     dont_buy_max_spread_bps: int = 0
     ma5_dont_buy: int = 0
+    bn_mid_too_high_to_sell: int = 0
 
 
 @dataclass
@@ -53,14 +59,12 @@ class LeaderFollowerTrader(RobotBase):
         default_factory=lambda: collections.deque(maxlen=10)
     )
 
-    # single_bt_price_buy_signals: list = field(default_factory=list)
-
     buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
-    bn_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
+    bn_usdt_mids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
     )
 
     signals: Signals = field(default_factory=Signals)
@@ -95,9 +99,7 @@ class LeaderFollowerTrader(RobotBase):
 
     async def run_streams(self) -> None:
         aws: Any = [
-            self.consume_leader_pub(),
-            self.check_follower_update(),
-            self.trigger_decide(),
+            self.poll_leader_pub(),
             periodic(
                 self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
@@ -110,84 +112,66 @@ class LeaderFollowerTrader(RobotBase):
 
         await asyncio.gather(*aws)
 
+    def set_taker_mids(self):
+        self.taker.usdt = self.leader_pub.usdt_mid
+
+        if not self.bridge_pub or not self.bridge_pub.mid:
+            raise Exception("No bridge mid")
+
+        self.taker.mid = self.leader_pub.usdt_mid * self.bridge_pub.mid
+        self.taker.std = self.leader_pub.std * self.bridge_pub.mid
+
     # LEADER
-    async def consume_leader_pub(self) -> None:
+    async def poll_leader_pub(self) -> None:
         pre = None
         while True:
-            if self.leader_pub.mid and self.leader_pub.mid != pre:
+            if not self.leader_pub.usdt_mid or self.leader_pub.usdt_mid == pre:
+                await asyncio.sleep(0)
+                continue
 
-                self.taker.usdt = self.leader_pub.mid
+            try:
+                await self.consume_leader_pub()
 
-                if self.bridge_pub and self.bridge_pub.mid:
-                    self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
-                else:
-                    return
-
-                if not self.base_step_qty:
-                    self.set_base_step_qty(self.taker.mid)
-
-                self.add_sell_signal()
-                self.add_buy_signal()
-
-                pre = self.leader_pub.mid
+                pre = self.leader_pub.usdt_mid
                 self.stats.leader_seen += 1
-            await asyncio.sleep(0)
 
-    async def trigger_decide(self) -> None:
-        proc = 0
-        while True:
-            seen = self.stats.leader_seen + self.stats.follower_seen
-            if seen > proc:
-                proc = seen
-                await self.decide()
-            await asyncio.sleep(0)
+                await asyncio.sleep(0)
 
-    def add_sell_signal(self):
-        """
-        Not even looking at bridge
-        """
-        usdt_mid = self.taker.usdt
-        if not usdt_mid:
-            return
+            except Exception as e:
+                pass
 
-        if len(self.bn_mids) < 3:
-            self.bn_mids.append(usdt_mid)
-            return
+    async def consume_leader_pub(self) -> None:
+        self.set_taker_mids()
 
-        median_of_last_n_bids = statistics.median(self.bn_mids)
-        self.bn_mids.append(usdt_mid)
-        unit_signal = self.config.unit_signal_bps.sell * median_of_last_n_bids
-        # sell if median_of_last_n_bids > 1bips of mid
-        signal = (median_of_last_n_bids - usdt_mid) / unit_signal
+        if not self.base_step_qty:
+            self.set_base_step_qty(self.taker.mid)
+
+        await self.add_sell_signal()
+        await self.add_buy_signal()
+
+    async def add_sell_signal(self):
+        # try sell if bn mid drops 1.1 std
+        signal = (
+            (self.leader_pub.mean - self.leader_pub.usdt_mid)
+            / self.leader_pub.std
+            * Decimal("1.1")
+        )
         self.sell_signals.append(signal)
+        if signal > 1:
+            await self.decide()
 
-    def get_hold_risk(self):
-        current_step = self.pair.base.total_balance / self.base_step_qty
-        hold_risk = Decimal(1) + current_step * self.config.unit_signal_bps.hold
-        return hold_risk
-
-    def add_buy_signal(self):
+    async def add_buy_signal(self):
+        """
+        We can directly try sell yet this is to remember and keep trying if we don't sell at first
+        """
         if self.taker.mid and self.follower_pub.ask:
-            hold_risk = self.get_hold_risk()
             unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
-            signal = (self.taker.mid - self.follower_pub.ask * hold_risk) / unit_signal
+            signal = (
+                self.taker.mid - self.taker.std - self.follower_pub.ask
+            ) / unit_signal
             self.buy_signals.append(signal)
-
-    # FOLLOWER
-    async def check_follower_update(self):
-        # loop = asyncio.get_event_loop()
-        while True:
-            if (
-                self.follower_pub.bid != self.market.bid
-                or self.follower_pub.ask != self.market.ask
-            ):
-
-                self.market.ask = self.follower_pub.ask
-                self.market.bid = self.follower_pub.bid
-                self.add_buy_signal()
-                self.stats.follower_seen += 1
-
-            await asyncio.sleep(0)
+            if signal > 1:
+                await self.decide()
 
     # DECIDE
     async def decide(self):
@@ -195,116 +179,136 @@ class LeaderFollowerTrader(RobotBase):
             self.stats.decision_locked += 1
             return
 
-        if not self.leader_pub.mid or not self.follower_pub.bid:
+        if not self.leader_pub.usdt_mid or not self.follower_pub.bid:
             self.stats.missing_data += 1
             return
 
         async with self.decide_lock:
             self.stats.decisions += 1
 
-            sell = await self.should_sell()
-            if sell:
+            sell_tried = await self.should_sell()
+            if sell_tried:
                 return
             await self.should_buy()
-
-    async def should_sell(self):
-        res = self.get_sell_order()
-        if res:
-            price, qty, decision_input = res
-            await self.order_api.send_order(OrderType.SELL, price, qty, decision_input)
-            self.stats.sell_tried += 1
-            return True
-
-    async def should_buy(self):
-        res = self.get_buy_order()
-        if res:
-            price, qty, decision_input = res
-            await self.order_api.send_order(OrderType.BUY, price, qty, decision_input)
-            self.stats.buy_tried += 1
 
     def get_precise_price(
         self, price: Decimal, reference: Decimal, rounding
     ) -> Decimal:
         return price.quantize(reference, rounding=rounding)
 
-    def get_sell_order(self):
+    # SELL
+    def can_sell(self):
         if not self.sell_signals:
-            return
-
-        self.taker.sell = self.taker.mid * (
-            Decimal(1) + self.config.unit_signal_bps.sell
-        )
+            return False
 
         self.signals.sell = max(self.sell_signals)
-        hold_risk = self.get_hold_risk()
+
+        if self.signals.sell < 1:
+            self.stats.sell_not_needed += 1
+            return False
 
         if (
-            self.signals.sell > 1
-            and self.follower_pub.bid
-            and self.taker.mid <= (self.follower_pub.bid) * hold_risk
+            self.follower_pub.bid
+            and self.taker.mid > self.follower_pub.bid + 2 * self.taker.std
         ):
+            self.stats.bn_mid_too_high_to_sell += 1
+            return False
 
-            price = self.get_precise_price(
-                self.taker.sell, self.follower_pub.bid, decimal.ROUND_HALF_DOWN
-            )
-            price = n_bps_lower(price, Decimal(4))
+        return True
 
-            qty = self.base_step_qty * self.signals.sell
-            if qty > self.pair.base.free:
-                qty = round_decimal_floor(self.pair.base.free)
+    async def should_sell(self):
 
-            qty = int(qty)
-
-            if not self.order_api.can_sell(price, qty):
-                self.stats.sell_not_needed += 1
-                return
-
-            decision_input = OrderDecisionInput(
-                market=copy(self.market),
-                taker=copy(self.taker),
-            )
-            return price, qty, decision_input
-
-    def get_buy_order(self):
-        if not self.buy_signals or not self.follower_pub.ask:
+        if not self.can_sell():
             return
+
+        price = self.get_sell_price()
+        qty = self.get_sell_qty()
+
+        if not self.order_api.can_sell(price, qty):
+            self.stats.cant_sell += 1
+            return
+
+        # decision_input = OrderDecisionInput(
+        #     market=copy(self.market),
+        #     taker=copy(self.taker),
+        # )
+
+        await self.order_api.send_order(OrderType.SELL, price, qty)
+        self.stats.sell_tried += 1
+        return True
+
+    def get_sell_price(self):
+        price = self.get_precise_price(
+            self.taker.mid, self.follower_pub.bid, decimal.ROUND_HALF_DOWN
+        )
+        price = n_bps_lower(price, Decimal(4))
+
+        return price
+
+    def get_sell_qty(self):
+        qty = self.base_step_qty * self.signals.sell * self.config.step_per_signal
+
+        if qty > self.pair.base.free:
+            qty = round_decimal_floor(self.pair.base.free)
+
+        return int(qty)
+
+    # BUY
+    def get_buy_qty(self):
+        qty = self.base_step_qty
+
+        current_step = self.pair.base.total_balance / self.base_step_qty
+        remaining_step = self.config.max_step - current_step
+        if remaining_step < 1:
+            return
+
+        return int(qty)
+
+    def get_buy_price(self):
+        return self.get_precise_price(
+            self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
+        )
+
+    def can_buy(self):
+        if not self.buy_signals or not self.follower_pub.ask:
+            return False
 
         self.signals.buy = statistics.mean(self.buy_signals)
 
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
-        if self.signals.buy > 1 and self.buy_signals[-1] > 1:
+        if self.signals.buy < 1 or self.buy_signals[-1] < 1:
+            self.stats.buy_not_needed += 1
+            return False
 
-            if self.leader_pub.spread_bps > self.config.max_spread_bps:
-                self.stats.dont_buy_max_spread_bps += 1
-                return
+        if self.leader_pub.spread_bps > self.config.max_spread_bps:
+            self.stats.dont_buy_max_spread_bps += 1
+            return False
 
-            if self.leader_pub.ma5 and self.leader_pub.mid < self.leader_pub.ma5:
-                self.stats.ma5_dont_buy += 1
-                return
+        if self.leader_pub.ma5 and self.leader_pub.usdt_mid < self.leader_pub.ma5:
+            self.stats.ma5_dont_buy += 1
+            return False
 
-            price = self.get_precise_price(
-                self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
-            )
+        return True
 
-            qty = self.base_step_qty
+    async def should_buy(self):
+        if not self.can_buy():
+            return
 
-            current_step = self.pair.base.total_balance / self.base_step_qty
-            remaining_step = self.config.max_step - current_step
-            if remaining_step < 1:
-                qty = remaining_step * self.base_step_qty
+        price = self.get_buy_price()
 
-            qty = int(qty)
+        qty = self.get_buy_qty()
 
-            if not self.order_api.can_buy(price, qty):
-                self.stats.buy_not_needed += 1
-                return None
+        if not (price and qty):
+            self.stats.cant_buy += 1
+            return
 
-            decision_input = OrderDecisionInput(
-                market=copy(self.market),
-                taker=copy(self.taker),
-            )
-            return price, qty, decision_input
+        if not self.order_api.can_buy(price, qty):
+            self.stats.cant_buy += 1
+            return None
+
+        await self.order_api.send_order(OrderType.BUY, price, qty)
+        self.stats.buy_tried += 1
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
@@ -315,7 +319,7 @@ class LeaderFollowerTrader(RobotBase):
             "pair": self.pair.dict(),
             "config": self.config.dict(),
             "base_step_qty": self.base_step_qty,
-            # "mids": list(self.bn_mids),
+            # "mids": list(self.bn_usdt_mids),
             # "buy signals": list(self.buy_signals),
             # "sell signals": list(self.sell_signals),
             "signals": asdict(self.signals),
