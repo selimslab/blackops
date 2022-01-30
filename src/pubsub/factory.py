@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Dict
 
-import src.streams.bn as bn_streams
-import src.streams.btcturk as btc_streams
 from src.exchanges.factory import ExchangeType, NetworkType, api_client_factory
 
 from .pubs import BalancePub, BinancePub, BTPub, PubsubProducer
@@ -29,8 +27,7 @@ class PubFactory:
             ex_type, network
         )
 
-        stream = bn_streams.create_book_stream(symbol)
-        pub = BinancePub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
+        pub = BinancePub(pubsub_key=pubsub_key, api_client=api_client, symbol=symbol)
 
         self.PUBS[pubsub_key] = pub
 
@@ -48,8 +45,7 @@ class PubFactory:
             ex_type, network
         )
 
-        stream = btc_streams.create_book_stream(symbol)
-        pub = BTPub(pubsub_key=pubsub_key, api_client=api_client, stream=stream)
+        pub = BTPub(pubsub_key=pubsub_key, api_client=api_client, symbol=symbol)
 
         self.PUBS[pubsub_key] = pub
 

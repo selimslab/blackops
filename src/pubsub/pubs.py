@@ -1,9 +1,13 @@
 import asyncio
+import collections
+import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import AsyncGenerator, Dict, Union
+from typing import AsyncGenerator, Dict, Optional, Union
 
+import src.streams.bn as bn_streams
+import src.streams.btcturk as btc_streams
 from src.domain.models import BPS, DECIMAL_2, Asset, AssetSymbol
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
@@ -65,7 +69,7 @@ class BalancePub(PublisherBase):
 
 @dataclass
 class BTPub(PublisherBase):
-    stream: AsyncGenerator
+    symbol: str
     api_client: ExchangeAPIClientBase
 
     books_seen: int = 0
@@ -74,6 +78,11 @@ class BTPub(PublisherBase):
     ask: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
+
+    book_stream: Optional[AsyncGenerator] = None
+
+    def __post_init__(self):
+        self.book_stream = btc_streams.create_book_stream(self.symbol)
 
     async def run(self):
         await self.publish_stream()
@@ -93,21 +102,19 @@ class BTPub(PublisherBase):
             return
 
     async def publish_stream(self):
-        if not self.stream:
+        if not self.book_stream:
             raise ValueError("No stream")
 
-        loop = asyncio.get_event_loop()
-        async for book in self.stream:
+        async for book in self.book_stream:
             if book:
                 self.parse_book(book)
-                # await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 
 @dataclass
 class BinancePub(PublisherBase):
 
-    stream: AsyncGenerator
+    symbol: str
     api_client: ExchangeAPIClientBase
     books_seen: int = 0
     ask: Decimal = Decimal(0)
@@ -115,8 +122,17 @@ class BinancePub(PublisherBase):
     bid: Decimal = Decimal(0)
     spread_bps: Decimal = Decimal(0)
 
+    # mids: collections.deque = field(default_factory=lambda:collections.deque(maxlen=300))
+    book_stream: Optional[AsyncGenerator] = None
+    kline_stream: Optional[AsyncGenerator] = None
+
+    ma5: Decimal = Decimal(0)
+
+    def __post_init__(self):
+        self.book_stream = bn_streams.create_book_stream(self.symbol)
+
     async def run(self):
-        await self.publish_stream()
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 1))
 
     def parse_book(self, book):
         try:
@@ -130,12 +146,20 @@ class BinancePub(PublisherBase):
         except Exception as e:
             pass
 
+    async def publish_klines(self):
+        try:
+            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=5)
+            if klines:
+                self.ma5 = statistics.mean([Decimal(k[4]) for k in klines])
+        except Exception as e:
+            pass
+
     async def publish_stream(self):
-        if not self.stream:
+        if not self.book_stream:
             raise ValueError("No stream")
 
         # loop = asyncio.get_event_loop()
-        async for book in self.stream:
+        async for book in self.book_stream:
             if book:
                 try:
                     if "data" in book:
@@ -152,11 +176,9 @@ class BinancePub(PublisherBase):
                             if mid != self.mid:
                                 self.mid = mid
                                 self.books_seen += 1
-                            # logger.info(mid)
                 except Exception as e:
                     pass
 
-                # await loop.run_in_executor(thread_pool_executor, self.parse_book, book)
             await asyncio.sleep(0)
 
 

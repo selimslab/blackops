@@ -22,21 +22,21 @@ def publish_error(message, channel: str = DEFAULT_CHANNEL):
     try:
         pusher_client.trigger(channel, ERROR, add_time(message))
     except Exception as e:
-        pass
+        logger.error(e)
 
 
 def publish_message(message, channel: str = DEFAULT_CHANNEL):
     try:
         pusher_client.trigger(channel, MESSAGE, add_time(message))
     except Exception as e:
-        pass
+        logger.error(e)
 
 
 def publish_stats(message, channel: str = DEFAULT_CHANNEL):
     try:
         pusher_client.trigger(channel, STATS, add_time(message))
     except Exception as e:
-        pass
+        logger.error(e)
 
 
 if __name__ == "__main__":

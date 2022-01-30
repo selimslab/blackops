@@ -35,6 +35,7 @@ class Stats:
     buy_not_needed: int = 0
     sell_not_needed: int = 0
     dont_buy_max_spread_bps: int = 0
+    ma5_dont_buy: int = 0
 
 
 @dataclass
@@ -278,6 +279,10 @@ class LeaderFollowerTrader(RobotBase):
                 self.stats.dont_buy_max_spread_bps += 1
                 return
 
+            if self.leader_pub.ma5 and self.leader_pub.mid < self.leader_pub.ma5:
+                self.stats.ma5_dont_buy += 1
+                return
+
             price = self.get_precise_price(
                 self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
             )
@@ -310,10 +315,11 @@ class LeaderFollowerTrader(RobotBase):
             "pair": self.pair.dict(),
             "config": self.config.dict(),
             "base_step_qty": self.base_step_qty,
-            "mids": list(self.bn_mids),
-            "buy signals": list(self.buy_signals),
-            "sell signals": list(self.sell_signals),
-            "sma signals": asdict(self.signals),
+            # "mids": list(self.bn_mids),
+            # "buy signals": list(self.buy_signals),
+            # "sell signals": list(self.sell_signals),
+            "signals": asdict(self.signals),
+            "ma5": self.leader_pub.ma5,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,
@@ -331,11 +337,11 @@ class LeaderFollowerTrader(RobotBase):
             "order": {
                 "fresh": self.order_api.open_orders_fresh,
                 "stats": asdict(self.order_api.stats),
-                "last 3 cancelled": list(
-                    asdict(order) for order in self.order_api.last_cancelled
-                ),
-                "last 3 filled": list(
-                    asdict(order) for order in self.order_api.last_filled
-                ),
+                # "last 3 cancelled": list(
+                #     asdict(order) for order in self.order_api.last_cancelled
+                # ),
+                # "last 3 filled": list(
+                #     asdict(order) for order in self.order_api.last_filled
+                # ),
             },
         }

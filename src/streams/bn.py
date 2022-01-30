@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from typing import Callable
 
 import async_timeout
@@ -7,7 +8,6 @@ from binance import AsyncClient, BinanceSocketManager  # type:ignore
 
 import src.pubsub.log_pub as log_pub
 from src.monitoring import logger
-from src.pubsub.pubs import BinancePub
 
 
 class BinanceWebSocketException(Exception):
@@ -18,11 +18,30 @@ class BinanceOverflowException(Exception):
     pass
 
 
+class BinanceFactory:
+    client: AsyncClient = None
+    sm: BinanceSocketManager = None
+
+    async def get_client(self):
+        if not self.client:
+            self.client = await AsyncClient.create()
+
+        return self.client
+
+    async def get_socket_manager(self):
+        client = await self.get_client()
+        if not self.sm:
+            self.sm = BinanceSocketManager(client)
+        return self.sm
+
+
+bn_factory = BinanceFactory()
+
+
 async def binance_stream_generator(symbol: str, stream_type: str):
-    client = await AsyncClient.create()
     try:
-        bm = BinanceSocketManager(client)
-        ts = bm.multiplex_socket([f"{symbol.lower()}{stream_type}"])
+        sm = await bn_factory.get_socket_manager()
+        ts = sm.multiplex_socket([f"{symbol.lower()}@{stream_type}"])
 
         async with ts as tscm:
             while True:
@@ -37,7 +56,7 @@ async def binance_stream_generator(symbol: str, stream_type: str):
                 await asyncio.sleep(0)
 
     except Exception as e:
-        await client.close_connection()
+        # await client.close_connection()
         msg = f"binance stream disconnected: {e}"
         logger.error(f"binance_stream_generator: {msg}")
         raise e
@@ -88,11 +107,26 @@ async def reconnecting_binance_generator(generator_factory: Callable):
             raise e
 
 
-def create_book_stream(symbol: str):
+def create_stream(symbol: str, stream_type: str):
     def create_new_socket_conn():
-        return binance_stream_generator(symbol, "@bookTicker")
+        return binance_stream_generator(symbol, stream_type)
 
     return reconnecting_binance_generator(create_new_socket_conn)
+
+
+def create_book_stream(symbol: str):
+    return create_stream(symbol, "bookTicker")
+
+
+def create_kline_stream(symbol: str):
+    return create_stream(symbol, "kline_1m")
+
+
+async def get_klines(symbol: str, interval: str, limit=7):
+    client = await bn_factory.get_client()
+
+    res = await client.get_klines(symbol=symbol, interval=interval, limit=limit)
+    return res
 
 
 proc = 0
@@ -105,8 +139,8 @@ async def work():
     print("proc", proc)
 
 
-async def test_orderbook_stream(symbol):
-    gen = create_book_stream(symbol)
+async def test_stream(symbol):
+    gen = create_kline_stream(symbol)
     seen = 0
     async with async_timeout.timeout(10):
         async for book in gen:
@@ -125,5 +159,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orderbook_stream("SHIBUSDT"))
-    # asyncio.run(main())
+    asyncio.run(test_stream("MANAUSDT"))
+    # asyncio.run(get_klines_1m())
