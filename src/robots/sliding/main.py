@@ -34,6 +34,7 @@ class Stats:
     buy_tried: int = 0
     buy_not_needed: int = 0
     sell_not_needed: int = 0
+    dont_buy_max_spread_bps: int = 0
 
 
 @dataclass
@@ -273,6 +274,10 @@ class LeaderFollowerTrader(RobotBase):
 
         if self.signals.buy > 1 and self.buy_signals[-1] > 1:
 
+            if self.leader_pub.spread_bps > self.config.max_spread_bps:
+                self.stats.dont_buy_max_spread_bps += 1
+                return
+
             price = self.get_precise_price(
                 self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
             )
@@ -303,8 +308,7 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
-            "max_step": self.config.max_step,
-            "quote_step_qty": self.config.quote_step_qty,
+            "config": self.config.dict(),
             "base_step_qty": self.base_step_qty,
             "mids": list(self.bn_mids),
             "buy signals": list(self.buy_signals),
@@ -317,6 +321,7 @@ class LeaderFollowerTrader(RobotBase):
                 # "bids": list(self.bids_seen),
                 # "asks": list(self.asks_seen),
                 "taker": asdict(self.taker),
+                "bn spread": self.leader_pub.spread_bps,
                 "bn seen": self.leader_pub.books_seen,
                 "bt seen": self.follower_pub.books_seen,
                 "stats": asdict(self.stats),

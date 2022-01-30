@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import AsyncGenerator, Dict, Union
 
-from src.domain.models import Asset, AssetSymbol
+from src.domain.models import BPS, DECIMAL_2, Asset, AssetSymbol
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
@@ -86,7 +86,7 @@ class BTPub(PublisherBase):
             if ask and bid and (ask != self.ask or bid != self.bid):
                 self.ask = ask
                 self.bid = bid
-                self.mid = (ask + bid) / Decimal(2)
+                self.mid = (ask + bid) / DECIMAL_2
                 self.books_seen += 1
         except Exception as e:
             logger.info(f"BTPub: {e}")
@@ -110,7 +110,10 @@ class BinancePub(PublisherBase):
     stream: AsyncGenerator
     api_client: ExchangeAPIClientBase
     books_seen: int = 0
+    ask: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
+    bid: Decimal = Decimal(0)
+    spread_bps: Decimal = Decimal(0)
 
     async def run(self):
         await self.publish_stream()
@@ -120,7 +123,7 @@ class BinancePub(PublisherBase):
             if "data" in book:
                 mid = (
                     Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
-                ) / Decimal(2)
+                ) / DECIMAL_2
                 if mid != self.mid:
                     self.mid = mid
                     self.books_seen += 1
@@ -136,13 +139,19 @@ class BinancePub(PublisherBase):
             if book:
                 try:
                     if "data" in book:
-                        mid = (
-                            Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
-                        ) / Decimal(2)
+                        ask = Decimal(book["data"]["a"])
+                        bid = Decimal(book["data"]["b"])
 
-                        if mid != self.mid:
-                            self.mid = mid
-                            self.books_seen += 1
+                        if ask and bid and (ask != self.ask or bid != self.bid):
+                            self.ask = ask
+                            self.bid = bid
+                            mid = (ask + bid) / DECIMAL_2
+
+                            self.spread_bps = (ask - bid) / mid * BPS
+
+                            if mid != self.mid:
+                                self.mid = mid
+                                self.books_seen += 1
                             # logger.info(mid)
                 except Exception as e:
                     pass

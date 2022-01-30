@@ -5,6 +5,8 @@ from typing import Dict
 
 from pydantic.main import BaseModel
 
+DECIMAL_2 = Decimal(2)
+
 AssetSymbol = str
 AssetPairSymbol = str
 
