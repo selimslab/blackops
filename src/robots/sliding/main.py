@@ -320,6 +320,7 @@ class LeaderFollowerTrader(RobotBase):
             # "sell signals": list(self.sell_signals),
             "signals": asdict(self.signals),
             "ma5": self.leader_pub.ma5,
+            "ma ok": self.leader_pub.is_klines_ok,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,

@@ -153,7 +153,7 @@ class BinancePub(PublisherBase):
             if klines:
                 close = [Decimal(k[4]) for k in klines]
                 self.ma5 = statistics.mean(close)
-                self.is_klines_ok = bool(close[-1] > self.ma5)
+                self.is_klines_ok = bool(close[-1] >= self.ma5)
         except Exception as e:
             pass
 
