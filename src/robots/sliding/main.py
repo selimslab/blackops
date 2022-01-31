@@ -313,7 +313,7 @@ class LeaderFollowerTrader(RobotBase):
         return {
             "start time": self.start_time,
             "pair": self.pair.dict(),
-            "config": self.config.dict(),
+            # "config": self.config.dict(),
             "base_step_qty": self.base_step_qty,
             # "mids": list(self.bn_mids),
             # "buy signals": list(self.buy_signals),
