@@ -143,7 +143,7 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 3))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
 
     def parse_book(self, book):
         try:
@@ -157,7 +157,7 @@ class BinancePub(PublisherBase):
                     mid = (ask + bid) / DECIMAL_2
 
                     # self.mids.append(mid)
-                    self.last_n.append(mid)
+                    # self.last_n.append(mid)
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
