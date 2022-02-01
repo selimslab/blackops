@@ -139,7 +139,7 @@ async def work():
 
 
 async def test_stream(symbol):
-    gen = create_kline_stream(symbol)
+    gen = create_book_stream(symbol)
     seen = 0
     async with async_timeout.timeout(10):
         async for book in gen:
@@ -153,5 +153,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    # asyncio.run(test_stream("MANAUSDT"))
-    asyncio.run(main())
+    asyncio.run(test_stream("MANAUSDT"))
+    # asyncio.run(main())

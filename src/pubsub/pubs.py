@@ -92,7 +92,7 @@ class BTPub(PublisherBase):
             ask = self.api_client.get_best_ask(book)
             bid = self.api_client.get_best_bid(book)
 
-            if ask and bid and (ask != self.ask or bid != self.bid):
+            if ask and bid:  # and (ask != self.ask or bid != self.bid)
                 self.ask = ask
                 self.bid = bid
                 self.mid = (ask + bid) / DECIMAL_2
@@ -151,7 +151,7 @@ class BinancePub(PublisherBase):
                 ask = Decimal(book["data"]["a"])
                 bid = Decimal(book["data"]["b"])
 
-                if ask and bid and (ask != self.ask or bid != self.bid):
+                if ask and bid:  # and (ask != self.ask or bid != self.bid):
                     self.ask = ask
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
