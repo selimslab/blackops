@@ -184,7 +184,8 @@ class LeaderFollowerTrader(RobotBase):
         if self.taker.usdt < mean:
             return
 
-        self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
+        min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
+        self.taker.buy = min_mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
         if self.follower_pub.ask > self.taker.buy:
             return

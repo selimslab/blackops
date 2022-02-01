@@ -112,6 +112,31 @@ class BTPub(PublisherBase):
 
 
 @dataclass
+class RollingMean:
+    maxlen: int
+    total: Decimal = Decimal(0)
+    count: Decimal = Decimal(0)
+
+    def __post_init__(self):
+        self.values: collections.deque = field(
+            default_factory=lambda: collections.deque(maxlen=self.maxlen)
+        )
+
+    def add(self, value):
+        if self.count < self.maxlen:
+            self.values.append(value)
+            self.count += 1
+        else:
+            self.total -= self.values.popleft()
+            self.values.append(value)
+
+        self.total += value
+
+    def get_average(self):
+        return self.total / self.count
+
+
+@dataclass
 class BinancePub(PublisherBase):
 
     symbol: str
@@ -139,6 +164,9 @@ class BinancePub(PublisherBase):
     is_klines_ok: bool = False
     kline_closes: list = field(default_factory=list)
 
+    ma7: RollingMean = field(default_factory=lambda: RollingMean(7))
+    ma21: RollingMean = field(default_factory=lambda: RollingMean(21))
+
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
@@ -158,11 +186,16 @@ class BinancePub(PublisherBase):
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
-                    # self.mids.append(mid)
+                    self.mids.append(mid)
                     self.last_n.append(mid)
 
+                    self.ma7.add(mid)
+                    self.ma21.add(mid)
+
                     if mid != self.mid:
-                        # self.mid_std = statistics.stdev(self.mids)
+                        self.mid_std = statistics.stdev(self.mids)
+                        if self.ma7.get_average() < self.ma21.get_average():
+                            self.is_klines_ok = False
                         self.mid = mid
                         self.books_seen += 1
         except Exception as e:
