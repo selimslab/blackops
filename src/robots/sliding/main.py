@@ -131,7 +131,7 @@ class LeaderFollowerTrader(RobotBase):
         while True:
             if self.stats.follower_seen < self.follower_pub.books_seen:
                 await self.should_buy()
-                self.stats.follower_seen += 1
+                self.stats.follower_seen = copy(self.follower_pub.books_seen)
 
             await asyncio.sleep(0)
 
@@ -142,7 +142,7 @@ class LeaderFollowerTrader(RobotBase):
             raise Exception("No bridge mid")
 
         self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
-        self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
+        # self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
         if not self.base_step_qty:
             self.set_base_step_qty(self.taker.mid)
 
@@ -212,17 +212,17 @@ class LeaderFollowerTrader(RobotBase):
         self.stats.buy_tried += 1
 
     def get_buy_qty(self):
-        k = (
-            (self.taker.mid - self.follower_pub.ask)
-            / self.config.unit_signal_bps.buy
-            * self.taker.mid
-        )
-        qty = self.base_step_qty * k
 
         current_step = self.pair.base.total_balance / self.base_step_qty
         remaining_step = self.config.max_step - current_step
+
         if remaining_step < 1:
             return
+
+        unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
+        k = (self.taker.mid - self.follower_pub.ask) / unit_signal
+        k = min(k, remaining_step)
+        qty = self.base_step_qty * k
 
         return int(qty)
 

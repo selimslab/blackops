@@ -73,7 +73,7 @@ class BTPub(PublisherBase):
     api_client: ExchangeAPIClientBase
 
     books_seen: int = 0
-    stopwatch: StopwatchAPI = field(default_factory=StopwatchAPI)
+    # stopwatch: StopwatchAPI = field(default_factory=StopwatchAPI)
 
     ask: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
@@ -149,8 +149,10 @@ class BinancePub(PublisherBase):
                     self.ask = ask
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
-                    self.mids.append(mid)
-                    self.mid_std = statistics.stdev(self.mids)
+
+                    # self.mids.append(mid)
+                    # self.mid_std = statistics.stdev(self.mids)
+
                     self.spread_bps = (ask - bid) / mid / BPS
 
                     if mid != self.mid:
@@ -167,7 +169,7 @@ class BinancePub(PublisherBase):
                 self.ma5 = statistics.mean(close)
                 self.std = statistics.stdev(close)
                 self.is_klines_ok = bool(close[-1] >= self.ma5) or bool(
-                    close[-1] - close[-2] >= Decimal("1.2") * self.std
+                    close[-1] - close[-2] > Decimal("1.2") * self.std
                 )
         except Exception as e:
             pass
