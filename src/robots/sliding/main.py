@@ -140,9 +140,14 @@ class LeaderFollowerTrader(RobotBase):
             except Exception as e:
                 pass
 
+    # async def poll_follower_pub(self) -> None:
+
     async def consume_leader_pub(self) -> None:
         self.set_taker_mids()
         await self.should_sell()
+
+    async def consume_follower_pub(self) -> None:
+
         await self.should_buy()
 
     def set_taker_mids(self):
@@ -162,14 +167,12 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.bid:
             return
 
-        self.taker.sell = self.taker.mid * (
-            Decimal(1) + self.config.unit_signal_bps.sell
-        )
+        self.taker.sell = self.taker.mid - self.taker.std * Decimal("1.2")
 
-        if self.taker.mid > self.follower_pub.bid:
+        if self.follower_pub.bid < self.taker.sell:
             return
 
-        price = self.get_sell_price()
+        price = n_bps_lower(self.follower_pub.bid, Decimal(4))
         qty = self.get_sell_qty()
 
         if not self.order_api.can_sell(price, qty):
@@ -180,20 +183,12 @@ class LeaderFollowerTrader(RobotBase):
         self.stats.sell_tried += 1
         return True
 
-    def get_sell_price(self):
-        price = self.get_precise_price(
-            self.taker.mid, self.follower_pub.bid, decimal.ROUND_HALF_DOWN
-        )
-        price = n_bps_lower(price, Decimal(4))
-
-        return price
-
     def get_sell_qty(self):
         # diff = abs(self.taker.mid - self.follower_pub.bid)
 
         # sell all
         # sell_multiplier = self.config.max_step * (Decimal(1) - diff/self.taker.std)
-        qty: Decimal = self.base_step_qty * self.config.max_step / 2
+        qty: Decimal = self.base_step_qty * self.config.sell_step
 
         if qty > self.pair.base.free:
             qty = round_decimal_floor(self.pair.base.free)

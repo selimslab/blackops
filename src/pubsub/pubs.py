@@ -123,7 +123,7 @@ class BinancePub(PublisherBase):
     spread_bps: Decimal = Decimal(0)
 
     mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
+        default_factory=lambda: collections.deque(maxlen=21)
     )
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
