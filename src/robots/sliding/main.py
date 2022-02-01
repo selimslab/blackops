@@ -1,5 +1,7 @@
 import asyncio
+import collections
 import decimal
+import statistics
 from copy import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -25,13 +27,11 @@ class NoBuy:
     max_spread: int = 0
     klines: int = 0
     qty: int = 0
-    ask_too_high: int = 0
 
 
 @dataclass
 class NoSell:
     qty: int = 0
-    bid_too_low: int = 0
 
 
 @dataclass
@@ -155,10 +155,9 @@ class LeaderFollowerTrader(RobotBase):
         )
 
         if self.follower_pub.bid < self.taker.sell:
-            self.stats.no_sell.bid_too_low += 1
             return
 
-        price = n_bps_lower(self.follower_pub.bid, Decimal(4))
+        price = n_bps_lower(self.follower_pub.bid, Decimal(6))
         qty = self.get_sell_qty()
 
         if not self.order_api.can_sell(price, qty):
@@ -182,11 +181,13 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
+        mean = statistics.mean(self.leader_pub.mids[-5:])
+        if self.taker.usdt < mean:
+            return
+
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
         if self.follower_pub.ask > self.taker.buy:
-            self.stats.no_buy.ask_too_high += 1
-
             return
 
         if self.leader_pub.spread_bps > self.config.max_spread_bps:
@@ -238,7 +239,7 @@ class LeaderFollowerTrader(RobotBase):
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
             # "signals": asdict(self.signals),
-            "ma5": self.leader_pub.ma5,
+            "moving_avg": self.leader_pub.moving_avg,
             "klines_ok": self.leader_pub.is_klines_ok,
             "kline_closes": self.leader_pub.kline_closes,
             # "std": self.leader_pub.std,

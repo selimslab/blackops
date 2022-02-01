@@ -128,7 +128,7 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
-    ma5: Decimal = Decimal(0)
+    moving_avg: Decimal = Decimal(0)
     kline_std: Decimal = Decimal(0)
     mid_std: Decimal = Decimal(0)
     is_klines_ok: bool = False
@@ -167,11 +167,9 @@ class BinancePub(PublisherBase):
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=5)
             if klines:
                 kline_closes = [Decimal(k[4]) for k in klines]
-                self.ma5 = statistics.mean(kline_closes)
+                self.moving_avg = statistics.mean(kline_closes)
                 self.std = statistics.stdev(kline_closes)
-                self.is_klines_ok = bool(kline_closes[-1] >= self.ma5) or bool(
-                    kline_closes[-1] - kline_closes[-2] > Decimal("1.2") * self.std
-                )
+                self.is_klines_ok = bool(kline_closes[-1] >= self.moving_avg)
                 self.kline_closes = kline_closes
         except Exception as e:
             pass
