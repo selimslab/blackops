@@ -180,9 +180,9 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
-        mean = statistics.mean(self.leader_pub.last_n)
-        if self.taker.usdt < mean:
-            return
+        # mean = statistics.mean(self.leader_pub.last_n)
+        # if self.taker.usdt < mean:
+        #     return
 
         # min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
@@ -201,7 +201,7 @@ class LeaderFollowerTrader(RobotBase):
         price = self.get_precise_price(
             self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
         )
-        # price = n_bps_higher(self.follower_pub.bid, Decimal(5))
+        price = n_bps_higher(price, Decimal(5))
 
         qty = self.get_buy_qty()
 
