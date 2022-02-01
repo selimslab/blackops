@@ -186,7 +186,7 @@ class BinancePub(PublisherBase):
                     # self.ma21.add(mid)
 
                     if mid != self.mid:
-                        self.mid_std = statistics.stdev(self.mids)
+                        # self.mid_std = statistics.stdev(self.mids)
                         # if self.ma7.get_average() < self.ma21.get_average():
                         #     self.is_klines_ok = False
                         self.mid = mid
