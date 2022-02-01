@@ -153,7 +153,7 @@ class LeaderFollowerTrader(RobotBase):
         )
 
         price = self.get_precise_price(
-            self.taker.sell, self.follower_pub.bid, decimal.ROUND_HALF_DOWN
+            self.taker.sell, self.follower_pub.bid, decimal.ROUND_DOWN
         )
 
         if self.follower_pub.bid < price:
@@ -198,7 +198,7 @@ class LeaderFollowerTrader(RobotBase):
         #     return
 
         price = self.get_precise_price(
-            self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
+            self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
         )
 
         if self.follower_pub.ask > price:
