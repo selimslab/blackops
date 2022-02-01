@@ -156,14 +156,14 @@ class LeaderFollowerTrader(RobotBase):
         if self.follower_pub.bid < self.taker.sell:
             return
 
-        price = n_bps_lower(self.follower_pub.bid, Decimal(6))
+        # price = n_bps_lower(self.follower_pub.bid, Decimal(6))
         qty = self.get_sell_qty()
 
-        if not self.order_api.can_sell(price, qty):
+        if not self.order_api.can_sell(self.taker.sell, qty):
             self.stats.no_sell.qty += 1
             return
 
-        await self.order_api.send_order(OrderType.SELL, price, qty)
+        await self.order_api.send_order(OrderType.SELL, self.taker.sell, qty)
         self.stats.sell_tried += 1
         return True
 
@@ -201,7 +201,7 @@ class LeaderFollowerTrader(RobotBase):
         price = self.get_precise_price(
             self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
         )
-        price = n_bps_higher(price, Decimal(5))
+        # price = n_bps_higher(price, Decimal(5))
 
         qty = self.get_buy_qty()
 
