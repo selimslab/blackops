@@ -147,7 +147,7 @@ class LeaderFollowerTrader(RobotBase):
     # SELL
     async def should_sell(self):
 
-        if not self.follower_pub.bid:
+        if not self.follower_pub.bid or not self.base_step_qty:
             return
 
         self.taker.sell = self.taker.mid * (
@@ -179,6 +179,8 @@ class LeaderFollowerTrader(RobotBase):
 
     # BUY
     async def should_buy(self):
+        if not self.follower_pub.ask or not self.base_step_qty:
+            return
 
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
