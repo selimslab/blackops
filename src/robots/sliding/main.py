@@ -28,11 +28,13 @@ class NoBuy:
     max_spread: int = 0
     klines: int = 0
     qty: int = 0
+    ask_too_high: int = 0
 
 
 @dataclass
 class NoSell:
     qty: int = 0
+    bid_too_low: int = 0
 
 
 @dataclass
@@ -157,6 +159,7 @@ class LeaderFollowerTrader(RobotBase):
         )
 
         if self.taker.sell > self.follower_pub.bid:
+            self.stats.no_sell.bid_too_low += 1
             return
 
         price = n_bps_lower(self.follower_pub.bid, Decimal(4))
@@ -184,6 +187,8 @@ class LeaderFollowerTrader(RobotBase):
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
         if self.follower_pub.ask > self.taker.buy:
+            self.stats.no_buy.ask_too_high += 1
+
             return
 
         if self.leader_pub.spread_bps > self.config.max_spread_bps:
@@ -220,9 +225,9 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
-        k = (self.taker.mid - self.follower_pub.ask) / unit_signal
-        k = min(k, remaining_step)
-        qty = self.base_step_qty * k
+        signal = (self.taker.mid - self.follower_pub.ask) / unit_signal
+        signal = min(signal, remaining_step)
+        qty = self.base_step_qty * signal
 
         return int(qty)
 
@@ -237,7 +242,7 @@ class LeaderFollowerTrader(RobotBase):
             # "signals": asdict(self.signals),
             "ma5": self.leader_pub.ma5,
             "klines_ok": self.leader_pub.is_klines_ok,
-            "std": self.leader_pub.std,
+            # "std": self.leader_pub.std,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,
