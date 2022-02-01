@@ -11,7 +11,7 @@ from src.domain import BPS, OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
-from src.numberops.main import n_bps_lower
+from src.numberops.main import n_bps_higher, n_bps_lower
 from src.periodic import periodic
 from src.pubsub.pubs import BalancePub, BinancePub, BTPub
 from src.robots.base import RobotBase
@@ -184,8 +184,8 @@ class LeaderFollowerTrader(RobotBase):
         if self.taker.usdt < mean:
             return
 
-        min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
-        self.taker.buy = min_mid * (Decimal(1) - self.config.unit_signal_bps.buy)
+        # min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
+        self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
         if self.follower_pub.ask > self.taker.buy:
             return
@@ -201,6 +201,7 @@ class LeaderFollowerTrader(RobotBase):
         price = self.get_precise_price(
             self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
         )
+        price = n_bps_higher(self.follower_pub.bid, Decimal(5))
 
         qty = self.get_buy_qty()
 
