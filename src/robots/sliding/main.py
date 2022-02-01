@@ -158,7 +158,7 @@ class LeaderFollowerTrader(RobotBase):
             Decimal(1) - self.config.unit_signal_bps.sell
         )
 
-        if self.taker.sell > self.follower_pub.bid:
+        if self.follower_pub.bid < self.taker.sell:
             self.stats.no_sell.bid_too_low += 1
             return
 
