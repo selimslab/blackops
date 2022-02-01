@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import asynccontextmanager
 from typing import Callable
 
 import async_timeout
