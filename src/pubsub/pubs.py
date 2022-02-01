@@ -145,10 +145,6 @@ class BinancePub(PublisherBase):
     bid: Decimal = Decimal(0)
     spread_bps: Decimal = Decimal(0)
 
-    mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=21)
-    )
-
     last_n: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=5)
     )
@@ -184,16 +180,15 @@ class BinancePub(PublisherBase):
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
-                    self.mids.append(mid)
                     self.last_n.append(mid)
 
-                    self.ma7.add(mid)
-                    self.ma21.add(mid)
+                    # self.ma7.add(mid)
+                    # self.ma21.add(mid)
 
                     if mid != self.mid:
                         self.mid_std = statistics.stdev(self.mids)
-                        if self.ma7.get_average() < self.ma21.get_average():
-                            self.is_klines_ok = False
+                        # if self.ma7.get_average() < self.ma21.get_average():
+                        #     self.is_klines_ok = False
                         self.mid = mid
                         self.books_seen += 1
         except Exception as e:
