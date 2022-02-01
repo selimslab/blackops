@@ -125,6 +125,11 @@ class BinancePub(PublisherBase):
     mids: collections.deque = field(
         default_factory=lambda: collections.deque(maxlen=21)
     )
+
+    last_n: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=5)
+    )
+
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
@@ -151,7 +156,8 @@ class BinancePub(PublisherBase):
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
 
-                    self.mids.append(mid)
+                    # self.mids.append(mid)
+                    self.last_n.append(mid)
 
                     self.spread_bps = (ask - bid) / mid / BPS
 

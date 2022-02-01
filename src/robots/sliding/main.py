@@ -181,7 +181,7 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
-        mean = statistics.mean(self.leader_pub.mids[-5:])
+        mean = statistics.mean(self.leader_pub.last_n)
         if self.taker.usdt < mean:
             return
 
