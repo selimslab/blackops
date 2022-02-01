@@ -118,9 +118,7 @@ class RollingMean:
     count: Decimal = Decimal(0)
 
     def __post_init__(self):
-        self.values: collections.deque = field(
-            default_factory=lambda: collections.deque(maxlen=self.maxlen)
-        )
+        self.values = collections.deque(maxlen=self.maxlen)
 
     def add(self, value):
         if self.count < self.maxlen:
