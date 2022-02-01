@@ -24,28 +24,27 @@ from .models import BookTop, Signals, Theo
 
 
 @dataclass
+class NoBuy:
+    max_spread: int = 0
+    klines: int = 0
+    qty: int = 0
+
+
+@dataclass
+class NoSell:
+    qty: int = 0
+
+
+@dataclass
 class Stats:
     leader_seen: int = 0
-
     follower_seen: int = 0
-
-    decisions: int = 0
-
-    missing_data: int = 0
 
     sell_tried: int = 0
     buy_tried: int = 0
 
-    buy_not_needed: int = 0
-    sell_not_needed: int = 0
-
-    dont_buy_max_spread_bps: int = 0
-    ma5_dont_buy: int = 0
-
-    cant_sell: int = 0
-    cant_buy: int = 0
-
-    bn_mid_too_high_to_sell: int = 0
+    no_buy: NoBuy = field(default_factory=NoBuy)
+    no_sell: NoSell = field(default_factory=NoSell)
 
 
 @dataclass
@@ -59,29 +58,13 @@ class LeaderFollowerTrader(RobotBase):
 
     base_step_qty: Optional[Decimal] = None
 
-    sell_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=10)
-    )
+    start_time: datetime = field(default_factory=lambda: datetime.now())
 
-    # single_bt_price_buy_signals: list = field(default_factory=list)
-
-    buy_signals: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
-    )
-
-    bn_mids: collections.deque = field(
-        default_factory=lambda: collections.deque(maxlen=3)
-    )
+    stats: Stats = field(default_factory=Stats)
 
     taker: Theo = field(default_factory=Theo)
 
-    start_time: datetime = field(default_factory=lambda: datetime.now())
-
-    decide_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
     market: BookTop = field(default_factory=BookTop)
-
-    stats: Stats = field(default_factory=Stats)
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
@@ -140,15 +123,17 @@ class LeaderFollowerTrader(RobotBase):
             except Exception as e:
                 pass
 
-    # async def poll_follower_pub(self) -> None:
-
     async def consume_leader_pub(self) -> None:
         self.set_taker_mids()
         await self.should_sell()
 
-    async def consume_follower_pub(self) -> None:
+    async def poll_follower_pub(self):
+        while True:
+            if self.stats.follower_seen < self.follower_pub.books_seen:
+                await self.should_buy()
+                self.stats.follower_seen += 1
 
-        await self.should_buy()
+            await asyncio.sleep(0)
 
     def set_taker_mids(self):
         self.taker.usdt = self.leader_pub.mid
@@ -167,16 +152,18 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.bid:
             return
 
-        self.taker.sell = self.taker.mid - self.taker.std * Decimal("1.2")
+        self.taker.sell = self.taker.mid * (
+            Decimal(1) - self.config.unit_signal_bps.sell
+        )
 
-        if self.follower_pub.bid < self.taker.sell:
+        if self.taker.sell > self.follower_pub.bid:
             return
 
         price = n_bps_lower(self.follower_pub.bid, Decimal(4))
         qty = self.get_sell_qty()
 
         if not self.order_api.can_sell(price, qty):
-            self.stats.cant_sell += 1
+            self.stats.no_sell.qty += 1
             return
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
@@ -184,10 +171,6 @@ class LeaderFollowerTrader(RobotBase):
         return True
 
     def get_sell_qty(self):
-        # diff = abs(self.taker.mid - self.follower_pub.bid)
-
-        # sell all
-        # sell_multiplier = self.config.max_step * (Decimal(1) - diff/self.taker.std)
         qty: Decimal = self.base_step_qty * self.config.sell_step
 
         if qty > self.pair.base.free:
@@ -204,30 +187,37 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         if self.leader_pub.spread_bps > self.config.max_spread_bps:
-            self.stats.dont_buy_max_spread_bps += 1
+            self.stats.no_buy.max_spread += 1
             return
 
         if self.leader_pub.is_klines_ok:
-            self.stats.ma5_dont_buy += 1
+            self.stats.no_buy.klines += 1
             return
 
-        price = self.get_buy_price()
+        price = self.get_precise_price(
+            self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
+        )
 
         qty = self.get_buy_qty()
 
-        if not price or not qty:
-            self.stats.cant_buy += 1
+        if not qty:
+            self.stats.no_buy.qty += 1
             return
 
         if not self.order_api.can_buy(price, qty):
-            self.stats.cant_buy += 1
+            self.stats.no_buy.qty += 1
             return None
 
         await self.order_api.send_order(OrderType.BUY, price, qty)
         self.stats.buy_tried += 1
 
     def get_buy_qty(self):
-        qty = self.base_step_qty
+        k = (
+            (self.taker.mid - self.follower_pub.ask)
+            / self.config.unit_signal_bps.buy
+            * self.taker.mid
+        )
+        qty = self.base_step_qty * k
 
         current_step = self.pair.base.total_balance / self.base_step_qty
         remaining_step = self.config.max_step - current_step
@@ -235,11 +225,6 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         return int(qty)
-
-    def get_buy_price(self):
-        return self.get_precise_price(
-            self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
-        )
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
