@@ -192,7 +192,6 @@ class BinancePub(PublisherBase):
                         self.books_seen += 1
         except Exception as e:
             logger.error(e)
-            pass
 
     async def publish_klines(self):
         try:
