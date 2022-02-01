@@ -184,19 +184,19 @@ class LeaderFollowerTrader(RobotBase):
         if self.taker.usdt < mean:
             return
 
-        min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
-        self.taker.buy = min_mid * (Decimal(1) - self.config.unit_signal_bps.buy)
+        # min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
+        self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 
         if self.follower_pub.ask > self.taker.buy:
             return
 
-        if self.leader_pub.spread_bps > self.config.max_spread_bps:
-            self.stats.no_buy.max_spread += 1
-            return
+        # if self.leader_pub.spread_bps > self.config.max_spread_bps:
+        #     self.stats.no_buy.max_spread += 1
+        #     return
 
-        if self.leader_pub.is_klines_ok:
-            self.stats.no_buy.klines += 1
-            return
+        # if self.leader_pub.is_klines_ok:
+        #     self.stats.no_buy.klines += 1
+        #     return
 
         price = self.get_precise_price(
             self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
