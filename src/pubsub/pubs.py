@@ -122,28 +122,40 @@ class BinancePub(PublisherBase):
     bid: Decimal = Decimal(0)
     spread_bps: Decimal = Decimal(0)
 
-    # mids: collections.deque = field(default_factory=lambda:collections.deque(maxlen=300))
+    mids: collections.deque = field(
+        default_factory=lambda: collections.deque(maxlen=10)
+    )
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
     ma5: Decimal = Decimal(0)
+    kline_std: Decimal = Decimal(0)
+    mid_std: Decimal = Decimal(0)
     is_klines_ok: bool = False
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 10))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
 
     def parse_book(self, book):
         try:
             if "data" in book:
-                mid = (
-                    Decimal(book["data"]["a"]) + Decimal(book["data"]["b"])
-                ) / DECIMAL_2
-                if mid != self.mid:
-                    self.mid = mid
-                    self.books_seen += 1
+                ask = Decimal(book["data"]["a"])
+                bid = Decimal(book["data"]["b"])
+
+                if ask and bid and (ask != self.ask or bid != self.bid):
+                    self.ask = ask
+                    self.bid = bid
+                    mid = (ask + bid) / DECIMAL_2
+                    self.mids.append(mid)
+                    self.mid_std = statistics.stdev(self.mids)
+                    self.spread_bps = (ask - bid) / mid / BPS
+
+                    if mid != self.mid:
+                        self.mid = mid
+                        self.books_seen += 1
         except Exception as e:
             pass
 
@@ -153,7 +165,10 @@ class BinancePub(PublisherBase):
             if klines:
                 close = [Decimal(k[4]) for k in klines]
                 self.ma5 = statistics.mean(close)
-                self.is_klines_ok = bool(close[-1] >= self.ma5)
+                self.std = statistics.stdev(close)
+                self.is_klines_ok = bool(close[-1] >= self.ma5) or bool(
+                    close[-1] - close[-2] >= Decimal("1.2") * self.std
+                )
         except Exception as e:
             pass
 
@@ -164,24 +179,7 @@ class BinancePub(PublisherBase):
         # loop = asyncio.get_event_loop()
         async for book in self.book_stream:
             if book:
-                try:
-                    if "data" in book:
-                        ask = Decimal(book["data"]["a"])
-                        bid = Decimal(book["data"]["b"])
-
-                        if ask and bid and (ask != self.ask or bid != self.bid):
-                            self.ask = ask
-                            self.bid = bid
-                            mid = (ask + bid) / DECIMAL_2
-
-                            self.spread_bps = (ask - bid) / mid / BPS
-
-                            if mid != self.mid:
-                                self.mid = mid
-                                self.books_seen += 1
-                except Exception as e:
-                    pass
-
+                self.parse_book(book)
             await asyncio.sleep(0)
 
 
