@@ -92,7 +92,7 @@ class BTPub(PublisherBase):
             ask = self.api_client.get_best_ask(book)
             bid = self.api_client.get_best_bid(book)
 
-            if ask and bid:
+            if ask and bid and (ask != self.ask or bid != self.bid):
                 self.ask = ask
                 self.bid = bid
                 self.mid = (ask + bid) / DECIMAL_2
@@ -132,6 +132,7 @@ class BinancePub(PublisherBase):
     kline_std: Decimal = Decimal(0)
     mid_std: Decimal = Decimal(0)
     is_klines_ok: bool = False
+    kline_closes: list = field(default_factory=list)
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
@@ -150,12 +151,12 @@ class BinancePub(PublisherBase):
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
 
-                    # self.mids.append(mid)
-                    # self.mid_std = statistics.stdev(self.mids)
+                    self.mids.append(mid)
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
                     if mid != self.mid:
+                        self.mid_std = statistics.stdev(self.mids)
                         self.mid = mid
                         self.books_seen += 1
         except Exception as e:
@@ -165,12 +166,13 @@ class BinancePub(PublisherBase):
         try:
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=5)
             if klines:
-                close = [Decimal(k[4]) for k in klines]
-                self.ma5 = statistics.mean(close)
-                self.std = statistics.stdev(close)
-                self.is_klines_ok = bool(close[-1] >= self.ma5) or bool(
-                    close[-1] - close[-2] > Decimal("1.2") * self.std
+                kline_closes = [Decimal(k[4]) for k in klines]
+                self.ma5 = statistics.mean(kline_closes)
+                self.std = statistics.stdev(kline_closes)
+                self.is_klines_ok = bool(kline_closes[-1] >= self.ma5) or bool(
+                    kline_closes[-1] - kline_closes[-2] > Decimal("1.2") * self.std
                 )
+                self.kline_closes = kline_closes
         except Exception as e:
             pass
 

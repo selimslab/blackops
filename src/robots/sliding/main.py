@@ -9,16 +9,15 @@ from typing import Any, Optional
 from src.domain import BPS, OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
-from src.numberops import n_bps_higher, round_decimal_floor, round_decimal_half_up
+from src.numberops import round_decimal_floor, round_decimal_half_up
 from src.numberops.main import n_bps_lower
 from src.periodic import periodic
-from src.proc import thread_pool_executor
 from src.pubsub.pubs import BalancePub, BinancePub, BTPub
 from src.robots.base import RobotBase
-from src.robots.sliding.orders import OrderApi, OrderDecisionInput
+from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
-from .models import BookTop, Signals, Theo
+from .models import BookTop, Theo
 
 
 @dataclass
@@ -87,6 +86,7 @@ class LeaderFollowerTrader(RobotBase):
     async def run_streams(self) -> None:
         aws: Any = [
             self.poll_leader_pub(),
+            self.poll_follower_pub(),
             periodic(
                 self.order_api.refresh_open_orders,
                 sleep_seconds.refresh_open_orders,
@@ -113,7 +113,8 @@ class LeaderFollowerTrader(RobotBase):
                 continue
 
             try:
-                await self.consume_leader_pub()
+                self.set_taker_mids()
+                await self.should_sell()
 
                 pre = self.leader_pub.mid
                 self.stats.leader_seen += 1
@@ -123,13 +124,10 @@ class LeaderFollowerTrader(RobotBase):
             except Exception as e:
                 pass
 
-    async def consume_leader_pub(self) -> None:
-        self.set_taker_mids()
-        await self.should_sell()
-
     async def poll_follower_pub(self):
         while True:
             if self.stats.follower_seen < self.follower_pub.books_seen:
+                await self.should_sell()
                 await self.should_buy()
                 self.stats.follower_seen = copy(self.follower_pub.books_seen)
 
@@ -142,7 +140,7 @@ class LeaderFollowerTrader(RobotBase):
             raise Exception("No bridge mid")
 
         self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
-        # self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
+        self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
         if not self.base_step_qty:
             self.set_base_step_qty(self.taker.mid)
 
@@ -240,6 +238,7 @@ class LeaderFollowerTrader(RobotBase):
             # "signals": asdict(self.signals),
             "ma5": self.leader_pub.ma5,
             "klines_ok": self.leader_pub.is_klines_ok,
+            "kline_closes": self.leader_pub.kline_closes,
             # "std": self.leader_pub.std,
             "prices": {
                 "ask": self.follower_pub.ask,
