@@ -199,7 +199,7 @@ class LeaderFollowerTrader(RobotBase):
         #     return
 
         price = self.get_precise_price(
-            self.taker.buy, self.follower_pub.ask, decimal.ROUND_HALF_DOWN
+            self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
         )
         price = n_bps_higher(price, Decimal(5))
 
