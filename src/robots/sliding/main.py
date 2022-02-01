@@ -1,5 +1,6 @@
 import asyncio
 import decimal
+import statistics
 from copy import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -179,9 +180,9 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
-        # mean = statistics.mean(self.leader_pub.last_n)
-        # if self.taker.usdt < mean:
-        #     return
+        mean = statistics.mean(self.leader_pub.last_n)
+        if self.taker.usdt < mean:
+            return
 
         self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
 

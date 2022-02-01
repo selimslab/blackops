@@ -151,21 +151,22 @@ class BinancePub(PublisherBase):
                 ask = Decimal(book["data"]["a"])
                 bid = Decimal(book["data"]["b"])
 
-                if ask and bid:  # and (ask != self.ask or bid != self.bid):
+                if ask and bid and (ask != self.ask or bid != self.bid):
                     self.ask = ask
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
 
-                    # self.mids.append(mid)
-                    # self.last_n.append(mid)
-
                     self.spread_bps = (ask - bid) / mid / BPS
 
+                    # self.mids.append(mid)
+                    self.last_n.append(mid)
+
                     if mid != self.mid:
-                        self.mid_std = statistics.stdev(self.mids)
+                        # self.mid_std = statistics.stdev(self.mids)
                         self.mid = mid
                         self.books_seen += 1
         except Exception as e:
+            logger.error(e)
             pass
 
     async def publish_klines(self):
