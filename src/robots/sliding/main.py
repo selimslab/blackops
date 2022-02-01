@@ -139,7 +139,7 @@ class LeaderFollowerTrader(RobotBase):
             raise Exception("No bridge mid")
 
         self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
-        self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
+        # self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
         if not self.base_step_qty:
             self.set_base_step_qty(self.taker.mid)
 
@@ -156,7 +156,6 @@ class LeaderFollowerTrader(RobotBase):
         if self.follower_pub.bid < self.taker.sell:
             return
 
-        # price = n_bps_lower(self.follower_pub.bid, Decimal(6))
         qty = self.get_sell_qty()
 
         if not self.order_api.can_sell(self.taker.sell, qty):
@@ -201,7 +200,6 @@ class LeaderFollowerTrader(RobotBase):
         price = self.get_precise_price(
             self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
         )
-        # price = n_bps_higher(price, Decimal(5))
 
         qty = self.get_buy_qty()
 

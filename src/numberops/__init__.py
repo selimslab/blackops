@@ -1,5 +1,4 @@
 from .main import (
-    get_bps,
     get_precision,
     n_bps_higher,
     n_bps_lower,

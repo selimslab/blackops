@@ -29,26 +29,26 @@ def get_precision(d: Decimal):
     return exponent
 
 
-def get_bps(d: Decimal) -> Decimal:
+def get_smallest_exponent(d: Decimal) -> Decimal:
     sign, digit, exponent = d.as_tuple()
     return Decimal(str(10 ** exponent))
 
 
-def one_bps_lower(d: Decimal) -> Decimal:
-    bps = get_bps(d)
-    return d - bps
-
-
-def one_bps_higher(d: Decimal) -> Decimal:
-    bps = get_bps(d)
-    return d + bps
-
-
 def n_bps_higher(d: Decimal, n: Decimal) -> Decimal:
-    bps = get_bps(d)
+    bps = get_smallest_exponent(d)
     return d + n * bps
 
 
 def n_bps_lower(d: Decimal, n: Decimal) -> Decimal:
-    bps = get_bps(d)
+    bps = get_smallest_exponent(d)
     return d - n * bps
+
+
+def one_bps_lower(d: Decimal) -> Decimal:
+    bps = get_smallest_exponent(d)
+    return d - bps
+
+
+def one_bps_higher(d: Decimal) -> Decimal:
+    bps = get_smallest_exponent(d)
+    return d + bps
