@@ -10,12 +10,14 @@ from .main import (
 
 
 def get_precise_price(price: Decimal, reference: Decimal) -> Decimal:
-    return price.quantize(reference, rounding=decimal.ROUND_DOWN)
+    return price.quantize(reference, rounding=None)
 
 
 def test_round():
 
-    assert get_precise_price(Decimal("0.00378688"), Decimal("0.0034")) == 0
+    assert get_precise_price(Decimal("0.00378688"), Decimal("0.0034")) == Decimal(
+        "0.0037"
+    )
 
     shib = Decimal("0.00041596")
     btc = Decimal("793648")

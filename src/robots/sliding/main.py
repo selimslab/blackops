@@ -97,11 +97,6 @@ class LeaderFollowerTrader(RobotBase):
 
         await asyncio.gather(*aws)
 
-    def get_precise_price(
-        self, price: Decimal, reference: Decimal, rounding
-    ) -> Decimal:
-        return price.quantize(reference, rounding=rounding)
-
     # LEADER
     async def poll_leader_pub(self) -> None:
         pre = None
@@ -152,9 +147,7 @@ class LeaderFollowerTrader(RobotBase):
             Decimal(1) - self.config.unit_signal_bps.sell
         )
 
-        price = self.get_precise_price(
-            self.taker.sell, self.follower_pub.bid, decimal.ROUND_DOWN
-        )
+        price = self.taker.sell.quantize(self.follower_pub.bid, decimal.ROUND_DOWN)
 
         if self.follower_pub.bid < price:
             return
@@ -197,9 +190,7 @@ class LeaderFollowerTrader(RobotBase):
         #     self.stats.no_buy.klines += 1
         #     return
 
-        price = self.get_precise_price(
-            self.taker.buy, self.follower_pub.ask, decimal.ROUND_DOWN
-        )
+        price = self.taker.buy.quantize(self.follower_pub.ask, decimal.ROUND_DOWN)
 
         if self.follower_pub.ask > price:
             return
