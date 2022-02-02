@@ -30,14 +30,14 @@ class LeaderFollowerConfig(StrategyConfigBase):
     quote_step_qty: Decimal = Decimal(4000)
 
     min_sell_qty: Decimal = Decimal(400)
-    min_buy_qty: Decimal = Decimal(4000)
+    min_buy_qty: Decimal = Decimal(2000)
 
     testnet = False
 
     max_spread_bps: Decimal = Decimal(15)
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        buy=Decimal(15) * BPS, sell=Decimal(-3) * BPS
+        buy=Decimal(18) * BPS, sell=Decimal(1) * BPS
     )
 
     sell_step_per_std = max_step / Decimal(3)
