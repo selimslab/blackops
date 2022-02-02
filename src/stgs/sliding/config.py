@@ -37,7 +37,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
     max_spread_bps: Decimal = Decimal(15)
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        buy=Decimal(20) * BPS, sell=Decimal(3) * BPS
+        buy=Decimal(18) * BPS, sell=Decimal(1) * BPS
     )
 
     sell_step_per_std = max_step / Decimal(3)
