@@ -10,7 +10,6 @@ from src.domain import BPS, OrderType, create_asset_pair
 from src.environment import sleep_seconds
 from src.monitoring import logger
 from src.numberops import round_decimal_floor, round_decimal_half_up
-from src.numberops.main import n_bps_higher, n_bps_lower
 from src.periodic import periodic
 from src.pubsub.pubs import BalancePub, BinancePub, BTPub
 from src.robots.base import RobotBase

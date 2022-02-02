@@ -41,21 +41,11 @@ def get_smallest_exponent(d: Decimal) -> Decimal:
     return Decimal(str(10 ** exponent))
 
 
-def n_bps_higher(d: Decimal, n: Decimal) -> Decimal:
+def n_exp_higher(d: Decimal, n: Decimal) -> Decimal:
     bps = get_smallest_exponent(d)
     return d + n * bps
 
 
-def n_bps_lower(d: Decimal, n: Decimal) -> Decimal:
+def n_exp_lower(d: Decimal, n: Decimal) -> Decimal:
     bps = get_smallest_exponent(d)
     return d - n * bps
-
-
-def one_bps_lower(d: Decimal) -> Decimal:
-    bps = get_smallest_exponent(d)
-    return d - bps
-
-
-def one_bps_higher(d: Decimal) -> Decimal:
-    bps = get_smallest_exponent(d)
-    return d + bps
