@@ -194,7 +194,7 @@ class BinancePub(PublisherBase):
                 self.is_klines_ok = is_slope_up
 
         except Exception as e:
-            pass
+            logger.error(e)
 
     async def publish_stream(self):
         if not self.book_stream:

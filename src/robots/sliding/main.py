@@ -115,6 +115,7 @@ class LeaderFollowerTrader(RobotBase):
                 await asyncio.sleep(0)
 
             except Exception as e:
+                logger.error(e)
                 pass
 
     async def poll_follower_pub(self):
