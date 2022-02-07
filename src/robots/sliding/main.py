@@ -149,7 +149,7 @@ class LeaderFollowerTrader(RobotBase):
             + self.config.unit_signal_bps.sell
             - current_step * self.config.unit_signal_bps.step
         )
-        if not self.leader_pub.is_klines_ok:
+        if not self.leader_pub.is_slope_up:
             price_coeff -= self.config.unit_signal_bps.slope_risk
 
         # -1bps - 4*1bps = -5bps
@@ -202,7 +202,7 @@ class LeaderFollowerTrader(RobotBase):
             self.stats.no_buy.max_spread += 1
             return
 
-        if self.leader_pub.is_klines_ok:
+        if self.leader_pub.is_slope_up:
             self.stats.no_buy.klines += 1
             return
 
@@ -244,7 +244,7 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
-            "slope_up": self.leader_pub.is_klines_ok,
+            "slope_up": self.leader_pub.is_slope_up,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,

@@ -148,7 +148,7 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
-    is_klines_ok: bool = False
+    is_slope_up: bool = False
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(7))
@@ -158,7 +158,7 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 10))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
 
     def parse_book(self, book):
         try:
@@ -190,8 +190,7 @@ class BinancePub(PublisherBase):
                 kline_closes = [Decimal(k[4]) for k in klines]
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
-                is_slope_up = bool(latter > former)
-                self.is_klines_ok = is_slope_up
+                self.is_slope_up = bool(latter > former)
 
         except Exception as e:
             logger.error(e)
