@@ -109,7 +109,7 @@ class LeaderFollowerTrader(RobotBase):
                 self.set_taker_mids()
                 await self.should_sell()
 
-                pre = self.leader_pub.mid
+                pre = copy(self.leader_pub.mid)
                 self.stats.leader_seen += 1
 
                 await asyncio.sleep(0)
