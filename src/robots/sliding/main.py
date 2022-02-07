@@ -149,7 +149,7 @@ class LeaderFollowerTrader(RobotBase):
             - current_step * self.config.unit_signal_bps.step
         )
         if not self.leader_pub.is_klines_ok:
-            price_coeff -= self.config.unit_signal_bps.slope_risk_bps
+            price_coeff -= self.config.unit_signal_bps.slope_risk
 
         # -1bps - 4*1bps = -5bps
         # with slope risk, -10 = -15bps
