@@ -146,7 +146,7 @@ class LeaderFollowerTrader(RobotBase):
         current_step = self.get_current_step()
         price_coeff = (
             Decimal(1)
-            - self.config.unit_signal_bps.sell
+            + self.config.unit_signal_bps.sell
             - current_step * self.config.unit_signal_bps.step
         )
         if not self.leader_pub.is_klines_ok:
@@ -244,6 +244,7 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
+            "slope_up": self.leader_pub.is_klines_ok,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,
