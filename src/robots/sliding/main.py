@@ -252,10 +252,10 @@ class LeaderFollowerTrader(RobotBase):
                 "bn bid": self.leader_pub.bid,
                 "bn seen": self.leader_pub.books_seen,
                 "bt seen": self.follower_pub.books_seen,
-                # "stats": asdict(self.stats),
+                "stats": asdict(self.stats),
             },
-            # "order": {
-            #     "fresh": self.order_api.open_orders_fresh,
-            #     "stats": asdict(self.order_api.stats),
-            # },
+            "order": {
+                "fresh": self.order_api.open_orders_fresh,
+                "stats": asdict(self.order_api.stats),
+            },
         }
