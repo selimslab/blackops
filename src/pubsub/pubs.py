@@ -149,6 +149,7 @@ class BinancePub(PublisherBase):
     kline_stream: Optional[AsyncGenerator] = None
 
     is_slope_up: bool = False
+    prev_diff: Decimal = Decimal(0)
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(7))
@@ -190,7 +191,9 @@ class BinancePub(PublisherBase):
                 kline_closes = [Decimal(k[4]) for k in klines]
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
-                self.is_slope_up = bool(latter > former)
+                diff = latter - former
+                self.is_slope_up = bool(diff > 0 and diff >= self.prev_diff)
+                self.prev_diff = diff
 
         except Exception as e:
             logger.error(e)
