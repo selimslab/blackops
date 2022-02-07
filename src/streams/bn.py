@@ -39,7 +39,8 @@ bn_factory = BinanceFactory()
 
 async def binance_stream_generator(symbol: str, stream_type: str):
     try:
-        sm = await bn_factory.get_socket_manager()
+        client = await AsyncClient.create()
+        sm = BinanceSocketManager(client)
         ts = sm.multiplex_socket([f"{symbol.lower()}@{stream_type}"])
 
         async with ts as tscm:
