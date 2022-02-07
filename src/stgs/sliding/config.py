@@ -13,6 +13,7 @@ class UnitSignalBPS(BaseModel):
     sell: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
     step: Decimal = Decimal(0)
+    slope_risk: Decimal = Decimal(0)
 
 
 class LeaderFollowerConfig(StrategyConfigBase):
