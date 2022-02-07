@@ -148,23 +148,17 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
-    moving_avg: Decimal = Decimal(0)
-    kline_std: Decimal = Decimal(0)
-    mid_std: Decimal = Decimal(0)
     is_klines_ok: bool = False
-    kline_closes: list = field(default_factory=list)
 
-    ma7: RollingMean = field(default_factory=lambda: RollingMean(7))
-    ma21: RollingMean = field(default_factory=lambda: RollingMean(21))
+    # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
+    # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(7))
+    # ma_large: RollingMean = field(default_factory=lambda: RollingMean(21))
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(
-            self.publish_stream(),
-            # periodic(self.publish_klines, 5)
-        )
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 10))
 
     def parse_book(self, book):
         try:
@@ -177,17 +171,13 @@ class BinancePub(PublisherBase):
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
 
-                    # self.spread_bps = (ask - bid) / mid / BPS
+                    self.spread_bps = (ask - bid) / mid / BPS
 
-                    # self.last_n.append(mid)
-
-                    # self.ma7.add(mid)
-                    # self.ma21.add(mid)
+                    # self.ma_small.add(mid)
+                    # self.ma_mid.add(mid)
+                    # self.ma_large.add(mid)
 
                     if mid != self.mid:
-                        # self.mid_std = statistics.stdev(self.mids)
-                        # if self.ma7.get_average() < self.ma21.get_average():
-                        #     self.is_klines_ok = False
                         self.mid = mid
                         self.books_seen += 1
         except Exception as e:
@@ -195,13 +185,14 @@ class BinancePub(PublisherBase):
 
     async def publish_klines(self):
         try:
-            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=5)
+            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
                 kline_closes = [Decimal(k[4]) for k in klines]
-                self.moving_avg = statistics.mean(kline_closes)
-                self.std = statistics.stdev(kline_closes)
-                self.is_klines_ok = bool(kline_closes[-1] >= self.moving_avg)
-                self.kline_closes = kline_closes
+                former = statistics.mean(kline_closes[:5])
+                latter = statistics.mean(kline_closes[1:])
+                is_slope_up = bool(latter > former)
+                self.is_klines_ok = is_slope_up
+
         except Exception as e:
             pass
 

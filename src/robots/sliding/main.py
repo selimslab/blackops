@@ -1,5 +1,6 @@
 import asyncio
 import decimal
+import statistics
 from copy import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -132,7 +133,6 @@ class LeaderFollowerTrader(RobotBase):
             raise Exception("No bridge mid")
 
         self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
-        # self.taker.std = self.leader_pub.mid_std * self.bridge_pub.mid
         if not self.base_step_qty:
             self.set_base_step_qty(self.taker.mid)
 
@@ -142,9 +142,18 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.bid or not self.base_step_qty:
             return
 
-        self.taker.sell = self.taker.mid * (
-            Decimal(1) - self.config.unit_signal_bps.sell
+        current_step = self.get_current_step()
+        price_coeff = (
+            Decimal(1)
+            - self.config.unit_signal_bps.sell
+            - current_step * self.config.unit_signal_bps.step
         )
+        if not self.leader_pub.is_klines_ok:
+            price_coeff -= self.config.unit_signal_bps.slope_risk_bps
+
+        # -1bps - 4*1bps = -5bps
+        # with slope risk, -10 = -15bps
+        self.taker.sell = self.taker.mid * price_coeff
 
         price = self.taker.sell.quantize(self.follower_pub.bid, decimal.ROUND_DOWN)
 
@@ -174,27 +183,29 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
-        # mean = statistics.mean(self.leader_pub.last_n)
-        # if self.taker.usdt < mean:
-        #     return
-
-        # min_mid = min(self.leader_pub.last_n) * self.bridge_pub.mid
-        self.taker.buy = self.taker.mid * (Decimal(1) - self.config.unit_signal_bps.buy)
-
-        # if self.leader_pub.spread_bps > self.config.max_spread_bps:
-        #     self.stats.no_buy.max_spread += 1
-        #     return
-
-        # if self.leader_pub.is_klines_ok:
-        #     self.stats.no_buy.klines += 1
-        #     return
-
         price = self.taker.buy.quantize(self.follower_pub.ask, decimal.ROUND_DOWN)
+
+        current_step = self.get_current_step()
+        # -15bps - 4*1bps = -19bps
+        price_coeff = (
+            Decimal(1)
+            - self.config.unit_signal_bps.buy
+            - current_step * self.config.unit_signal_bps.step
+        )
+        self.taker.buy = self.taker.mid * price_coeff
 
         if self.follower_pub.ask > price:
             return
 
-        qty = self.get_buy_qty()
+        if self.leader_pub.spread_bps > self.config.max_spread_bps:
+            self.stats.no_buy.max_spread += 1
+            return
+
+        if self.leader_pub.is_klines_ok:
+            self.stats.no_buy.klines += 1
+            return
+
+        qty = self.get_buy_qty(current_step)
 
         if not qty:
             self.stats.no_buy.qty += 1
@@ -207,9 +218,11 @@ class LeaderFollowerTrader(RobotBase):
         await self.order_api.send_order(OrderType.BUY, price, qty)
         self.stats.buy_tried += 1
 
-    def get_buy_qty(self):
+    def get_current_step(self):
+        return self.pair.base.total_balance / self.base_step_qty
 
-        current_step = self.pair.base.total_balance / self.base_step_qty
+    def get_buy_qty(self, current_step):
+
         remaining_step = self.config.max_step - current_step
 
         if remaining_step < 1:
@@ -230,10 +243,6 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
-            # "moving_avg": self.leader_pub.moving_avg,
-            # "klines_ok": self.leader_pub.is_klines_ok,
-            # "kline_closes": self.leader_pub.kline_closes,
-            # "std": self.leader_pub.std,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,

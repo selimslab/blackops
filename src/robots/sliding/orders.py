@@ -238,18 +238,21 @@ class OrderApi:
     async def deliver_ok(self, order: Order):
         if order.side == OrderType.BUY:
             self.stats.delivered_counts.buy += 1
-            # self.pair.base.free += order.qty
         else:
             self.stats.delivered_counts.sell += 1
-            # self.pair.base.free -= order.qty
 
         self.orders_in_last_second += 1
         await asyncio.sleep(
             sleep_seconds.wait_before_cancel
         )  # allow time for order to be filled
+
         self.open_orders.append(order)
+
         await self.cancel_open_orders()
-        await asyncio.sleep(sleep_seconds.wait_after_deliver)
+        if order.side == OrderType.BUY:
+            await asyncio.sleep(sleep_seconds.wait_after_deliver_buy)
+        else:
+            await asyncio.sleep(sleep_seconds.wait_after_deliver_sell)
 
     async def deliver_fail(self):
         self.stats.fail_counts.bad_response += 1
@@ -290,11 +293,16 @@ class OrderApi:
         decision_input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
-            if self.locks.order.locked():
+            if side == OrderType.BUY:
+                lock = self.locks.buy
+            else:
+                lock = self.locks.sell
+
+            if lock.locked():
                 self.stats.fail_counts.locked += 1
                 return None
 
-            async with self.locks.order:
+            async with lock:
                 if not self.can_order(side, price, qty):
                     return None
 
