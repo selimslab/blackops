@@ -4,14 +4,11 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-import async_timeout
-
 from src.monitoring import logger
-from src.proc import thread_pool_executor
 
 
 async def periodic(func: Callable, sleep_seconds: float) -> None:
-    loop = asyncio.get_running_loop()
+    # loop = asyncio.get_running_loop()
     while True:
         try:
             if asyncio.iscoroutinefunction(func):

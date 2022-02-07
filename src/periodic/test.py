@@ -12,8 +12,6 @@ async def robot():
         else:
             print("no", lock.locked())
 
-        # await asyncio.sleep(0.)
-
 
 async def test_timer_lock():
     await asyncio.gather(robot(), robot())
