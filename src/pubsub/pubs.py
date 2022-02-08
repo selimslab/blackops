@@ -206,8 +206,8 @@ class BinancePub(PublisherBase):
                 # risk cant be > mid
                 risk = min(self.slope.thresholds.flat, risk)
 
-                # if risk < 3 and second_dt_up:
-                #     risk /= Decimal(2)
+                if risk < 3 and second_dt_up:
+                    risk /= Decimal(2)
 
                 self.slope.diff_bps = diff_bps
 
