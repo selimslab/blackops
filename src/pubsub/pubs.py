@@ -153,7 +153,7 @@ class BinancePub(PublisherBase):
 
     prev_diff: Decimal = Decimal(0)
     min_slope_bps_sell: Decimal = Decimal(2) * BPS
-    min_slope_bps_buy: Decimal = Decimal(6) * BPS
+    min_slope_bps_buy: Decimal = Decimal(7) * BPS
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
@@ -205,7 +205,7 @@ class BinancePub(PublisherBase):
                 selldiff = latter * self.min_slope_bps_sell
                 buydiff = latter * self.min_slope_bps_buy
                 self.is_slope_down = bool(diff < selldiff)
-                self.is_slope_up = bool(diff > buydiff and diff > self.prev_diff)
+                self.is_slope_up = bool(diff > buydiff)  # and diff > self.prev_diff
                 self.prev_diff = diff
 
         except Exception as e:

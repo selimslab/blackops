@@ -185,6 +185,16 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
+        # do not buy if spread unhealthy
+        if self.leader_pub.spread_bps > self.config.max_spread_bps:
+            self.stats.no_buy.max_spread += 1
+            return
+
+        # dont buy if slope is not clearly up
+        if not self.leader_pub.is_slope_up:
+            self.stats.no_buy.slope += 1
+            return
+
         price = self.taker.buy.quantize(self.follower_pub.ask, decimal.ROUND_DOWN)
 
         current_step = self.get_current_step()
@@ -201,16 +211,6 @@ class LeaderFollowerTrader(RobotBase):
 
         # do not waste orders if ask is too high
         if self.follower_pub.ask > price:
-            return
-
-        # do not buy if spread unhealthy
-        if self.leader_pub.spread_bps > self.config.max_spread_bps:
-            self.stats.no_buy.max_spread += 1
-            return
-
-        # dont buy if slope is not clearly up
-        if not self.leader_pub.is_slope_up:
-            self.stats.no_buy.slope += 1
             return
 
         # we could add micro ma

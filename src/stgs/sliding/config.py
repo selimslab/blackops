@@ -40,7 +40,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
         buy=Decimal(15) * BPS,
         sell=Decimal(5) * BPS,
         step=Decimal(1) * BPS,
-        slope_risk=Decimal(7) * BPS,
+        slope_risk=Decimal(6) * BPS,
     )
 
     input: LeaderFollowerInput
