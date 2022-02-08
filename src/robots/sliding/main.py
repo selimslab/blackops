@@ -20,19 +20,6 @@ from .config import settings
 
 
 @dataclass
-class NoBuy:
-    max_spread: int = 0
-    slope: int = 0
-
-
-@dataclass
-class Stats:
-    leader_proc: int = 0
-    follower_proc: int = 0
-    no_buy: NoBuy = field(default_factory=NoBuy)
-
-
-@dataclass
 class Theo:
     sell: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
@@ -51,8 +38,6 @@ class LeaderFollowerTrader(RobotBase):
     base_step_qty: Optional[Decimal] = None
 
     start_time: datetime = field(default_factory=lambda: datetime.now())
-
-    stats: Stats = field(default_factory=Stats)
 
     taker: Theo = field(default_factory=Theo)
 
@@ -103,7 +88,7 @@ class LeaderFollowerTrader(RobotBase):
                 await self.should_sell()
 
                 pre = copy(self.leader_pub.book.mid)
-                self.stats.leader_proc += 1
+                self.leader_pub.book.processed += 1
 
                 await asyncio.sleep(0)
 
@@ -112,10 +97,10 @@ class LeaderFollowerTrader(RobotBase):
 
     async def poll_follower_pub(self):
         while True:
-            if self.stats.follower_proc < self.follower_pub.book.seen:
+            if self.follower_pub.book.processed < self.follower_pub.book.seen:
                 await self.should_sell()
                 await self.should_buy()
-                self.stats.follower_proc = copy(self.follower_pub.book.seen)
+                self.follower_pub.book.processed = copy(self.follower_pub.book.seen)
 
             await asyncio.sleep(0)
 
@@ -199,12 +184,12 @@ class LeaderFollowerTrader(RobotBase):
 
         # do not buy if spread unhealthy
         if self.leader_pub.spread_bps > settings.max_spread_bps:
-            self.stats.no_buy.max_spread += 1
+            self.order_api.stats.buy_stats.no_buy.max_spread += 1
             return
 
         # dont buy if slope is not clearly up
         if not self.leader_pub.slope.up:
-            self.stats.no_buy.slope += 1
+            self.order_api.stats.buy_stats.no_buy.slope += 1
             return
 
         # we could add micro ma
@@ -252,6 +237,5 @@ class LeaderFollowerTrader(RobotBase):
             "follower": asdict(self.follower_pub.book),
             "taker": asdict(self.taker),
             "slope": asdict(self.leader_pub.slope),
-            "stats": asdict(self.stats),
             "order": asdict(self.order_api.stats),
         }

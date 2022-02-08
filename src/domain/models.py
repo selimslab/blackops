@@ -21,6 +21,7 @@ class Book:
     mid: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
     seen: int = 0
+    processed: int = 0
 
 
 class Asset(BaseModel):

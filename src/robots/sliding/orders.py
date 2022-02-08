@@ -24,8 +24,14 @@ class DeliveryStats:
 
 
 @dataclass
+class NoBuy:
+    max_spread: int = 0
+    slope: int = 0
+
+
+@dataclass
 class BuyStats(DeliveryStats):
-    pass
+    no_buy: NoBuy = field(default_factory=NoBuy)
 
 
 @dataclass
