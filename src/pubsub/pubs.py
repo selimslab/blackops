@@ -148,7 +148,9 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
+    is_slope_down: bool = False
     is_slope_up: bool = False
+
     prev_diff: Decimal = Decimal(0)
     min_slope_bps: Decimal = Decimal(3)
 
@@ -201,6 +203,7 @@ class BinancePub(PublisherBase):
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
+                self.is_slope_down = bool(diff < 0)
                 self.is_slope_up = bool(
                     diff > latter * self.min_slope_bps and diff > self.prev_diff
                 )

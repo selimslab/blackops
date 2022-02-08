@@ -149,7 +149,7 @@ class LeaderFollowerTrader(RobotBase):
             + self.config.unit_signal_bps.sell
             - current_step * self.config.unit_signal_bps.step
         )
-        if not self.leader_pub.is_slope_up:
+        if self.leader_pub.is_slope_down:
             price_coeff -= self.config.unit_signal_bps.slope_risk
 
         # -1bps - 4*1bps = -5bps
@@ -247,6 +247,8 @@ class LeaderFollowerTrader(RobotBase):
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
             "slope_up": self.leader_pub.is_slope_up,
+            "slope_down": self.leader_pub.is_slope_down,
+            "slope diff": self.leader_pub.prev_diff,
             # "micro_ma_ok": self.leader_pub.micro_ma_ok,
             "prices": {
                 "ask": self.follower_pub.ask,
