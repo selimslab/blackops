@@ -215,7 +215,7 @@ class BinancePub(PublisherBase):
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
 
-                diff_bps = diff / latter * BPS
+                diff_bps = diff / latter / BPS
 
                 second_dt_up = bool(diff_bps >= self.slope.diff_bps)
                 self.slope.up = bool(
