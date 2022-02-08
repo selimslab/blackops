@@ -5,6 +5,7 @@ from copy import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from re import S
 from typing import AsyncGenerator, Dict, Optional, Union
 
 import src.streams.bn as bn_streams
@@ -136,24 +137,14 @@ class RollingMean:
 
 
 @dataclass
-class SlopeBPS:
-    up: Decimal = Decimal(8) * BPS
-    flat: Decimal = Decimal(4) * BPS
-    down: Decimal = Decimal(2) * BPS
-
-
-@dataclass
-class SlopeDiff:
-    up: Decimal = Decimal(0)
-    flat: Decimal = Decimal(0)
-    down: Decimal = Decimal(0)
-
-
-@dataclass
-class SlopeState:
+class Slope:
     up: bool = False
     flat: bool = False
     down: bool = False
+
+    diff: Decimal = Decimal(0)
+    step: Decimal = Decimal(2)
+    risk: Decimal = Decimal(0)
 
 
 @dataclass
@@ -168,15 +159,8 @@ class BinancePub(PublisherBase):
     spread_bps: Decimal = Decimal(0)
 
     book_stream: Optional[AsyncGenerator] = None
-    kline_stream: Optional[AsyncGenerator] = None
 
-    is_slope_up: bool = False
-    is_slope_flat: bool = False
-    is_slope_down: bool = False
-
-    slope: SlopeState = field(default_factory=SlopeState)
-    slope_bps: SlopeBPS = field(default_factory=SlopeBPS)
-    slope_diff: SlopeDiff = field(default_factory=SlopeDiff)
+    slope: Slope = field(default_factory=Slope)
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
@@ -227,20 +211,13 @@ class BinancePub(PublisherBase):
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
 
-                prev_diffs = copy(self.slope_diff)
+                bps_diff = diff / latter * BPS
 
-                self.slope_diff.up = latter * self.slope_bps.up
-                self.slope_diff.flat = latter * self.slope_bps.flat
-                self.slope_diff.down = latter * self.slope_bps.down
+                self.slope_risk = 4 - bps_diff
 
-                self.slope.up = bool(
-                    diff > self.slope_diff.up and diff >= prev_diffs.up
-                )
-                self.slope.flat = bool(
-                    self.slope_diff.down < diff < self.slope_diff.flat
-                    and diff <= prev_diffs.flat
-                )
-                self.slope.down = bool(diff < self.slope_diff.down)
+                self.slope.up = bool(bps_diff > 4)
+
+                self.slope.down = bool(bps_diff < 1)
 
         except Exception as e:
             logger.error(e)
