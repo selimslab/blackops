@@ -139,21 +139,24 @@ class LeaderFollowerTrader(RobotBase):
 
     # SELL
     async def should_sell(self):
-
+        # wait for the bid and base_step_qty to be set
         if not self.follower_pub.bid or not self.base_step_qty:
             return
 
         current_step = self.get_current_step()
+
+        # sell 5 bps more than mid,
+        # sell lower as you have more position
         price_coeff = (
             Decimal(1)
             + self.config.unit_signal_bps.sell
             - current_step * self.config.unit_signal_bps.step
         )
+
+        # if slope down, sell even lower
         if self.leader_pub.is_slope_down:
             price_coeff -= self.config.unit_signal_bps.slope_risk
 
-        # -1bps - 4*1bps = -5bps
-        # with slope risk, -10 = -15bps
         self.taker.sell = self.taker.mid * price_coeff
 
         price = self.taker.sell.quantize(self.follower_pub.bid, decimal.ROUND_DOWN)
@@ -182,6 +185,7 @@ class LeaderFollowerTrader(RobotBase):
 
     # BUY
     async def should_buy(self):
+        # wait for the ask and base_step_qty to be set
         if not self.follower_pub.ask or not self.base_step_qty:
             return
 
