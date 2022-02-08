@@ -151,6 +151,10 @@ class Slope:
     diff_bps: Decimal = Decimal(0)
     risk_level: Decimal = Decimal(0)
 
+    former: Decimal = Decimal(0)
+    latter: Decimal = Decimal(0)
+    diff: Decimal = Decimal(0)
+
 
 @dataclass
 class BinancePub(PublisherBase):
@@ -215,16 +219,17 @@ class BinancePub(PublisherBase):
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
 
+                self.slope.former = former
+                self.slope.latter = latter
+                self.slope.diff = diff
+
                 diff_bps = diff / latter / BPS
 
+                # compare with the old diff
                 second_dt_up = bool(diff_bps >= self.slope.diff_bps)
                 self.slope.up = bool(
                     diff_bps >= self.slope.thresholds.buy and second_dt_up
                 )
-
-                # self.slope.flat = bool(
-                #     self.slope.thresholds.sell < diff_bps < self.slope.thresholds.mid and diff_bps <= self.slope.diff_bps
-                # )
 
                 risk = self.slope.thresholds.mid - diff_bps
 
@@ -238,11 +243,6 @@ class BinancePub(PublisherBase):
                 risk = max(0, risk)
 
                 self.slope.risk_level = risk
-
-                # self.slope.down = bool(
-                #     (diff_bps <= self.slope.thresholds.sell and diff_bps <= self.slope.diff_bps)
-                #     or diff <= 0
-                # )
 
         except Exception as e:
             logger.error(e)
