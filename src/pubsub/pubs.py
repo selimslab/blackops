@@ -105,7 +105,7 @@ class BTPub(PublisherBase):
 
 @dataclass
 class SlopeThresholds:
-    up: Decimal = Decimal(7)
+    up: Decimal = Decimal(8)
     flat: Decimal = Decimal(4)
 
 
@@ -194,14 +194,14 @@ class BinancePub(PublisherBase):
 
                 diff_bps = diff / latter / BPS
 
-                # compare with the old diff
-                second_dt_up = bool(diff_bps >= self.slope.diff_bps)
-
                 self.slope.up = bool(
-                    diff_bps >= self.slope.thresholds.up and second_dt_up
+                    diff_bps >= self.slope.thresholds.up  # and second_dt_up
                 )
 
                 risk = self.slope.thresholds.flat - diff_bps
+
+                # compare with the old diff
+                second_dt_up = bool(diff_bps >= self.slope.diff_bps)
 
                 # risk cant be > mid
                 risk = min(self.slope.thresholds.flat, risk)
