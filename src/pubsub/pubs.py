@@ -147,12 +147,12 @@ class Slope:
     # down: bool = False
 
     thresholds: SlopeThresholds = field(default_factory=SlopeThresholds)
-    diff_bps: Decimal = Decimal(0)
-    risk_level: Decimal = Decimal(0)
 
     former: Decimal = Decimal(0)
     latter: Decimal = Decimal(0)
     diff: Decimal = Decimal(0)
+    diff_bps: Decimal = Decimal(0)
+    risk_level: Decimal = Decimal(0)
 
 
 @dataclass
