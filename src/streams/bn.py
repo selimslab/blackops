@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from typing import Callable
 
 import async_timeout
@@ -17,27 +18,48 @@ class BinanceOverflowException(Exception):
     pass
 
 
+class BinanceFactory:
+    client: AsyncClient = None
+    sm: BinanceSocketManager = None
+
+    @asynccontextmanager
+    async def client_context(self):
+        if not self.client:  # or (self.client.session and self.client.session.closed):
+            self.client = await AsyncClient.create()
+        yield self.client
+        await self.client.close_connection()
+
+    @asynccontextmanager
+    async def socket_manager_context(self):
+        async with self.client_context() as client:
+            if not self.sm:
+                self.sm = BinanceSocketManager(client)
+            yield self.sm
+            await asyncio.sleep(0)
+
+
+bn_factory = BinanceFactory()
+
+
 async def binance_stream_generator(symbol: str, stream_type: str):
     try:
         # create a fresh client and socket manager for each stream each time
-        client = await AsyncClient.create()
-        sm = BinanceSocketManager(client)
-        ts = sm.multiplex_socket([f"{symbol.lower()}@{stream_type}"])
+        async with bn_factory.socket_manager_context() as sm:
+            ts = sm.multiplex_socket([f"{symbol.lower()}@{stream_type}"])
 
-        async with ts as tscm:
-            while True:
-                msg = await tscm.recv()
+            async with ts as tscm:
+                while True:
+                    msg = await tscm.recv()
 
-                if msg and msg.get("e", "") == "error":
-                    raise BinanceWebSocketException(msg)
+                    if msg and msg.get("e", "") == "error":
+                        raise BinanceWebSocketException(msg)
 
-                if msg:
-                    yield msg
+                    if msg:
+                        yield msg
 
-                await asyncio.sleep(0)
+                    await asyncio.sleep(0)
 
     except Exception as e:
-        await client.close_connection()
         msg = f"binance stream disconnected: {e}"
         logger.error(f"binance_stream_generator: {msg}")
         raise e
