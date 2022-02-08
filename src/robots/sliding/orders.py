@@ -208,9 +208,11 @@ class OrderApi:
         self.stats.refreshed += 1
 
     def can_sell(self, price, qty) -> bool:
+        # do we have enough to sell, and is it too little to sell=
         return self.pair.base.free >= qty and qty * price >= self.config.min_sell_qty
 
     def can_buy(self, price, qty) -> bool:
+        # Do we have enough money and is it too little to buy?
         return (
             bool(self.pair.quote.free)
             and self.pair.quote.free >= price * qty > self.config.min_buy_qty

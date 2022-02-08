@@ -158,6 +158,7 @@ class LeaderFollowerTrader(RobotBase):
 
         price = self.taker.sell.quantize(self.follower_pub.bid, decimal.ROUND_DOWN)
 
+        # do not sell if bid is too low
         if self.follower_pub.bid < price:
             return
 
@@ -187,26 +188,32 @@ class LeaderFollowerTrader(RobotBase):
         price = self.taker.buy.quantize(self.follower_pub.ask, decimal.ROUND_DOWN)
 
         current_step = self.get_current_step()
-        # -15bps - 4*1bps = -19bps
+
+        # mid - 15bps - step*1bps
+        # seek to buy lower as you buy
         price_coeff = (
             Decimal(1)
             - self.config.unit_signal_bps.buy
             - current_step * self.config.unit_signal_bps.step
         )
+
         self.taker.buy = self.taker.mid * price_coeff
 
+        # do not waste orders if ask is too high
         if self.follower_pub.ask > price:
             return
 
+        # do not buy if spread unhealthy
         if self.leader_pub.spread_bps > self.config.max_spread_bps:
             self.stats.no_buy.max_spread += 1
             return
 
+        # dont buy if slope is not clearly up
         if not self.leader_pub.is_slope_up:
             self.stats.no_buy.klines += 1
             return
 
-        # could be micro ma
+        # we could add micro ma
 
         qty = self.get_buy_qty(current_step)
 

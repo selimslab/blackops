@@ -152,7 +152,7 @@ class BinancePub(PublisherBase):
     is_slope_up: bool = False
 
     prev_diff: Decimal = Decimal(0)
-    min_slope_bps: Decimal = Decimal(3)
+    min_slope_bps: Decimal = Decimal(3) * BPS
 
     micro_ma_ok: bool = False
 
