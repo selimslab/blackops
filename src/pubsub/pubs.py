@@ -135,16 +135,21 @@ class RollingMean:
 
 
 @dataclass
+class SlopeThresholds:
+    buy: Decimal = Decimal(12)
+    mid: Decimal = Decimal(5)
+    sell: Decimal = Decimal(2)
+
+
+@dataclass
 class Slope:
     up: bool = False
-    down: bool = False
+    # flat: bool = False
+    # down: bool = False
 
-    buy_bps: Decimal = Decimal(12) * BPS
-    sell_bps: Decimal = Decimal(4) * BPS
-
-    diff: Decimal = Decimal(0)
-    buy_diff: Decimal = Decimal(0)
-    sell_diff: Decimal = Decimal(0)
+    thresholds: SlopeThresholds = field(default_factory=SlopeThresholds)
+    diff_bps: Decimal = Decimal(0)
+    risk_level: Decimal = Decimal(0)
 
 
 @dataclass
@@ -210,18 +215,34 @@ class BinancePub(PublisherBase):
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
 
-                self.slope.buy_diff = latter * self.slope.buy_bps
-                self.slope.sell_diff = latter * self.slope.sell_bps
+                diff_bps = diff / latter * BPS
 
+                second_dt_up = bool(diff_bps >= self.slope.diff_bps)
                 self.slope.up = bool(
-                    diff >= self.slope.buy_diff and diff >= self.slope.diff
-                )
-                self.slope.down = bool(
-                    (diff <= self.slope.sell_diff and diff <= self.slope.diff)
-                    or diff <= 0
+                    diff_bps >= self.slope.thresholds.buy and second_dt_up
                 )
 
-                self.slope.diff = diff
+                # self.slope.flat = bool(
+                #     self.slope.thresholds.sell < diff_bps < self.slope.thresholds.mid and diff_bps <= self.slope.diff_bps
+                # )
+
+                risk = self.slope.thresholds.mid - diff_bps
+
+                if second_dt_up:
+                    risk -= 2
+                self.slope.diff_bps = diff_bps
+
+                # risk cant be > mid
+                risk = min(self.slope.thresholds.mid, risk)
+                # risk cant be < 0
+                risk = max(0, risk)
+
+                self.slope.risk_level = risk
+
+                # self.slope.down = bool(
+                #     (diff_bps <= self.slope.thresholds.sell and diff_bps <= self.slope.diff_bps)
+                #     or diff <= 0
+                # )
 
         except Exception as e:
             logger.error(e)
