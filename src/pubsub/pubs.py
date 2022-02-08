@@ -136,9 +136,8 @@ class RollingMean:
 
 @dataclass
 class SlopeThresholds:
-    buy: Decimal = Decimal(12)
-    mid: Decimal = Decimal(5)
-    sell: Decimal = Decimal(2)
+    buy: Decimal = Decimal(10)
+    mid: Decimal = Decimal(4)
 
 
 @dataclass
@@ -193,7 +192,7 @@ class BinancePub(PublisherBase):
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
 
-                    self.spread_bps = (ask - bid) / mid / BPS
+                    self.spread_bps = (ask - bid) * BPS / mid
 
                     # self.ma_small.add(mid)
                     # self.ma_mid.add(mid)
@@ -223,24 +222,25 @@ class BinancePub(PublisherBase):
                 self.slope.latter = latter
                 self.slope.diff = diff
 
-                diff_bps = diff / latter / BPS
+                diff_bps = diff * BPS / latter
 
                 # compare with the old diff
                 second_dt_up = bool(diff_bps >= self.slope.diff_bps)
+
                 self.slope.up = bool(
-                    diff_bps >= self.slope.thresholds.buy and second_dt_up
+                    diff_bps >= self.slope.thresholds.buy  # and second_dt_up
                 )
 
                 risk = self.slope.thresholds.mid - diff_bps
 
                 if second_dt_up:
-                    risk -= 2
+                    risk /= Decimal(2)
                 self.slope.diff_bps = diff_bps
 
                 # risk cant be > mid
                 risk = min(self.slope.thresholds.mid, risk)
                 # risk cant be < 0
-                risk = max(0, risk)
+                risk = max(Decimal(0), risk)
 
                 self.slope.risk_level = risk
 
