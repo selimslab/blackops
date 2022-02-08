@@ -68,16 +68,19 @@ class BalancePub(PublisherBase):
 
 
 @dataclass
+class Book:
+    ask: Decimal = Decimal(0)
+    mid: Decimal = Decimal(0)
+    bid: Decimal = Decimal(0)
+    seen: int = 0
+
+
+@dataclass
 class BTPub(PublisherBase):
     symbol: str
     api_client: ExchangeAPIClientBase
 
-    books_seen: int = 0
-    # stopwatch: StopwatchAPI = field(default_factory=StopwatchAPI)
-
-    ask: Decimal = Decimal(0)
-    mid: Decimal = Decimal(0)
-    bid: Decimal = Decimal(0)
+    book: Book = field(default_factory=Book)
 
     book_stream: Optional[AsyncGenerator] = None
 
@@ -93,10 +96,10 @@ class BTPub(PublisherBase):
             bid = self.api_client.get_best_bid(book)
 
             if ask and bid:  # and (ask != self.ask or bid != self.bid)
-                self.ask = ask
-                self.bid = bid
-                self.mid = (ask + bid) / DECIMAL_2
-                self.books_seen += 1
+                self.book.ask = ask
+                self.book.bid = bid
+                self.book.mid = (ask + bid) / DECIMAL_2
+                self.book.seen += 1
         except Exception as e:
             logger.info(f"BTPub: {e}")
             return
@@ -143,8 +146,6 @@ class SlopeThresholds:
 @dataclass
 class Slope:
     up: bool = False
-    # flat: bool = False
-    # down: bool = False
 
     thresholds: SlopeThresholds = field(default_factory=SlopeThresholds)
 
@@ -159,11 +160,11 @@ class Slope:
 class BinancePub(PublisherBase):
 
     symbol: str
+
     api_client: ExchangeAPIClientBase
-    books_seen: int = 0
-    ask: Decimal = Decimal(0)
-    mid: Decimal = Decimal(0)
-    bid: Decimal = Decimal(0)
+
+    book: Book = field(default_factory=Book)
+
     spread_bps: Decimal = Decimal(0)
 
     book_stream: Optional[AsyncGenerator] = None
@@ -187,9 +188,11 @@ class BinancePub(PublisherBase):
                 ask = Decimal(book["data"]["a"])
                 bid = Decimal(book["data"]["b"])
 
-                if ask and bid and (ask != self.ask or bid != self.bid):
-                    self.ask = ask
-                    self.bid = bid
+                if ask and bid and (ask != self.book.ask or bid != self.book.bid):
+
+                    self.book.ask = ask
+                    self.book.bid = bid
+
                     mid = (ask + bid) / DECIMAL_2
 
                     self.spread_bps = (ask - bid) / mid / BPS
@@ -198,14 +201,14 @@ class BinancePub(PublisherBase):
                     # self.ma_mid.add(mid)
                     # self.ma_large.add(mid)
 
-                    if mid != self.mid:
+                    if mid != self.book.mid:
                         # self.micro_ma_ok = bool(
                         #     self.ma_small.get_average()
                         #     > self.ma_mid.get_average()
                         #     > self.ma_large.get_average()
                         # )
-                        self.mid = mid
-                        self.books_seen += 1
+                        self.book.mid = mid
+                        self.book.seen += 1
         except Exception as e:
             logger.error(e)
 
@@ -214,6 +217,7 @@ class BinancePub(PublisherBase):
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
                 kline_closes = [Decimal(k[4]) for k in klines]
+
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former

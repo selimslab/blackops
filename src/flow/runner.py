@@ -17,6 +17,7 @@ from src.pubsub.pubs import PublisherBase
 from src.pubsub.radio import radio
 from src.robots import robot_factory
 from src.robots.factory import Robot  # type: ignore
+from src.robots.sliding.config import settings
 from src.robots.sliding.main import LeaderFollowerTrader
 from src.stgs import StrategyConfig
 
@@ -158,14 +159,17 @@ class StatsPub(PublisherBase):
         stats: Dict[str, Any] = {}
 
         stats["time"] = datetime.now()
-        stats["radio listeners"] = {
-            key: st.listeners for key, st in radio.stations.items()
-        }
+        stats["settings"] = settings.dict()
+
+        # stats["listeners"] = {
+        #     key: st.listeners for key, st in radio.stations.items()
+        # }
+
         for flowrun in flow_runner.flowruns.values():
-            if "orders_in_last_second" not in stats:
-                stats[
-                    "orders_in_last_second"
-                ] = flowrun.robot.follower_pub.api_client.orders_in_last_second
+            # if "orders_in_last_second" not in stats:
+            #     stats[
+            #         "orders_in_last_second"
+            #     ] = flowrun.robot.follower_pub.api_client.orders_in_last_second
             stat_dict = flowrun.robot.create_stats_message()
 
             stats[flowrun.sha] = stat_dict

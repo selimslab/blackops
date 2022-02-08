@@ -5,6 +5,7 @@ from src.monitoring import logger
 from src.pubsub import pub_factory
 from src.stgs import LeaderFollowerConfig
 
+from .config import settings
 from .main import LeaderFollowerTrader
 
 
@@ -30,7 +31,7 @@ def sliding_window_factory(config: LeaderFollowerConfig):
     )
     if network == NetworkType.TESTNET:
         follower_pub.api_client.dummy_exchange.add_balance(  # type:ignore
-            Asset(symbol=stg.quote), config.max_step * config.quote_step_qty * 2
+            Asset(symbol=stg.quote), settings.max_step * settings.quote_step_qty * 2
         )
 
     bridge_pub = None

@@ -16,6 +16,7 @@ from src.robots.base import RobotBase
 from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
+from .config import settings
 from .models import BookTop, Theo
 
 
@@ -27,8 +28,8 @@ class NoBuy:
 
 @dataclass
 class Stats:
-    leader_seen: int = 0
-    follower_seen: int = 0
+    leader_proc: int = 0
+    follower_proc: int = 0
     no_buy: NoBuy = field(default_factory=NoBuy)
 
 
@@ -63,7 +64,7 @@ class LeaderFollowerTrader(RobotBase):
         )
 
     def set_base_step_qty(self, price: Decimal) -> None:
-        self.base_step_qty = round_decimal_half_up(self.config.quote_step_qty / price)
+        self.base_step_qty = round_decimal_half_up(settings.quote_step_qty / price)
 
     async def run(self) -> None:
         logger.info(f"Starting {self.config.sha}..")
@@ -89,7 +90,7 @@ class LeaderFollowerTrader(RobotBase):
     async def poll_leader_pub(self) -> None:
         pre = None
         while True:
-            if not self.leader_pub.mid or self.leader_pub.mid == pre:
+            if not self.leader_pub.book.mid or self.leader_pub.book.mid == pre:
                 await asyncio.sleep(0)
                 continue
 
@@ -97,8 +98,8 @@ class LeaderFollowerTrader(RobotBase):
                 self.set_taker_mids()
                 await self.should_sell()
 
-                pre = copy(self.leader_pub.mid)
-                self.stats.leader_seen += 1
+                pre = copy(self.leader_pub.book.mid)
+                self.stats.leader_proc += 1
 
                 await asyncio.sleep(0)
 
@@ -107,27 +108,27 @@ class LeaderFollowerTrader(RobotBase):
 
     async def poll_follower_pub(self):
         while True:
-            if self.stats.follower_seen < self.follower_pub.books_seen:
+            if self.stats.follower_proc < self.follower_pub.book.seen:
                 await self.should_sell()
                 await self.should_buy()
-                self.stats.follower_seen = copy(self.follower_pub.books_seen)
+                self.stats.follower_proc = copy(self.follower_pub.book.seen)
 
             await asyncio.sleep(0)
 
     def set_taker_mids(self):
-        self.taker.usdt = self.leader_pub.mid
+        self.taker.usdt = self.leader_pub.book.mid
 
-        if not self.bridge_pub or not self.bridge_pub.mid:
+        if not self.bridge_pub or not self.bridge_pub.book.mid:
             raise Exception("No bridge mid")
 
-        self.taker.mid = self.leader_pub.mid * self.bridge_pub.mid
+        self.taker.mid = self.leader_pub.book.mid * self.bridge_pub.book.mid
         if not self.base_step_qty:
             self.set_base_step_qty(self.taker.mid)
 
     # SELL
     async def should_sell(self):
         # wait for the bid and base_step_qty to be set
-        if not self.follower_pub.bid or not self.base_step_qty:
+        if not self.follower_pub.book.bid or not self.base_step_qty:
             return
 
         current_step = self.get_current_step()
@@ -136,23 +137,22 @@ class LeaderFollowerTrader(RobotBase):
         # sell lower as you have more position
         price_coeff = (
             Decimal(1)
-            + self.config.unit_signal_bps.sell
-            - current_step * self.config.unit_signal_bps.step
+            + settings.unit_signal_bps.sell
+            - current_step * settings.unit_signal_bps.step
         )
 
         # if slope down, sell even lower
         if self.leader_pub.slope.risk_level:
             price_coeff -= (
-                self.config.unit_signal_bps.slope_risk
-                * self.leader_pub.slope.risk_level
+                settings.unit_signal_bps.slope_risk * self.leader_pub.slope.risk_level
             )
 
         self.taker.sell = self.taker.mid * price_coeff
 
-        price = self.taker.sell.quantize(self.follower_pub.bid, decimal.ROUND_DOWN)
+        price = self.taker.sell.quantize(self.follower_pub.book.bid, decimal.ROUND_DOWN)
 
         # do not sell if bid is too low
-        if self.follower_pub.bid < price:
+        if self.follower_pub.book.bid < price:
             return
 
         qty = self.get_sell_qty()
@@ -164,7 +164,7 @@ class LeaderFollowerTrader(RobotBase):
         return True
 
     def get_sell_qty(self):
-        qty: Decimal = self.base_step_qty * self.config.sell_step
+        qty: Decimal = self.base_step_qty * settings.sell_step
 
         if qty > self.pair.base.free:
             qty = round_decimal_floor(self.pair.base.free)
@@ -174,11 +174,11 @@ class LeaderFollowerTrader(RobotBase):
     # BUY
     async def should_buy(self):
         # wait for the ask and base_step_qty to be set
-        if not self.follower_pub.ask or not self.base_step_qty:
+        if not self.follower_pub.book.ask or not self.base_step_qty:
             return
 
         # do not buy if spread unhealthy
-        if self.leader_pub.spread_bps > self.config.max_spread_bps:
+        if self.leader_pub.spread_bps > settings.max_spread_bps:
             self.stats.no_buy.max_spread += 1
             return
 
@@ -187,7 +187,7 @@ class LeaderFollowerTrader(RobotBase):
             self.stats.no_buy.slope += 1
             return
 
-        price = self.taker.buy.quantize(self.follower_pub.ask, decimal.ROUND_DOWN)
+        price = self.taker.buy.quantize(self.follower_pub.book.ask, decimal.ROUND_DOWN)
 
         current_step = self.get_current_step()
 
@@ -195,14 +195,14 @@ class LeaderFollowerTrader(RobotBase):
         # seek to buy lower as you buy
         price_coeff = (
             Decimal(1)
-            - self.config.unit_signal_bps.buy
-            - current_step * self.config.unit_signal_bps.step
+            - settings.unit_signal_bps.buy
+            - current_step * settings.unit_signal_bps.step
         )
 
         self.taker.buy = self.taker.mid * price_coeff
 
         # do not waste orders if ask is too high
-        if self.follower_pub.ask > price:
+        if self.follower_pub.book.ask > price:
             return
 
         # we could add micro ma
@@ -225,13 +225,13 @@ class LeaderFollowerTrader(RobotBase):
 
     def get_buy_qty(self, current_step):
 
-        remaining_step = self.config.max_step - current_step
+        remaining_step = settings.max_step - current_step
 
         if remaining_step < 1:
             return
 
-        unit_signal = self.config.unit_signal_bps.buy * self.taker.mid
-        signal = (self.taker.mid - self.follower_pub.ask) / unit_signal
+        unit_signal = settings.unit_signal_bps.buy * self.taker.mid
+        signal = (self.taker.mid - self.follower_pub.book.ask) / unit_signal
         signal = min(signal, remaining_step)
         qty = self.base_step_qty * signal
 
@@ -245,20 +245,11 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
+            "leader": asdict(self.leader_pub.book),
+            "follower": asdict(self.follower_pub.book),
+            "taker": asdict(self.taker),
+            "stats": asdict(self.stats),
+            "order": asdict(self.order_api.stats),
+            "open fresh": self.order_api.open_orders_fresh,
             "slope": asdict(self.leader_pub.slope),
-            # "micro_ma_ok": self.leader_pub.micro_ma_ok,
-            "prices": {
-                "ask": self.follower_pub.ask,
-                "bid": self.follower_pub.bid,
-                "taker": asdict(self.taker),
-                "bn ask": self.leader_pub.ask,
-                "bn bid": self.leader_pub.bid,
-                "bn seen": self.leader_pub.books_seen,
-                "bt seen": self.follower_pub.books_seen,
-                "stats": asdict(self.stats),
-            },
-            "order": {
-                "fresh": self.order_api.open_orders_fresh,
-                "stats": asdict(self.order_api.stats),
-            },
         }

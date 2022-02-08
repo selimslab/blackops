@@ -14,6 +14,7 @@ from src.monitoring import logger
 from src.proc import process_pool_executor, thread_pool_executor
 from src.stgs import LeaderFollowerConfig
 
+from .config import settings
 from .models import BookTop, Theo
 
 
@@ -206,13 +207,13 @@ class OrderApi:
 
     def can_sell(self, price, qty) -> bool:
         # do we have enough to sell, and is it too little to sell=
-        return self.pair.base.free >= qty and qty * price >= self.config.min_sell_qty
+        return self.pair.base.free >= qty and qty * price >= settings.min_sell_qty
 
     def can_buy(self, price, qty) -> bool:
         # Do we have enough money and is it too little to buy?
         return (
             bool(self.pair.quote.free)
-            and self.pair.quote.free >= price * qty > self.config.min_buy_qty
+            and self.pair.quote.free >= price * qty > settings.min_buy_qty
         )
 
     def can_order(self, side: OrderType, price: Decimal, qty: int) -> bool:
