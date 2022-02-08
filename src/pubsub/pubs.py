@@ -139,7 +139,7 @@ class Slope:
     up: bool = False
     down: bool = False
 
-    buy_bps: Decimal = Decimal(10) * BPS
+    buy_bps: Decimal = Decimal(12) * BPS
     sell_bps: Decimal = Decimal(4) * BPS
 
     diff: Decimal = Decimal(0)
