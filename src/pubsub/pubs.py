@@ -152,8 +152,8 @@ class BinancePub(PublisherBase):
     is_slope_up: bool = False
 
     prev_diff: Decimal = Decimal(0)
-    min_slope_bps_sell: Decimal = Decimal(3) * BPS
-    min_slope_bps_buy: Decimal = Decimal(5) * BPS
+    min_slope_bps_sell: Decimal = Decimal(2) * BPS
+    min_slope_bps_buy: Decimal = Decimal(6) * BPS
 
     micro_ma_ok: bool = False
 
