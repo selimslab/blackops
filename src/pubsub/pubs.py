@@ -108,7 +108,7 @@ class BTPub(PublisherBase):
 
 @dataclass
 class SlopeThresholds:
-    up: float = 8
+    up: float = 6
     flat: float = 3
 
 
@@ -126,6 +126,12 @@ class Slope:
 
 
 @dataclass
+class Indicators:
+    ema: float = 0
+    adx: float = 0
+
+
+@dataclass
 class BinancePub(PublisherBase):
 
     symbol: str
@@ -139,6 +145,8 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
 
     slope: Slope = field(default_factory=Slope)
+
+    indicators: Indicators = field(default_factory=Indicators)
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
@@ -200,19 +208,25 @@ class BinancePub(PublisherBase):
         try:
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
-                kline_closes = [float(k[4]) for k in klines]
-                closes = np.asarray(kline_closes)
-                ema = talib.EMA(closes, timeperiod=5)
+                closes = [float(k[4]) for k in klines]
+
+                # opens , high, low, closes = [], [], [], []
+                # for k in klines:
+                #     opens.append(float(k[1]))
+                #     high.append(float(k[2]))
+                #     low.append(float(k[3]))
+                #     closes.append(float(k[4]))
+
+                # opens , high, low, closes = np.asarray(opens), np.asarray(high), np.asarray(low), np.asarray(closes)
+
+                # adx = talib.ADX(high, low, closes, timeperiod=7)
+                # logger.info(f"ADX: {adx}")
+                # self.indicators.adx = adx[-1]
+
+                closes = np.asarray(closes)
+                ema = talib.DEMA(closes, timeperiod=5)
+
                 self.slope.former, self.slope.latter = ema[-2:]
-
-                # self.slope.former, self.slope.latter = self.ema(
-                #     kline_closes, 5
-                # )
-
-                # kline_closes[:5], kline_closes[1:]
-
-                # former = statistics.mean(kline_closes[:5])
-                # latter = statistics.mean(kline_closes[1:])
                 self.slope.diff = self.slope.latter - self.slope.former
                 diff_bps = self.slope.diff / self.slope.latter * 10000
 
