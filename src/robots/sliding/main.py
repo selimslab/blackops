@@ -245,7 +245,7 @@ class LeaderFollowerTrader(RobotBase):
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
             "slope_up": self.leader_pub.is_slope_up,
-            "micro_ma_ok": self.leader_pub.micro_ma_ok,
+            # "micro_ma_ok": self.leader_pub.micro_ma_ok,
             "prices": {
                 "ask": self.follower_pub.ask,
                 "bid": self.follower_pub.bid,

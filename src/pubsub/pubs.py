@@ -177,15 +177,15 @@ class BinancePub(PublisherBase):
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
-                    self.ma_small.add(mid)
-                    self.ma_mid.add(mid)
-                    self.ma_large.add(mid)
+                    # self.ma_small.add(mid)
+                    # self.ma_mid.add(mid)
+                    # self.ma_large.add(mid)
 
-                    self.micro_ma_ok = (
-                        self.ma_small.get_average()
-                        > self.ma_mid.get_average()
-                        > self.ma_large.get_average()
-                    )
+                    # self.micro_ma_ok = (
+                    #     self.ma_small.get_average()
+                    #     > self.ma_mid.get_average()
+                    #     > self.ma_large.get_average()
+                    # )
 
                     if mid != self.mid:
                         self.mid = mid
