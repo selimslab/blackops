@@ -220,9 +220,9 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         # we could add micro ma
-        if not self.leader_pub.micro_ma_ok:
-            self.stats.no_buy.micro_ma += 1
-            return
+        # if not self.leader_pub.micro_ma_ok:
+        #     self.stats.no_buy.micro_ma += 1
+        #     return
 
         qty = self.get_buy_qty(current_step)
 
