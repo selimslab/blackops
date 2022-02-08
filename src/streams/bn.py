@@ -130,7 +130,7 @@ def create_kline_stream(symbol: str):
 
 
 async def get_klines(symbol: str, interval: str, limit=7):
-    client = bn_factory.get_client()
+    client = await bn_factory.get_client()
     res = await client.get_klines(symbol=symbol, interval=interval, limit=limit)
     return res
 
