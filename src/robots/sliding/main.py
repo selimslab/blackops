@@ -179,16 +179,6 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.book.ask or not self.base_step_qty:
             return
 
-        # do not buy if spread unhealthy
-        if self.leader_pub.spread_bps > settings.max_spread_bps:
-            self.stats.no_buy.max_spread += 1
-            return
-
-        # dont buy if slope is not clearly up
-        if not self.leader_pub.slope.up:
-            self.stats.no_buy.slope += 1
-            return
-
         price = self.taker.buy.quantize(self.follower_pub.book.ask, decimal.ROUND_DOWN)
 
         current_step = self.get_current_step()
@@ -205,6 +195,16 @@ class LeaderFollowerTrader(RobotBase):
 
         # do not waste orders if ask is too high
         if self.follower_pub.book.ask > price:
+            return
+
+        # do not buy if spread unhealthy
+        if self.leader_pub.spread_bps > settings.max_spread_bps:
+            self.stats.no_buy.max_spread += 1
+            return
+
+        # dont buy if slope is not clearly up
+        if not self.leader_pub.slope.up:
+            self.stats.no_buy.slope += 1
             return
 
         # we could add micro ma
@@ -245,13 +245,13 @@ class LeaderFollowerTrader(RobotBase):
     def create_stats_message(self) -> dict:
         return {
             "start time": self.start_time,
-            "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
+            "open fresh": self.order_api.open_orders_fresh,
+            "pair": self.pair.dict(),
             "leader": asdict(self.leader_pub.book),
             "follower": asdict(self.follower_pub.book),
             "taker": asdict(self.taker),
+            "slope": asdict(self.leader_pub.slope),
             "stats": asdict(self.stats),
             "order": asdict(self.order_api.stats),
-            "open fresh": self.order_api.open_orders_fresh,
-            "slope": asdict(self.leader_pub.slope),
         }
