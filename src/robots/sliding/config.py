@@ -22,7 +22,7 @@ class Settings(BaseModel):
         buy=Decimal(14) * BPS,
         sell=Decimal(6) * BPS,
         step=Decimal(1) * BPS,
-        # slope_risk=Decimal(6) * BPS,
+        slope_risk=Decimal(6) * BPS,
     )
 
     min_sell_qty: Decimal = Decimal(400)

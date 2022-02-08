@@ -186,6 +186,8 @@ class BinancePub(PublisherBase):
 
                 self.slope.up = bool(diff_bps >= 5)
 
+                self.slope.diff_bps = diff_bps
+
         except Exception as e:
             logger.error(e, exc_info=True)
 
