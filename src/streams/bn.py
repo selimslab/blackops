@@ -17,28 +17,9 @@ class BinanceOverflowException(Exception):
     pass
 
 
-class BinanceFactory:
-    client: AsyncClient = None
-    sm: BinanceSocketManager = None
-
-    async def get_client(self):
-        if not self.client:
-            self.client = await AsyncClient.create()
-
-        return self.client
-
-    async def get_socket_manager(self):
-        client = await self.get_client()
-        if not self.sm:
-            self.sm = BinanceSocketManager(client)
-        return self.sm
-
-
-bn_factory = BinanceFactory()
-
-
 async def binance_stream_generator(symbol: str, stream_type: str):
     try:
+        # create a fresh client and socket manager for each stream each time
         client = await AsyncClient.create()
         sm = BinanceSocketManager(client)
         ts = sm.multiplex_socket([f"{symbol.lower()}@{stream_type}"])
@@ -123,7 +104,7 @@ def create_kline_stream(symbol: str):
 
 
 async def get_klines(symbol: str, interval: str, limit=7):
-    client = await bn_factory.get_client()
+    client = await AsyncClient.create()
 
     res = await client.get_klines(symbol=symbol, interval=interval, limit=limit)
     return res
