@@ -107,22 +107,16 @@ class BTPub(PublisherBase):
 
 
 @dataclass
-class SlopeThresholds:
-    up: float = 6
-    slope_risk_start: float = 3
-
-
-@dataclass
 class Slope:
     up: bool = False
-
-    thresholds: SlopeThresholds = field(default_factory=SlopeThresholds)
+    down: bool = False
 
     former: float = 0
     latter: float = 0
     diff: float = 0
     diff_bps: float = 0
-    risk_level: float = 0
+
+    # risk_level: float = 0
 
 
 @dataclass
@@ -139,11 +133,6 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
 
     slope: Slope = field(default_factory=Slope)
-
-    # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
-    # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
-    # ma_large: RollingMean = field(default_factory=lambda: RollingMean(27))
-    # micro_ma_ok: bool = False
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
@@ -181,21 +170,6 @@ class BinancePub(PublisherBase):
         except Exception as e:
             logger.error(e)
 
-    def ema(self, close: list, period: int):
-        n = len(close)
-        ans = []
-        end = period
-        old_ema = statistics.mean(close[:end])
-
-        while end <= n:
-            k = 2.0 / (period + 1)
-            ema = close[end - 1] * k + old_ema * (1 - k)
-            ans.append(ema)
-            old_ema = ema
-            end += 1
-
-        return ans
-
     async def publish_klines(self):
         try:
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
@@ -205,31 +179,12 @@ class BinancePub(PublisherBase):
                 ema = talib.EMA(closes, timeperiod=5)
                 self.slope.former, self.slope.latter = ema[-2:]
 
-                # self.slope.former, self.slope.latter = self.ema(
-                #     kline_closes, 5
-                # )
-
-                # kline_closes[:5], kline_closes[1:]
-
-                # former = statistics.mean(kline_closes[:5])
-                # latter = statistics.mean(kline_closes[1:])
                 self.slope.diff = self.slope.latter - self.slope.former
                 diff_bps = self.slope.diff / self.slope.latter * 10000
 
-                self.slope.up = bool(
-                    diff_bps >= self.slope.thresholds.up  # and second_dt_up
-                )
+                self.slope.down = bool(diff_bps < 1)
 
-                risk = self.slope.thresholds.slope_risk_start - diff_bps
-
-                # risk cant be > 7
-                risk = min(12, risk)
-                # risk cant be < 0
-                risk = max(0, risk)
-
-                self.slope.risk_level = risk
-
-                self.slope.diff_bps = diff_bps
+                self.slope.up = bool(diff_bps >= 5)
 
         except Exception as e:
             logger.error(e, exc_info=True)
@@ -238,7 +193,6 @@ class BinancePub(PublisherBase):
         if not self.book_stream:
             raise ValueError("No stream")
 
-        # loop = asyncio.get_event_loop()
         async for book in self.book_stream:
             if book:
                 self.parse_book(book)
