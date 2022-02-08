@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 import simplejson  # type: ignore
 
 import src.pubsub.log_pub as log_pub
-from src.environment import sleep_seconds
+from src.environment import debug, sleep_seconds
 from src.monitoring import logger
 from src.periodic import periodic
 from src.proc import process_pool_executor, thread_pool_executor
@@ -75,13 +75,15 @@ class FlowRunner:
     async def start_flow(self, stg: StrategyConfig):
         robot = robot_factory.create_robot(stg)
         coros = [
-            self.start_balance_station(robot),
             self.start_leader_station(robot),
             self.start_follower_station(robot),
             self.start_bridge_station(robot),
             self.start_robot(robot),
             self.start_stats_station(),
         ]
+        if not debug:
+            coros.append(self.start_balance_station(robot))
+
         coros = [c for c in coros if c]
 
         await asyncio.gather(*coros)

@@ -1,6 +1,15 @@
 FROM python:3.8.12-slim-bullseye
  
 RUN apt-get update && apt-get -y install curl
+
+RUN cd /tmp \
+    && curl -L -O http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz \
+    && tar -zxf ta-lib-0.4.0-src.tar.gz \
+    && cd ta-lib/ \
+    && ./configure --prefix=/usr \
+    && make \
+    && sudo make install
+
  
 # ENV POETRY_VERSION 1.1.11
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py  | python - 

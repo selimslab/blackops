@@ -51,7 +51,7 @@ logger.info(f"Debug mode: {debug}")
 if debug:
     apiKey = os.getenv("BTCTURK_PUBLIC_KEY_TEST", "")
     apiSecret = os.getenv("BTCTURK_PRIVATE_KEY_TEST", "")
-    LOG_RADIO = "LOG_RADIO_TEST"
+    LOG_RADIO = "0"
 else:
     apiKey = os.getenv("BTCTURK_PUBLIC_KEY_PROD", "")
     apiSecret = os.getenv("BTCTURK_PRIVATE_KEY_PROD", "")

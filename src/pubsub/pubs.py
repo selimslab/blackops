@@ -1,9 +1,14 @@
 import asyncio
 import statistics
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from inspect import trace
 from typing import AsyncGenerator, Dict, Optional, Union
+
+import numpy
+import talib
 
 import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams
@@ -105,8 +110,8 @@ class BTPub(PublisherBase):
 
 @dataclass
 class SlopeThresholds:
-    up: Decimal = Decimal(8)
-    flat: Decimal = Decimal(3)
+    up: int = 12
+    flat: int = 5
 
 
 @dataclass
@@ -115,11 +120,18 @@ class Slope:
 
     thresholds: SlopeThresholds = field(default_factory=SlopeThresholds)
 
-    former: Decimal = Decimal(0)
-    latter: Decimal = Decimal(0)
-    diff: Decimal = Decimal(0)
-    diff_bps: Decimal = Decimal(0)
-    risk_level: Decimal = Decimal(0)
+    former: float = 0
+    latter: float = 0
+    diff: float = 0
+    diff_bps: float = 0
+    risk_level: float = 0
+
+
+@dataclass
+class Indicators:
+    close: list = field(default_factory=list)
+    ema: float = 0
+    rsi: float = 0
 
 
 @dataclass
@@ -137,6 +149,8 @@ class BinancePub(PublisherBase):
 
     slope: Slope = field(default_factory=Slope)
 
+    indicators: Indicators = field(default_factory=Indicators)
+
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
     # ma_large: RollingMean = field(default_factory=lambda: RollingMean(27))
@@ -146,7 +160,9 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
+        await asyncio.gather(
+            self.publish_stream(), periodic(self.publish_indicators, 5)
+        )
 
     def parse_book(self, book):
         try:
@@ -178,21 +194,33 @@ class BinancePub(PublisherBase):
         except Exception as e:
             logger.error(e)
 
-    async def publish_klines(self):
+    async def publish_indicators(self):
         try:
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
-                kline_closes = [Decimal(k[4]) for k in klines]
+                kline_closes = [float(k[4]) for k in klines]
+                close = numpy.asarray(kline_closes)
 
-                former = statistics.mean(kline_closes[:5])
-                latter = statistics.mean(kline_closes[1:])
+                self.indicators.close = close
+
+                ema = talib.EMA(close, timeperiod=5)
+
+                # self.indicators.rsi = talib.RSI(close, timeperiod=5)
+
+                former, latter = ema[-2:]
+
+                self.indicators.ema = latter
+
+                # former = statistics.mean(kline_closes[:5])
+                # latter = statistics.mean(kline_closes[1:])
+
                 diff = latter - former
 
                 self.slope.former = former
                 self.slope.latter = latter
                 self.slope.diff = diff
 
-                diff_bps = diff / latter / BPS
+                diff_bps = diff / latter * 10000
 
                 # compare with the old diff
                 second_dt_up = bool(diff_bps >= self.slope.diff_bps)
@@ -207,17 +235,17 @@ class BinancePub(PublisherBase):
                 risk = min(self.slope.thresholds.flat, risk)
 
                 if risk < 3 and second_dt_up:
-                    risk /= Decimal(2)
+                    risk /= 2
 
                 self.slope.diff_bps = diff_bps
 
                 # risk cant be < 0
-                risk = max(Decimal(0), risk)
+                risk = max(0, risk)
 
                 self.slope.risk_level = risk
 
         except Exception as e:
-            logger.error(e)
+            logger.error(e, exc_info=True)
 
     async def publish_stream(self):
         if not self.book_stream:
