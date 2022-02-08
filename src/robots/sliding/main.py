@@ -23,10 +23,9 @@ from .models import BookTop, Theo
 @dataclass
 class NoBuy:
     max_spread: int = 0
-    klines: int = 0
     slope: int = 0
     qty: int = 0
-    micro_ma: int = 0
+    # micro_ma: int = 0
 
 
 @dataclass
