@@ -22,12 +22,16 @@ class BinanceFactory:
     client: AsyncClient = None
     sm: BinanceSocketManager = None
 
-    @asynccontextmanager
-    async def client_context(self):
+    async def get_client(self):
         if not self.client:  # or (self.client.session and self.client.session.closed):
             self.client = await AsyncClient.create()
-        yield self.client
-        await self.client.close_connection()
+        return self.client
+
+    @asynccontextmanager
+    async def client_context(self):
+        client = await self.get_client()
+        yield client
+        await client.close_connection()
 
     @asynccontextmanager
     async def socket_manager_context(self):
@@ -126,22 +130,12 @@ def create_kline_stream(symbol: str):
 
 
 async def get_klines(symbol: str, interval: str, limit=7):
-    client = await AsyncClient.create()
-
+    client = bn_factory.get_client()
     res = await client.get_klines(symbol=symbol, interval=interval, limit=limit)
     return res
 
 
-proc = 0
-
-
-async def work():
-    global proc
-    await asyncio.sleep(0.01)
-    proc += 1
-    print("proc", proc)
-
-
+########
 async def test_stream(symbol):
     gen = create_book_stream(symbol)
     seen = 0
@@ -149,7 +143,6 @@ async def test_stream(symbol):
         async for book in gen:
             seen += 1
             print(book)
-            await work()
 
 
 async def main():
