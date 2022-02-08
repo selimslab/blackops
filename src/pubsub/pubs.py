@@ -223,7 +223,7 @@ class BinancePub(PublisherBase):
                 risk = self.slope.thresholds.slope_risk_start - diff_bps
 
                 # risk cant be > 7
-                risk = min(9, risk)
+                risk = min(12, risk)
                 # risk cant be < 0
                 risk = max(0, risk)
 
