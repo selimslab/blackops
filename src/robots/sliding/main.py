@@ -206,6 +206,8 @@ class LeaderFollowerTrader(RobotBase):
             self.stats.no_buy.klines += 1
             return
 
+        # could be micro ma
+
         qty = self.get_buy_qty(current_step)
 
         if not qty:

@@ -150,7 +150,7 @@ class BinancePub(PublisherBase):
 
     is_slope_up: bool = False
     prev_diff: Decimal = Decimal(0)
-    min_slope_bps: Decimal = Decimal(5)
+    min_slope_bps: Decimal = Decimal(3)
 
     micro_ma_ok: bool = False
 
@@ -202,7 +202,7 @@ class BinancePub(PublisherBase):
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
                 self.is_slope_up = bool(
-                    diff > former * self.min_slope_bps and diff >= self.prev_diff
+                    diff > latter * self.min_slope_bps and diff > self.prev_diff
                 )
                 self.prev_diff = diff
 
