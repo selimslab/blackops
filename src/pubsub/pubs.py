@@ -203,10 +203,9 @@ class BinancePub(PublisherBase):
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
-                self.is_slope_down = bool(diff < 0)
-                self.is_slope_up = bool(
-                    diff > latter * self.min_slope_bps and diff > self.prev_diff
-                )
+                mindiff = latter * self.min_slope_bps
+                self.is_slope_down = bool(diff < mindiff)
+                self.is_slope_up = bool(diff > mindiff and diff > self.prev_diff)
                 self.prev_diff = diff
 
         except Exception as e:

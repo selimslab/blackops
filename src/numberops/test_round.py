@@ -1,19 +1,14 @@
 import decimal
 from decimal import Decimal
 
-from .main import (
-    one_bps_lower,
-    round_decimal_floor,
-    round_decimal_half_down,
-    round_decimal_half_up,
-)
+from .main import round_decimal_floor, round_decimal_half_down, round_decimal_half_up
 
 
 def get_precise_price(price: Decimal, reference: Decimal) -> Decimal:
     return price.quantize(reference, rounding=None)
 
 
-def test_round():
+def go_test_round():
 
     assert get_precise_price(Decimal("0.00378688"), Decimal("0.0034")) == Decimal(
         "0.0037"
@@ -50,14 +45,28 @@ def test_round():
     assert round_decimal_half_up(step_try / shib) == Decimal("7000000")
     assert round_decimal_half_up(step_try / btc) == Decimal("0.004")
 
-    assert one_bps_lower(Decimal("0.00378")) == Decimal("0.00377")
-    assert one_bps_lower(Decimal("54.67")) == Decimal("54.66")
-    assert one_bps_lower(Decimal("0.000001")) == Decimal("0")
-    assert one_bps_lower(Decimal("5456")) == Decimal("5455")
-    assert one_bps_lower(Decimal("5456000")) == Decimal("5455999")
-    assert one_bps_lower(Decimal("0.00378000")) == Decimal("0.00377999")
+    # assert one_bps_lower(Decimal("0.00378")) == Decimal("0.00377")
+    # assert one_bps_lower(Decimal("54.67")) == Decimal("54.66")
+    # assert one_bps_lower(Decimal("0.000001")) == Decimal("0")
+    # assert one_bps_lower(Decimal("5456")) == Decimal("5455")
+    # assert one_bps_lower(Decimal("5456000")) == Decimal("5455999")
+    # assert one_bps_lower(Decimal("0.00378000")) == Decimal("0.00377999")
 
     assert get_precise_price(Decimal("2.834567"), Decimal("2.833")) == Decimal("2.835")
     assert get_precise_price(Decimal("2.863937"), Decimal("2.833")) == Decimal("2.864")
 
     # assert round_decimal_floor(Decimal("27.885")) == Decimal("0.004")
+
+
+def test_quant():
+    price = Decimal("4.836788")
+    q = price.quantize(Decimal("4.01"), rounding=decimal.ROUND_DOWN)
+    assert q == Decimal("4.83")
+
+    price = Decimal("4.834788")
+    q = price.quantize(Decimal("4.01"), rounding=decimal.ROUND_DOWN)
+    assert q == Decimal("4.83")
+
+    price = Decimal("0.000465931147")
+    q = price.quantize(Decimal("0.00046593"), rounding=decimal.ROUND_DOWN)
+    assert q == Decimal("0.00046593")
