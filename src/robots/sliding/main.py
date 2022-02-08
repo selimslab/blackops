@@ -38,10 +38,6 @@ class NoSell:
 class Stats:
     leader_seen: int = 0
     follower_seen: int = 0
-
-    sell_tried: int = 0
-    buy_tried: int = 0
-
     no_buy: NoBuy = field(default_factory=NoBuy)
     no_sell: NoSell = field(default_factory=NoSell)
 
@@ -174,7 +170,6 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
-        self.stats.sell_tried += 1
         return True
 
     def get_sell_qty(self):
@@ -235,7 +230,6 @@ class LeaderFollowerTrader(RobotBase):
             return None
 
         await self.order_api.send_order(OrderType.BUY, price, qty)
-        self.stats.buy_tried += 1
 
     def get_current_step(self):
         return self.pair.base.total_balance / self.base_step_qty
