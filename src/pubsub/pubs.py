@@ -105,8 +105,8 @@ class BTPub(PublisherBase):
 
 @dataclass
 class SlopeThresholds:
-    up: Decimal = Decimal(8)
-    flat: Decimal = Decimal(3)
+    up: Decimal = Decimal(10)
+    flat: Decimal = Decimal(5)
 
 
 @dataclass
