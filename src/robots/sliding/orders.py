@@ -44,10 +44,11 @@ class FailCounts:
 
 @dataclass
 class OrderStats:
-    fail_counts: FailCounts = field(default_factory=FailCounts)
 
     buy_stats: BuyStats = field(default_factory=BuyStats)
     sell_stats: SellStats = field(default_factory=SellStats)
+
+    fail_counts: FailCounts = field(default_factory=FailCounts)
 
 
 @dataclass
