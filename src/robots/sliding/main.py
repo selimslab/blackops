@@ -130,8 +130,8 @@ class LeaderFollowerTrader(RobotBase):
 
         # if slope down, sell even lower
         if self.leader_pub.slope.risk_level:
-            price_coeff -= (
-                settings.unit_signal_bps.slope_risk * self.leader_pub.slope.risk_level
+            price_coeff -= settings.unit_signal_bps.slope_risk * Decimal(
+                str(self.leader_pub.slope.risk_level)
             )
 
         self.taker.sell = self.taker.mid * price_coeff
