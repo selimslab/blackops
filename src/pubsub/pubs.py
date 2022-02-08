@@ -152,7 +152,8 @@ class BinancePub(PublisherBase):
     is_slope_up: bool = False
 
     prev_diff: Decimal = Decimal(0)
-    min_slope_bps: Decimal = Decimal(3) * BPS
+    min_slope_bps_sell: Decimal = Decimal(3) * BPS
+    min_slope_bps_buy: Decimal = Decimal(5) * BPS
 
     micro_ma_ok: bool = False
 
@@ -203,9 +204,10 @@ class BinancePub(PublisherBase):
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
-                mindiff = latter * self.min_slope_bps
-                self.is_slope_down = bool(diff < mindiff)
-                self.is_slope_up = bool(diff > mindiff and diff > self.prev_diff)
+                selldiff = latter * self.min_slope_bps_sell
+                buydiff = latter * self.min_slope_bps_buy
+                self.is_slope_down = bool(diff < selldiff)
+                self.is_slope_up = bool(diff > buydiff and diff > self.prev_diff)
                 self.prev_diff = diff
 
         except Exception as e:
