@@ -108,7 +108,7 @@ class BTPub(PublisherBase):
 
 @dataclass
 class SlopeThresholds:
-    up: float = 8
+    up: float = 6
     flat: float = 3
 
 

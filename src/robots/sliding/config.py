@@ -19,10 +19,10 @@ class Settings(BaseModel):
     quote_step_qty: Decimal = Decimal(2000)
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        buy=Decimal(15) * BPS,
+        buy=Decimal(14) * BPS,
         sell=Decimal(5) * BPS,
-        step=Decimal("0.8") * BPS,
-        slope_risk=Decimal("1.6") * BPS,
+        step=Decimal("0.7") * BPS,
+        slope_risk=Decimal("1.5") * BPS,
     )
 
     min_sell_qty: Decimal = Decimal(400)
