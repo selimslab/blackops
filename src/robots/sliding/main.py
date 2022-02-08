@@ -151,7 +151,7 @@ class LeaderFollowerTrader(RobotBase):
         )
 
         # if slope down, sell even lower
-        if self.leader_pub.is_slope_down:
+        if self.leader_pub.slope.down:
             price_coeff -= self.config.unit_signal_bps.slope_risk
 
         self.taker.sell = self.taker.mid * price_coeff
@@ -191,7 +191,7 @@ class LeaderFollowerTrader(RobotBase):
             return
 
         # dont buy if slope is not clearly up
-        if not self.leader_pub.is_slope_up:
+        if not self.leader_pub.slope.up:
             self.stats.no_buy.slope += 1
             return
 
@@ -255,9 +255,7 @@ class LeaderFollowerTrader(RobotBase):
             "start time": self.start_time,
             "pair": self.pair.dict(),
             "base_step_qty": self.base_step_qty,
-            "slope_up": self.leader_pub.is_slope_up,
-            "slope_down": self.leader_pub.is_slope_down,
-            "slope diff": self.leader_pub.prev_diff,
+            "slope": asdict(self.leader_pub.slope),
             # "micro_ma_ok": self.leader_pub.micro_ma_ok,
             "prices": {
                 "ask": self.follower_pub.ask,

@@ -135,6 +135,17 @@ class RollingMean:
 
 
 @dataclass
+class Slope:
+    up: bool = False
+    down: bool = False
+
+    buy: Decimal = Decimal(9) * BPS
+    sell: Decimal = Decimal(3) * BPS
+
+    diff: Decimal = Decimal(0)
+
+
+@dataclass
 class BinancePub(PublisherBase):
 
     symbol: str
@@ -146,14 +157,8 @@ class BinancePub(PublisherBase):
     spread_bps: Decimal = Decimal(0)
 
     book_stream: Optional[AsyncGenerator] = None
-    kline_stream: Optional[AsyncGenerator] = None
 
-    is_slope_down: bool = False
-    is_slope_up: bool = False
-
-    prev_diff: Decimal = Decimal(0)
-    min_slope_bps_sell: Decimal = Decimal(3) * BPS
-    min_slope_bps_buy: Decimal = Decimal(8) * BPS
+    slope: Slope = field(default_factory=Slope)
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
@@ -164,7 +169,7 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 4))
 
     def parse_book(self, book):
         try:
@@ -202,11 +207,15 @@ class BinancePub(PublisherBase):
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
-                selldiff = latter * self.min_slope_bps_sell
-                buydiff = latter * self.min_slope_bps_buy
-                self.is_slope_down = bool(diff < selldiff)
-                self.is_slope_up = bool(diff > buydiff)  # and diff > self.prev_diff
-                self.prev_diff = diff
+
+                self.slope.up = bool(
+                    diff > latter * self.slope.buy and diff >= self.slope.diff
+                )
+                self.slope.down = bool(
+                    diff < latter * self.slope.sell and diff <= self.slope.diff
+                )
+
+                self.slope.diff = diff
 
         except Exception as e:
             logger.error(e)
