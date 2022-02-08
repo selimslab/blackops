@@ -11,11 +11,9 @@ from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.exchanges.locks import Locks
 from src.monitoring import logger
-from src.proc import process_pool_executor, thread_pool_executor
 from src.stgs import LeaderFollowerConfig
 
 from .config import settings
-from .models import BookTop, Theo
 
 
 @dataclass
@@ -53,19 +51,12 @@ class OrderStats:
 
 
 @dataclass
-class OrderDecisionInput:
-    taker: Theo = field(default_factory=Theo)
-    market: BookTop = field(default_factory=BookTop)
-
-
-@dataclass
 class Order:
     order_id: OrderId
     symbol: str
     side: str
     price: Decimal
     qty: Decimal
-    input: Optional[OrderDecisionInput] = None
 
 
 @dataclass
@@ -92,8 +83,6 @@ class OrderApi:
 
     orders_in_last_second: int = 0
     max_orders_per_second: int = 3
-
-    decision_inputs: Dict[OrderId, OrderDecisionInput] = field(default_factory=dict)
 
     async def clear_orders_in_last_second(self):
         self.orders_in_last_second = 0
@@ -145,9 +134,6 @@ class OrderApi:
             # self.pair.base.free += order.qty
             self.stats.sell_stats.cancelled += 1
 
-        if order.order_id in self.decision_inputs:
-            del self.decision_inputs[order.order_id]
-
     def cancel_failed(self, order: Order) -> None:
         # couldn't cancel but maybe filled
         self.open_orders_fresh = False
@@ -192,7 +178,6 @@ class OrderApi:
                 qty=Decimal(order_dict.get("leftAmount", 0)),
                 symbol=order_dict.get("pairSymbol"),
                 side=order_dict.get("type"),
-                input=self.decision_inputs.get(order_dict.get("id")),
             )
             for order_dict in orderlist
         ]
@@ -201,7 +186,6 @@ class OrderApi:
             if order.order_id not in self.cancelled_orders:
                 self.open_orders.append(order)
 
-        self.decision_inputs = {}
         self.open_orders_fresh = True
         self.cancelled_orders = {}
 
@@ -264,7 +248,6 @@ class OrderApi:
         side: OrderType,
         price: Decimal,
         qty: int,
-        decision_input: Optional[OrderDecisionInput] = None,
     ):
         order_id = self.parse_order_id(order_log)
         if order_id:
@@ -274,10 +257,7 @@ class OrderApi:
                 price=price,
                 qty=Decimal(qty),
                 symbol=self.pair.symbol,
-                input=decision_input,
             )
-            if decision_input:
-                self.decision_inputs[order_id] = decision_input
             await self.deliver_ok(order)
         else:
             logger.info(f"{self.pair} {side} {qty} {price} : {order_log}")
@@ -288,7 +268,6 @@ class OrderApi:
         side: OrderType,
         price: Decimal,
         qty: int,
-        decision_input: Optional[OrderDecisionInput] = None,
     ) -> Optional[OrderId]:
         try:
             if side == OrderType.BUY:
@@ -308,7 +287,7 @@ class OrderApi:
                     self.pair, side, float(price), qty
                 )
                 if order_log:
-                    await self.submit_ok(order_log, side, price, qty, decision_input)
+                    await self.submit_ok(order_log, side, price, qty)
                 else:
                     self.stats.fail_counts.parent += 1
             return None

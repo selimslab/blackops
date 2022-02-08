@@ -17,7 +17,6 @@ from src.robots.sliding.orders import OrderApi
 from src.stgs.sliding.config import LeaderFollowerConfig
 
 from .config import settings
-from .models import BookTop, Theo
 
 
 @dataclass
@@ -31,6 +30,14 @@ class Stats:
     leader_proc: int = 0
     follower_proc: int = 0
     no_buy: NoBuy = field(default_factory=NoBuy)
+
+
+@dataclass
+class Theo:
+    sell: Decimal = Decimal(0)
+    mid: Decimal = Decimal(0)
+    usdt: Decimal = Decimal(0)
+    buy: Decimal = Decimal(0)
 
 
 @dataclass
@@ -49,8 +56,6 @@ class LeaderFollowerTrader(RobotBase):
     stats: Stats = field(default_factory=Stats)
 
     taker: Theo = field(default_factory=Theo)
-
-    market: BookTop = field(default_factory=BookTop)
 
     def __post_init__(self) -> None:
         self.pair = create_asset_pair(self.config.input.base, self.config.input.quote)
