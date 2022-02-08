@@ -153,7 +153,7 @@ class BinancePub(PublisherBase):
 
     prev_diff: Decimal = Decimal(0)
     min_slope_bps_sell: Decimal = Decimal(3) * BPS
-    min_slope_bps_buy: Decimal = Decimal(9) * BPS
+    min_slope_bps_buy: Decimal = Decimal(8) * BPS
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
