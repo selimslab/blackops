@@ -139,10 +139,12 @@ class Slope:
     up: bool = False
     down: bool = False
 
-    buy: Decimal = Decimal(9) * BPS
-    sell: Decimal = Decimal(3) * BPS
+    buy_bps: Decimal = Decimal(10) * BPS
+    sell_bps: Decimal = Decimal(4) * BPS
 
     diff: Decimal = Decimal(0)
+    buy_diff: Decimal = Decimal(0)
+    sell_diff: Decimal = Decimal(0)
 
 
 @dataclass
@@ -208,11 +210,14 @@ class BinancePub(PublisherBase):
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
 
+                self.slope.buy_diff = latter * self.slope.buy_bps
+                self.slope.sell_diff = latter * self.slope.sell_bps
+
                 self.slope.up = bool(
-                    diff > latter * self.slope.buy and diff >= self.slope.diff
+                    diff >= self.slope.buy_diff and diff >= self.slope.diff
                 )
                 self.slope.down = bool(
-                    (diff < latter * self.slope.sell and diff <= self.slope.diff)
+                    (diff <= self.slope.sell_diff and diff <= self.slope.diff)
                     or diff <= 0
                 )
 
