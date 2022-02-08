@@ -16,7 +16,7 @@ class Settings(BaseModel):
     sell_step: Decimal = Decimal(2)
 
     max_step: Decimal = Decimal(20)
-    quote_step_qty: Decimal = Decimal(4000)
+    quote_step_qty: Decimal = Decimal(3000)
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
         buy=Decimal(16) * BPS,
