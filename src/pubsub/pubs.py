@@ -212,7 +212,8 @@ class BinancePub(PublisherBase):
                     diff > latter * self.slope.buy and diff >= self.slope.diff
                 )
                 self.slope.down = bool(
-                    diff < latter * self.slope.sell and diff <= self.slope.diff
+                    (diff < latter * self.slope.sell and diff <= self.slope.diff)
+                    or diff <= 0
                 )
 
                 self.slope.diff = diff
