@@ -24,7 +24,9 @@ from .models import BookTop, Theo
 class NoBuy:
     max_spread: int = 0
     klines: int = 0
+    slope: int = 0
     qty: int = 0
+    micro_ma: int = 0
 
 
 @dataclass
@@ -214,10 +216,13 @@ class LeaderFollowerTrader(RobotBase):
 
         # dont buy if slope is not clearly up
         if not self.leader_pub.is_slope_up:
-            self.stats.no_buy.klines += 1
+            self.stats.no_buy.slope += 1
             return
 
         # we could add micro ma
+        if not self.leader_pub.micro_ma_ok:
+            self.stats.no_buy.micro_ma += 1
+            return
 
         qty = self.get_buy_qty(current_step)
 

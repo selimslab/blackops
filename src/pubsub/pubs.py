@@ -157,9 +157,9 @@ class BinancePub(PublisherBase):
 
     micro_ma_ok: bool = False
 
-    ma_small: RollingMean = field(default_factory=lambda: RollingMean(5))
-    ma_mid: RollingMean = field(default_factory=lambda: RollingMean(11))
-    ma_large: RollingMean = field(default_factory=lambda: RollingMean(23))
+    ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
+    ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
+    ma_large: RollingMean = field(default_factory=lambda: RollingMean(27))
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
@@ -180,17 +180,17 @@ class BinancePub(PublisherBase):
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
-                    # self.ma_small.add(mid)
-                    # self.ma_mid.add(mid)
-                    # self.ma_large.add(mid)
-
-                    # self.micro_ma_ok = (
-                    #     self.ma_small.get_average()
-                    #     > self.ma_mid.get_average()
-                    #     > self.ma_large.get_average()
-                    # )
+                    self.ma_small.add(mid)
+                    self.ma_mid.add(mid)
+                    self.ma_large.add(mid)
 
                     if mid != self.mid:
+
+                        self.micro_ma_ok = bool(
+                            self.ma_small.get_average()
+                            > self.ma_mid.get_average()
+                            > self.ma_large.get_average()
+                        )
                         self.mid = mid
                         self.books_seen += 1
         except Exception as e:
