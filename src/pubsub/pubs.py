@@ -201,20 +201,19 @@ class BinancePub(PublisherBase):
                 risk = self.slope.thresholds.flat - diff_bps
 
                 # compare with the old diff
-                second_dt_up = bool(diff_bps >= self.slope.diff_bps)
+
+                # second_dt_up = bool(diff_bps >= self.slope.diff_bps)
+                # if risk < 3 and second_dt_up:
+                #     risk /= Decimal(2)
 
                 # risk cant be > mid
                 risk = min(self.slope.thresholds.flat, risk)
-
-                if risk < 3 and second_dt_up:
-                    risk /= Decimal(2)
-
-                self.slope.diff_bps = diff_bps
-
                 # risk cant be < 0
                 risk = max(Decimal(0), risk)
 
                 self.slope.risk_level = risk
+
+                self.slope.diff_bps = diff_bps
 
         except Exception as e:
             logger.error(e)
