@@ -36,7 +36,6 @@ class Stats:
 class Theo:
     sell: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
-    usdt: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
 
 
@@ -121,8 +120,6 @@ class LeaderFollowerTrader(RobotBase):
             await asyncio.sleep(0)
 
     def set_taker_mids(self):
-        self.taker.usdt = self.leader_pub.book.mid
-
         if not self.bridge_pub or not self.bridge_pub.book.mid:
             raise Exception("No bridge mid")
 
