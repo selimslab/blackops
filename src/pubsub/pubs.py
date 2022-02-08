@@ -192,7 +192,7 @@ class BinancePub(PublisherBase):
                     self.bid = bid
                     mid = (ask + bid) / DECIMAL_2
 
-                    self.spread_bps = (ask - bid) * BPS / mid
+                    self.spread_bps = (ask - bid) / mid / BPS
 
                     # self.ma_small.add(mid)
                     # self.ma_mid.add(mid)
@@ -222,7 +222,7 @@ class BinancePub(PublisherBase):
                 self.slope.latter = latter
                 self.slope.diff = diff
 
-                diff_bps = diff * BPS / latter
+                diff_bps = diff / latter / BPS
 
                 # compare with the old diff
                 second_dt_up = bool(diff_bps >= self.slope.diff_bps)
