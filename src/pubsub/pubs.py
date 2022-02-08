@@ -150,16 +150,19 @@ class BinancePub(PublisherBase):
 
     is_slope_up: bool = False
     prev_diff: Decimal = Decimal(0)
+    min_slope_bps: Decimal = Decimal(5)
 
-    # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
-    # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(7))
-    # ma_large: RollingMean = field(default_factory=lambda: RollingMean(21))
+    micro_ma_ok: bool = False
+
+    ma_small: RollingMean = field(default_factory=lambda: RollingMean(5))
+    ma_mid: RollingMean = field(default_factory=lambda: RollingMean(11))
+    ma_large: RollingMean = field(default_factory=lambda: RollingMean(23))
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 4))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
 
     def parse_book(self, book):
         try:
@@ -174,9 +177,15 @@ class BinancePub(PublisherBase):
 
                     self.spread_bps = (ask - bid) / mid / BPS
 
-                    # self.ma_small.add(mid)
-                    # self.ma_mid.add(mid)
-                    # self.ma_large.add(mid)
+                    self.ma_small.add(mid)
+                    self.ma_mid.add(mid)
+                    self.ma_large.add(mid)
+
+                    self.micro_ma_ok = (
+                        self.ma_small.get_average()
+                        > self.ma_mid.get_average()
+                        > self.ma_large.get_average()
+                    )
 
                     if mid != self.mid:
                         self.mid = mid
@@ -192,7 +201,9 @@ class BinancePub(PublisherBase):
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
-                self.is_slope_up = bool(diff > 0 and diff >= self.prev_diff)
+                self.is_slope_up = bool(
+                    diff > former * self.min_slope_bps and diff >= self.prev_diff
+                )
                 self.prev_diff = diff
 
         except Exception as e:
