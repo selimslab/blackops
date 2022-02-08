@@ -18,36 +18,37 @@ from .models import BookTop, Theo
 
 
 @dataclass
-class DeliveredCounts:
-    buy: int = 0
-    sell: int = 0
+class DeliveryStats:
+    delivered: int = 0
+    cancelled: int = 0
+    filled: int = 0
+
+
+@dataclass
+class BuyStats(DeliveryStats):
+    pass
+
+
+@dataclass
+class SellStats(DeliveryStats):
+    pass
 
 
 @dataclass
 class FailCounts:
-    buy_check: int = 0
-    sell_check: int = 0
     open_orders: int = 0
     hit_order_limit = 0
     parent: int = 0
     bad_response: int = 0
-    locked: int = 0
+    self_lock: int = 0
 
 
 @dataclass
 class OrderStats:
     fail_counts: FailCounts = field(default_factory=FailCounts)
 
-    delivered_counts: DeliveredCounts = field(default_factory=DeliveredCounts)
-    sell_cancelled: int = 0
-    buy_cancelled: int = 0
-
-    sell_filled: int = 0
-    buy_filled: int = 0
-
-    refreshed: int = 0
-    refresh_fail: int = 0
-    read_locked: int = 0
+    buy_stats: BuyStats = field(default_factory=BuyStats)
+    sell_stats: SellStats = field(default_factory=SellStats)
 
 
 @dataclass
@@ -138,10 +139,10 @@ class OrderApi:
 
         if order.side == OrderType.BUY:
             # self.pair.base.free -= order.qty
-            self.stats.buy_cancelled += 1
+            self.stats.buy_stats.cancelled += 1
         else:
             # self.pair.base.free += order.qty
-            self.stats.sell_cancelled += 1
+            self.stats.sell_stats.cancelled += 1
 
         if order.order_id in self.decision_inputs:
             del self.decision_inputs[order.order_id]
@@ -150,9 +151,9 @@ class OrderApi:
         # couldn't cancel but maybe filled
         self.open_orders_fresh = False
         if order.side == OrderType.BUY:
-            self.stats.buy_filled += 1
+            self.stats.buy_stats.filled += 1
         else:
-            self.stats.sell_filled += 1
+            self.stats.sell_stats.filled += 1
 
         self.last_filled.append(order)
 
@@ -165,7 +166,6 @@ class OrderApi:
             return None
 
         if self.locks.read.locked():
-            self.stats.read_locked += 1
             return None
 
         async with self.locks.read:
@@ -176,8 +176,6 @@ class OrderApi:
             if res:
                 # loop.run_in_executor(thread_pool_executor, self.get_and_refresh, res)
                 self.get_and_refresh(res)
-            else:
-                self.stats.refresh_fail += 1
 
         await self.cancel_open_orders()
 
@@ -205,7 +203,6 @@ class OrderApi:
         self.decision_inputs = {}
         self.open_orders_fresh = True
         self.cancelled_orders = {}
-        self.stats.refreshed += 1
 
     def can_sell(self, price, qty) -> bool:
         # do we have enough to sell, and is it too little to sell=
@@ -229,19 +226,17 @@ class OrderApi:
             return False
 
         if side == OrderType.BUY and not self.can_buy(price, qty):
-            self.stats.fail_counts.buy_check += 1
             return False
         elif side == OrderType.SELL and not self.can_sell(price, qty):
-            self.stats.fail_counts.sell_check += 1
             return False
 
         return True
 
     async def deliver_ok(self, order: Order):
         if order.side == OrderType.BUY:
-            self.stats.delivered_counts.buy += 1
+            self.stats.buy_stats.delivered += 1
         else:
-            self.stats.delivered_counts.sell += 1
+            self.stats.sell_stats.delivered += 1
 
         self.orders_in_last_second += 1
         await asyncio.sleep(
@@ -301,7 +296,7 @@ class OrderApi:
                 lock = self.locks.sell
 
             if lock.locked():
-                self.stats.fail_counts.locked += 1
+                self.stats.fail_counts.self_lock += 1
                 return None
 
             async with lock:

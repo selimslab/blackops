@@ -1,6 +1,5 @@
 import asyncio
 import decimal
-import statistics
 from copy import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -24,13 +23,6 @@ from .models import BookTop, Theo
 class NoBuy:
     max_spread: int = 0
     slope: int = 0
-    qty: int = 0
-    # micro_ma: int = 0
-
-
-@dataclass
-class NoSell:
-    qty: int = 0
 
 
 @dataclass
@@ -38,7 +30,6 @@ class Stats:
     leader_seen: int = 0
     follower_seen: int = 0
     no_buy: NoBuy = field(default_factory=NoBuy)
-    no_sell: NoSell = field(default_factory=NoSell)
 
 
 @dataclass
@@ -113,7 +104,6 @@ class LeaderFollowerTrader(RobotBase):
 
             except Exception as e:
                 logger.error(e)
-                pass
 
     async def poll_follower_pub(self):
         while True:
@@ -168,7 +158,6 @@ class LeaderFollowerTrader(RobotBase):
         qty = self.get_sell_qty()
 
         if not self.order_api.can_sell(price, qty):
-            self.stats.no_sell.qty += 1
             return
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
@@ -224,12 +213,10 @@ class LeaderFollowerTrader(RobotBase):
         qty = self.get_buy_qty(current_step)
 
         if not qty:
-            self.stats.no_buy.qty += 1
             return
 
         if not self.order_api.can_buy(price, qty):
-            self.stats.no_buy.qty += 1
-            return None
+            return
 
         await self.order_api.send_order(OrderType.BUY, price, qty)
 
