@@ -3,7 +3,7 @@ import collections
 import traceback
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Optional
 
 import src.pubsub.log_pub as log_pub
 from src.domain import Asset, AssetPair, OrderId, OrderType

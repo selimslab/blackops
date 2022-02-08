@@ -15,6 +15,14 @@ taker_fee_bps: Decimal = Decimal("8")
 maker_fee_bps: Decimal = taker_fee_bps / 2
 
 
+@dataclass
+class Book:
+    ask: Decimal = Decimal(0)
+    mid: Decimal = Decimal(0)
+    bid: Decimal = Decimal(0)
+    seen: int = 0
+
+
 class Asset(BaseModel):
     symbol: AssetSymbol
     free: Decimal = Decimal("0")

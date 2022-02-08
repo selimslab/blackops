@@ -5,5 +5,6 @@ from .main import (
     round_decimal_floor,
     round_decimal_half_up,
 )
+from .rolling import RollingMean
 
 # from .median import MedianFinder

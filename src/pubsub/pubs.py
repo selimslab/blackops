@@ -1,5 +1,4 @@
 import asyncio
-import collections
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -8,11 +7,12 @@ from typing import AsyncGenerator, Dict, Optional, Union
 
 import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams
-from src.domain.models import BPS, DECIMAL_2, Asset, AssetSymbol
+from src.domain.models import BPS, DECIMAL_2, Asset, AssetSymbol, Book
 from src.environment import sleep_seconds
 from src.exchanges.base import ExchangeAPIClientBase
 from src.monitoring import logger
-from src.periodic import StopwatchAPI, periodic
+from src.numberops import RollingMean
+from src.periodic import periodic
 from src.proc import process_pool_executor, thread_pool_executor
 
 
@@ -53,10 +53,7 @@ class BalancePub(PublisherBase):
     async def publish_balance(self):
         res = await self.exchange.get_account_balance()
         if res:
-            # loop = asyncio.get_event_loop()
-            # await loop.run_in_executor(thread_pool_executor, self.update_balances, res)
             self.update_balances(res)
-            # self.update_balances(res)
             self.last_updated = datetime.now()
 
     def update_balances(self, balances) -> None:
@@ -65,14 +62,6 @@ class BalancePub(PublisherBase):
             data = balance_dict[symbol]
             asset.free = Decimal(data["free"])
             asset.locked = Decimal(data["locked"])
-
-
-@dataclass
-class Book:
-    ask: Decimal = Decimal(0)
-    mid: Decimal = Decimal(0)
-    bid: Decimal = Decimal(0)
-    seen: int = 0
 
 
 @dataclass
@@ -95,7 +84,7 @@ class BTPub(PublisherBase):
             ask = self.api_client.get_best_ask(book)
             bid = self.api_client.get_best_bid(book)
 
-            if ask and bid:  # and (ask != self.ask or bid != self.bid)
+            if ask and bid:
                 self.book.ask = ask
                 self.book.bid = bid
                 self.book.mid = (ask + bid) / DECIMAL_2
@@ -112,29 +101,6 @@ class BTPub(PublisherBase):
             if book:
                 self.parse_book(book)
             await asyncio.sleep(0)
-
-
-@dataclass
-class RollingMean:
-    maxlen: int
-    total: Decimal = Decimal(0)
-    count: Decimal = Decimal(0)
-
-    def __post_init__(self):
-        self.values = collections.deque(maxlen=self.maxlen)
-
-    def add(self, value):
-        if self.count < self.maxlen:
-            self.values.append(value)
-            self.count += 1
-        else:
-            self.total -= self.values.popleft()
-            self.values.append(value)
-
-        self.total += value
-
-    def get_average(self):
-        return self.total / self.count
 
 
 @dataclass
@@ -180,7 +146,7 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 4))
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 5))
 
     def parse_book(self, book):
         try:
