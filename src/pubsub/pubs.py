@@ -1,6 +1,7 @@
 import asyncio
 import collections
 import statistics
+from copy import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -135,6 +136,27 @@ class RollingMean:
 
 
 @dataclass
+class SlopeBPS:
+    up: Decimal = Decimal(8) * BPS
+    flat: Decimal = Decimal(4) * BPS
+    down: Decimal = Decimal(2) * BPS
+
+
+@dataclass
+class SlopeDiff:
+    up: Decimal = Decimal(0)
+    flat: Decimal = Decimal(0)
+    down: Decimal = Decimal(0)
+
+
+@dataclass
+class SlopeState:
+    up: bool = False
+    flat: bool = False
+    down: bool = False
+
+
+@dataclass
 class BinancePub(PublisherBase):
 
     symbol: str
@@ -148,12 +170,13 @@ class BinancePub(PublisherBase):
     book_stream: Optional[AsyncGenerator] = None
     kline_stream: Optional[AsyncGenerator] = None
 
-    is_slope_down: bool = False
     is_slope_up: bool = False
+    is_slope_flat: bool = False
+    is_slope_down: bool = False
 
-    prev_diff: Decimal = Decimal(0)
-    min_slope_bps_sell: Decimal = Decimal(3) * BPS
-    min_slope_bps_buy: Decimal = Decimal(9) * BPS
+    slope: SlopeState = field(default_factory=SlopeState)
+    slope_bps: SlopeBPS = field(default_factory=SlopeBPS)
+    slope_diff: SlopeDiff = field(default_factory=SlopeDiff)
 
     # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
     # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(9))
@@ -199,17 +222,31 @@ class BinancePub(PublisherBase):
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
                 kline_closes = [Decimal(k[4]) for k in klines]
+
                 former = statistics.mean(kline_closes[:5])
                 latter = statistics.mean(kline_closes[1:])
                 diff = latter - former
-                selldiff = latter * self.min_slope_bps_sell
-                buydiff = latter * self.min_slope_bps_buy
-                self.is_slope_down = bool(diff < selldiff)
-                self.is_slope_up = bool(diff > buydiff)  # and diff > self.prev_diff
-                self.prev_diff = diff
+
+                prev_diffs = copy(self.slope_diff)
+
+                self.slope_diff.up = latter * self.slope_bps.up
+                self.slope_diff.flat = latter * self.slope_bps.flat
+                self.slope_diff.down = latter * self.slope_bps.down
+
+                self.slope.up = bool(
+                    diff > self.slope_diff.up and diff >= prev_diffs.up
+                )
+                self.slope.flat = bool(
+                    self.slope_diff.down < diff < self.slope_diff.flat
+                    and diff <= prev_diffs.flat
+                )
+                self.slope.down = bool(diff < self.slope_diff.down)
 
         except Exception as e:
             logger.error(e)
+
+    def update_slope(self):
+        pass
 
     async def publish_stream(self):
         if not self.book_stream:

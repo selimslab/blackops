@@ -13,7 +13,8 @@ class UnitSignalBPS(BaseModel):
     sell: Decimal = Decimal(0)
     buy: Decimal = Decimal(0)
     step: Decimal = Decimal(0)
-    slope_risk: Decimal = Decimal(0)
+    slope_down_risk: Decimal = Decimal(0)
+    slope_flat_risk: Decimal = Decimal(0)
 
 
 class LeaderFollowerConfig(StrategyConfigBase):
@@ -40,7 +41,8 @@ class LeaderFollowerConfig(StrategyConfigBase):
         buy=Decimal(15) * BPS,
         sell=Decimal(5) * BPS,
         step=Decimal(1) * BPS,
-        slope_risk=Decimal(9) * BPS,
+        slope_down_risk=Decimal(9) * BPS,
+        slope_flat_risk=Decimal(3) * BPS,
     )
 
     input: LeaderFollowerInput
