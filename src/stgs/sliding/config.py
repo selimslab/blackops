@@ -34,7 +34,7 @@ class LeaderFollowerConfig(StrategyConfigBase):
     sell_step: Decimal = Decimal(2)
 
     max_step: Decimal = Decimal(20)
-    quote_step_qty: Decimal = Decimal(5000)
+    quote_step_qty: Decimal = Decimal(4000)
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
         buy=Decimal(15) * BPS,
