@@ -5,6 +5,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import AsyncGenerator, Dict, Optional, Union
 
+import numpy as np
+import talib
+
 import src.streams.bn as bn_streams
 import src.streams.btcturk as btc_streams
 from src.domain.models import BPS, DECIMAL_2, Asset, AssetSymbol, Book
@@ -198,15 +201,20 @@ class BinancePub(PublisherBase):
             klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
                 kline_closes = [float(k[4]) for k in klines]
+                closes = np.asarray(kline_closes)
+                ema = talib.EMA(closes, timeperiod=5)
+                self.slope.former, self.slope.latter = ema[-2:]
 
-                self.slope.former, self.slope.latter = self.ema(
-                    kline_closes, 5
-                )  # kline_closes[:5], kline_closes[1:]
+                # self.slope.former, self.slope.latter = self.ema(
+                #     kline_closes, 5
+                # )
+
+                # kline_closes[:5], kline_closes[1:]
 
                 # former = statistics.mean(kline_closes[:5])
                 # latter = statistics.mean(kline_closes[1:])
                 self.slope.diff = self.slope.latter - self.slope.former
-                diff_bps = round(self.slope.diff / self.slope.latter * 10000, 2)
+                diff_bps = self.slope.diff / self.slope.latter * 10000
 
                 self.slope.up = bool(
                     diff_bps >= self.slope.thresholds.up  # and second_dt_up

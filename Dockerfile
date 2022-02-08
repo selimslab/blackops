@@ -1,7 +1,14 @@
 FROM python:3.8.12-slim-bullseye
+ENV PYTHONUNBUFFERED 1
+
  
-RUN apt-get update && apt-get -y install curl
- 
+RUN apt-get update && apt-get -y install curl gcc make 
+
+# Install TA-lib
+COPY docker_build_helpers/* /tmp/
+RUN cd /tmp && /tmp/install_ta-lib.sh && rm -r /tmp/*ta-lib*
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
 # ENV POETRY_VERSION 1.1.11
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py  | python - 
 
