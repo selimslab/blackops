@@ -129,13 +129,13 @@ class LeaderFollowerTrader(RobotBase):
         )
 
         # if slope down, sell earlier
-        if self.leader_pub.slope.down:
-            price_coeff -= settings.unit_signal_bps.slope_risk
+        # if self.leader_pub.slope.down:
+        #     price_coeff -= settings.unit_signal_bps.slope_risk
 
-        spread_diff = self.follower_pub.book.spread_bps - settings.max_spread_bps
+        # spread_diff = self.follower_pub.book.spread_bps - settings.max_spread_bps
 
-        if spread_diff > 0:
-            price_coeff -= spread_diff * settings.unit_signal_bps.spread_risk
+        # if spread_diff > 0:
+        #     price_coeff -= spread_diff * settings.unit_signal_bps.spread_risk
 
         self.taker.sell = self.taker.mid * price_coeff
 
@@ -198,8 +198,8 @@ class LeaderFollowerTrader(RobotBase):
             - current_step * settings.unit_signal_bps.step
         )
 
-        if self.leader_pub.slope.down:
-            price_coeff -= settings.unit_signal_bps.slope_risk
+        # if self.leader_pub.slope.down:
+        #     price_coeff -= settings.unit_signal_bps.slope_risk
 
         self.taker.buy = self.taker.mid * price_coeff
 
@@ -241,6 +241,6 @@ class LeaderFollowerTrader(RobotBase):
             "leader": asdict(self.leader_pub.book),
             "follower": asdict(self.follower_pub.book),
             "taker": asdict(self.taker),
-            "slope": asdict(self.leader_pub.slope),
+            # "slope": asdict(self.leader_pub.slope),
             "order": asdict(self.order_api.stats),
         }
