@@ -31,7 +31,8 @@ class NoBuy:
 
 @dataclass
 class BuyStats(DeliveryStats):
-    no_buy: NoBuy = field(default_factory=NoBuy)
+    # no_buy: NoBuy = field(default_factory=NoBuy)
+    pass
 
 
 @dataclass

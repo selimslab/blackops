@@ -27,7 +27,7 @@ class Settings(BaseModel):
         slope_risk=Decimal(8) * BPS,
     )
 
-    max_spread_bps: Decimal = Decimal(12)
+    max_spread_bps: Decimal = Decimal(10)
 
 
 settings = Settings()

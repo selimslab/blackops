@@ -171,12 +171,12 @@ class LeaderFollowerTrader(RobotBase):
             self.leader_pub.book.spread_bps > settings.max_spread_bps
             or self.follower_pub.book.spread_bps > settings.max_spread_bps
         ):
-            self.order_api.stats.buy_stats.no_buy.max_spread += 1
+            # self.order_api.stats.buy_stats.no_buy.max_spread += 1
             return
 
         # dont buy if slope is not clearly up
         if not self.leader_pub.slope.up:
-            self.order_api.stats.buy_stats.no_buy.slope += 1
+            # self.order_api.stats.buy_stats.no_buy.slope += 1
             return
 
         price = self.taker.buy.quantize(self.follower_pub.book.ask, decimal.ROUND_DOWN)
