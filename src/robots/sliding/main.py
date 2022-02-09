@@ -169,7 +169,7 @@ class LeaderFollowerTrader(RobotBase):
         # do not buy if spread unhealthy
         if (
             self.leader_pub.book.spread_bps > settings.max_spread_bps
-            or self.follower_pub.book.spread_bps > settings.max_spread_follower
+            or self.follower_pub.book.spread_bps > settings.max_spread_bps
         ):
             self.order_api.stats.buy_stats.no_buy.max_spread += 1
             return
