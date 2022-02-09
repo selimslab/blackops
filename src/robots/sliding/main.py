@@ -128,12 +128,9 @@ class LeaderFollowerTrader(RobotBase):
             - current_step * settings.unit_signal_bps.step
         )
 
-        # if slope down, sell even lower
+        # if slope down, sell earlier
         if self.leader_pub.slope.down:
             price_coeff -= settings.unit_signal_bps.slope_risk
-            # settings.unit_signal_bps.slope_risk * Decimal(
-            #     str(self.leader_pub.slope.risk_level)
-            # )
 
         self.taker.sell = self.taker.mid * price_coeff
 
@@ -145,11 +142,15 @@ class LeaderFollowerTrader(RobotBase):
 
         qty = self.get_sell_qty()
 
-        if not self.order_api.can_sell(price, qty):
+        if not self.can_sell(price, qty):
             return
 
         await self.order_api.send_order(OrderType.SELL, price, qty)
         return True
+
+    def can_sell(self, price, qty) -> bool:
+        # do we have enough to sell, and is it too little to sell
+        return self.pair.base.free >= qty and qty * price >= settings.min_sell_qty
 
     def get_sell_qty(self):
         qty: Decimal = self.base_step_qty * settings.sell_step
@@ -165,11 +166,23 @@ class LeaderFollowerTrader(RobotBase):
         if not self.follower_pub.book.ask or not self.base_step_qty:
             return
 
+        # do not buy if spread unhealthy
+        if (
+            self.leader_pub.book.spread_bps > settings.max_spread_bps
+            or self.follower_pub.book.spread_bps > settings.max_spread_follower
+        ):
+            self.order_api.stats.buy_stats.no_buy.max_spread += 1
+            return
+
+        # dont buy if slope is not clearly up
+        if not self.leader_pub.slope.up:
+            self.order_api.stats.buy_stats.no_buy.slope += 1
+            return
+
         price = self.taker.buy.quantize(self.follower_pub.book.ask, decimal.ROUND_DOWN)
 
         current_step = self.get_current_step()
 
-        # mid - 15bps - step*1bps
         # seek to buy lower as you buy
         price_coeff = (
             Decimal(1)
@@ -183,27 +196,12 @@ class LeaderFollowerTrader(RobotBase):
         if self.follower_pub.book.ask > price:
             return
 
-        # do not buy if spread unhealthy
-        if self.leader_pub.spread_bps > settings.max_spread_bps:
-            self.order_api.stats.buy_stats.no_buy.max_spread += 1
-            return
-
-        # dont buy if slope is not clearly up
-        if not self.leader_pub.slope.up:
-            self.order_api.stats.buy_stats.no_buy.slope += 1
-            return
-
-        # we could add micro ma
-        # if not self.leader_pub.micro_ma_ok:
-        #     self.stats.no_buy.micro_ma += 1
-        #     return
-
         qty = self.get_buy_qty(current_step)
 
         if not qty:
             return
 
-        if not self.order_api.can_buy(price, qty):
+        if self.pair.quote.free < price * qty:
             return
 
         await self.order_api.send_order(OrderType.BUY, price, qty)

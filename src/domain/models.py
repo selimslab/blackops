@@ -20,6 +20,7 @@ class Book:
     ask: Decimal = Decimal(0)
     mid: Decimal = Decimal(0)
     bid: Decimal = Decimal(0)
+    spread_bps: Decimal = Decimal(0)
     seen: int = 0
     processed: int = 0
 

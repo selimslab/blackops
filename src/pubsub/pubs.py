@@ -90,7 +90,9 @@ class BTPub(PublisherBase):
             if ask and bid:
                 self.book.ask = ask
                 self.book.bid = bid
-                self.book.mid = (ask + bid) / DECIMAL_2
+                mid = (ask + bid) / DECIMAL_2
+                self.book.mid = mid
+                self.book.spread_bps = (ask - bid) / mid / BPS
                 self.book.seen += 1
         except Exception as e:
             logger.info(f"BTPub: {e}")
@@ -128,8 +130,6 @@ class BinancePub(PublisherBase):
 
     book: Book = field(default_factory=Book)
 
-    spread_bps: Decimal = Decimal(0)
-
     book_stream: Optional[AsyncGenerator] = None
 
     slope: Slope = field(default_factory=Slope)
@@ -153,7 +153,7 @@ class BinancePub(PublisherBase):
 
                     mid = (ask + bid) / DECIMAL_2
 
-                    self.spread_bps = (ask - bid) / mid / BPS
+                    self.book.spread_bps = (ask - bid) / mid / BPS
 
                     # self.ma_small.add(mid)
                     # self.ma_mid.add(mid)

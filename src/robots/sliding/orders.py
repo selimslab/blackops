@@ -196,34 +196,6 @@ class OrderApi:
         self.open_orders_fresh = True
         self.cancelled_orders = {}
 
-    def can_sell(self, price, qty) -> bool:
-        # do we have enough to sell, and is it too little to sell=
-        return self.pair.base.free >= qty and qty * price >= settings.min_sell_qty
-
-    def can_buy(self, price, qty) -> bool:
-        # Do we have enough money and is it too little to buy?
-        return (
-            bool(self.pair.quote.free)
-            and self.pair.quote.free >= price * qty > settings.min_buy_qty
-        )
-
-    def can_order(self, side: OrderType, price: Decimal, qty: int) -> bool:
-
-        if self.orders_in_last_second >= self.max_orders_per_second:
-            self.stats.fail_counts.hit_order_limit += 1
-            return False
-
-        if len(self.open_orders) > 0 or not self.open_orders_fresh:
-            self.stats.fail_counts.open_orders += 1
-            return False
-
-        if side == OrderType.BUY and not self.can_buy(price, qty):
-            return False
-        elif side == OrderType.SELL and not self.can_sell(price, qty):
-            return False
-
-        return True
-
     async def deliver_ok(self, order: Order):
         if order.side == OrderType.BUY:
             self.stats.buy_stats.delivered += 1
@@ -277,6 +249,15 @@ class OrderApi:
         qty: int,
     ) -> Optional[OrderId]:
         try:
+
+            if self.orders_in_last_second >= self.max_orders_per_second:
+                self.stats.fail_counts.hit_order_limit += 1
+                return None
+
+            if len(self.open_orders) > 0 or not self.open_orders_fresh:
+                self.stats.fail_counts.open_orders += 1
+                return None
+
             if side == OrderType.BUY:
                 lock = self.locks.buy
             else:
@@ -287,9 +268,6 @@ class OrderApi:
                 return None
 
             async with lock:
-                if not self.can_order(side, price, qty):
-                    return None
-
                 order_log: Optional[dict] = await self.exchange.submit_limit_order(
                     self.pair, side, float(price), qty
                 )
