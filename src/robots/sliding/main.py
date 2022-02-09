@@ -224,12 +224,7 @@ class LeaderFollowerTrader(RobotBase):
         if remaining_step < 1:
             return
 
-        unit_signal = settings.unit_signal_bps.buy * self.taker.mid
-        signal = (self.taker.mid - self.follower_pub.book.ask) / unit_signal
-        signal = min(signal, remaining_step)
-        qty = self.base_step_qty * signal
-
-        return int(qty)
+        return int(self.base_step_qty)
 
     async def close(self) -> None:
         await self.order_api.cancel_open_orders()
