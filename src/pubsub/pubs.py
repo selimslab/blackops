@@ -138,8 +138,9 @@ class BinancePub(PublisherBase):
 
     # mids: collections.deque = field(default_factory=lambda: collections.deque(maxlen=21))
 
-    mids: RollingMean = field(default_factory=lambda: RollingMean(21))
-    micro_ma_ok: bool = False
+    # ma_small: RollingMean = field(default_factory=lambda: RollingMean(3))
+    # ma_mid: RollingMean = field(default_factory=lambda: RollingMean(7))
+    micro_ok: bool = False
 
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
@@ -162,13 +163,13 @@ class BinancePub(PublisherBase):
 
                     self.book.spread_bps = (ask - bid) / mid / BPS
 
-                    # self.mids.add(mid)
+                    # self.ma_small.add(mid)
+                    # self.ma_mid.add(mid)
 
                     if mid != self.book.mid:
-                        # self.micro_ma_ok = bool(
+                        # self.micro_ok = bool(
                         #     self.ma_small.get_average()
                         #     > self.ma_mid.get_average()
-                        #     > self.ma_large.get_average()
                         # )
                         self.book.mid = mid
                         self.book.seen += 1

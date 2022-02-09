@@ -179,6 +179,9 @@ class LeaderFollowerTrader(RobotBase):
             # self.order_api.stats.buy_stats.no_buy.slope += 1
             return
 
+        # if not self.leader_pub.micro_ok:
+        #     return
+
         price = self.taker.buy.quantize(self.follower_pub.book.ask, decimal.ROUND_DOWN)
 
         current_step = self.get_current_step()
