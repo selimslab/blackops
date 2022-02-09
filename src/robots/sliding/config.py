@@ -10,6 +10,7 @@ class UnitSignalBPS(BaseModel):
     buy: Decimal = Decimal(0)
     step: Decimal = Decimal(0)
     slope_risk: Decimal = Decimal(0)
+    spread_risk: Decimal = Decimal(0)
 
 
 class Settings(BaseModel):
@@ -24,9 +25,9 @@ class Settings(BaseModel):
         buy=Decimal(12) * BPS,
         sell=Decimal(6) * BPS,
         step=Decimal(1) * BPS,
-        slope_risk=Decimal(9) * BPS,
+        slope_risk=Decimal(4) * BPS,
+        spread_risk=Decimal(2) * BPS,
     )
-
     max_spread_bps: Decimal = Decimal(10)
 
 

@@ -146,10 +146,7 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(
-            self.publish_stream(),
-            # periodic(self.publish_klines, 4)
-        )
+        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 10))
 
     def parse_book(self, book):
         try:
@@ -181,26 +178,29 @@ class BinancePub(PublisherBase):
 
     async def publish_klines(self):
         try:
-            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=7)
+            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
             if klines:
-                kline_closes = [float(k[4]) for k in klines]
-                closes = np.asarray(kline_closes)
+
+                closes = np.asarray([float(k[4]) for k in klines])
+
                 ema = talib.EMA(closes, timeperiod=5)
-                self.slope.former, self.slope.mid, self.slope.latter = ema[-3:]
+
+                self.slope.former, self.slope.latter = ema[-2:]
 
                 self.slope.diff = self.slope.latter - self.slope.former
-                diff_bps = self.slope.diff / self.slope.latter * 10000
 
-                uptrend = (
-                    self.slope.latter - self.slope.mid
-                    >= self.slope.mid - self.slope.former
-                )
+                diff_bps = self.slope.diff / self.slope.latter * 10000
 
                 self.slope.down = bool(diff_bps < 0.2)
 
-                self.slope.up = bool(diff_bps >= 3 and uptrend)
-
                 self.slope.diff_bps = diff_bps
+
+                # uptrend = (
+                #     self.slope.latter - self.slope.mid
+                #     >= self.slope.mid - self.slope.former
+                # )
+
+                # self.slope.up = bool(diff_bps >= 3 and uptrend)
 
         except Exception as e:
             logger.error(e, exc_info=True)

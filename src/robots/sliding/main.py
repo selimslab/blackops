@@ -132,6 +132,11 @@ class LeaderFollowerTrader(RobotBase):
         if self.leader_pub.slope.down:
             price_coeff -= settings.unit_signal_bps.slope_risk
 
+        spread_diff = self.follower_pub.book.spread_bps - settings.max_spread_bps
+
+        if spread_diff > 0:
+            price_coeff -= spread_diff * settings.unit_signal_bps.spread_risk
+
         self.taker.sell = self.taker.mid * price_coeff
 
         price = self.taker.sell.quantize(self.follower_pub.book.bid, decimal.ROUND_DOWN)
