@@ -111,14 +111,14 @@ class BTPub(PublisherBase):
 
 @dataclass
 class Slope:
-    up: bool = False
+    # up: bool = False
     down: bool = False
-
-    former: float = 0
-    mid: float = 0
-    latter: float = 0
-    diff: float = 0
     diff_bps: float = 0
+
+    # former: float = 0
+    # mid: float = 0
+    # latter: float = 0
+    # diff: float = 0
 
     # risk_level: float = 0
 
@@ -185,11 +185,9 @@ class BinancePub(PublisherBase):
 
                 ema = talib.EMA(closes, timeperiod=5)
 
-                self.slope.former, self.slope.latter = ema[-2:]
+                former, latter = ema[-2:]
 
-                self.slope.diff = self.slope.latter - self.slope.former
-
-                diff_bps = self.slope.diff / self.slope.latter * 10000
+                diff_bps = (latter - former) / latter * 10000
 
                 self.slope.down = bool(diff_bps < 0.2)
 

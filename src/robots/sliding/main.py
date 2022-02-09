@@ -243,6 +243,6 @@ class LeaderFollowerTrader(RobotBase):
             "leader": asdict(self.leader_pub.book),
             "follower": asdict(self.follower_pub.book),
             "taker": asdict(self.taker),
-            # "slope": asdict(self.leader_pub.slope),
+            "slope": asdict(self.leader_pub.slope),
             "order": asdict(self.order_api.stats),
         }
