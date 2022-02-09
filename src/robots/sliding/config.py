@@ -30,7 +30,7 @@ class Settings(BaseModel):
         # spread_risk=Decimal(2) * BPS,
         # ratio_risk=Decimal(3) * BPS,
     )
-    max_spread_bps: Decimal = Decimal(10)
+    max_spread_bps: Decimal = Decimal(15)
 
 
 settings = Settings()
