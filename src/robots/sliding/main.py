@@ -198,6 +198,9 @@ class LeaderFollowerTrader(RobotBase):
             - current_step * settings.unit_signal_bps.step
         )
 
+        if self.leader_pub.slope.down:
+            price_coeff -= settings.unit_signal_bps.slope_risk
+
         self.taker.buy = self.taker.mid * price_coeff
 
         # do not waste orders if ask is too high
