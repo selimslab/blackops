@@ -146,7 +146,10 @@ class BinancePub(PublisherBase):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
     async def run(self):
-        await asyncio.gather(self.publish_stream(), periodic(self.publish_klines, 4))
+        await asyncio.gather(
+            self.publish_stream(),
+            # periodic(self.publish_klines, 4)
+        )
 
     def parse_book(self, book):
         try:

@@ -174,10 +174,10 @@ class LeaderFollowerTrader(RobotBase):
             # self.order_api.stats.buy_stats.no_buy.max_spread += 1
             return
 
-        # dont buy if slope is not clearly up
-        if not self.leader_pub.slope.up:
-            # self.order_api.stats.buy_stats.no_buy.slope += 1
-            return
+        # # dont buy if slope is not clearly up
+        # if not self.leader_pub.slope.up:
+        #     # self.order_api.stats.buy_stats.no_buy.slope += 1
+        #     return
 
         # if not self.leader_pub.micro_ok:
         #     return
@@ -240,6 +240,6 @@ class LeaderFollowerTrader(RobotBase):
             "leader": asdict(self.leader_pub.book),
             "follower": asdict(self.follower_pub.book),
             "taker": asdict(self.taker),
-            "slope": asdict(self.leader_pub.slope),
+            # "slope": asdict(self.leader_pub.slope),
             "order": asdict(self.order_api.stats),
         }
