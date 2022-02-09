@@ -21,10 +21,10 @@ class Settings(BaseModel):
     min_sell_qty: Decimal = Decimal(300)
 
     unit_signal_bps: UnitSignalBPS = UnitSignalBPS(
-        buy=Decimal(15) * BPS,
+        buy=Decimal(13) * BPS,
         sell=Decimal(5) * BPS,
         step=Decimal(1) * BPS,
-        slope_risk=Decimal(10) * BPS,
+        slope_risk=Decimal(9) * BPS,
     )
 
     max_spread_bps: Decimal = Decimal(10)

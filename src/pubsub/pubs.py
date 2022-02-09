@@ -193,9 +193,9 @@ class BinancePub(PublisherBase):
                     >= self.slope.mid - self.slope.former
                 )
 
-                self.slope.down = bool(diff_bps < 0.5)
+                self.slope.down = bool(diff_bps < 0.2)
 
-                self.slope.up = bool(diff_bps >= 4 and uptrend)
+                self.slope.up = bool(diff_bps >= 3 and uptrend)
 
                 self.slope.diff_bps = diff_bps
 
