@@ -114,6 +114,7 @@ class Slope:
     down: bool = False
 
     former: float = 0
+    mid: float = 0
     latter: float = 0
     diff: float = 0
     diff_bps: float = 0
@@ -172,19 +173,24 @@ class BinancePub(PublisherBase):
 
     async def publish_klines(self):
         try:
-            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=6)
+            klines = await bn_streams.get_klines(self.symbol, interval="1m", limit=7)
             if klines:
                 kline_closes = [float(k[4]) for k in klines]
                 closes = np.asarray(kline_closes)
                 ema = talib.EMA(closes, timeperiod=5)
-                self.slope.former, self.slope.latter = ema[-2:]
+                self.slope.former, self.slope.mid, self.slope.latter = ema[-3:]
 
                 self.slope.diff = self.slope.latter - self.slope.former
                 diff_bps = self.slope.diff / self.slope.latter * 10000
 
-                self.slope.down = bool(diff_bps < 1)
+                uptrend = (
+                    self.slope.latter - self.slope.mid
+                    >= self.slope.mid - self.slope.former
+                )
 
-                self.slope.up = bool(diff_bps >= 5)
+                self.slope.down = bool(diff_bps < 0)
+
+                self.slope.up = bool(diff_bps >= 3 and uptrend)
 
                 self.slope.diff_bps = diff_bps
 
