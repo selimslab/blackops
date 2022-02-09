@@ -15,7 +15,7 @@ class UnitSignalBPS(BaseModel):
 class Settings(BaseModel):
 
     max_step: Decimal = Decimal(20)
-    quote_step_qty: Decimal = Decimal(1000)
+    quote_step_qty: Decimal = Decimal(1500)
 
     sell_step: Decimal = Decimal(2)
     min_sell_qty: Decimal = Decimal(300)
