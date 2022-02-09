@@ -1,4 +1,5 @@
 import asyncio
+import collections
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -135,6 +136,11 @@ class BinancePub(PublisherBase):
 
     slope: Slope = field(default_factory=Slope)
 
+    # mids: collections.deque = field(default_factory=lambda: collections.deque(maxlen=21))
+
+    mids: RollingMean = field(default_factory=lambda: RollingMean(21))
+    micro_ma_ok: bool = False
+
     def __post_init__(self):
         self.book_stream = bn_streams.create_book_stream(self.symbol)
 
@@ -156,9 +162,7 @@ class BinancePub(PublisherBase):
 
                     self.book.spread_bps = (ask - bid) / mid / BPS
 
-                    # self.ma_small.add(mid)
-                    # self.ma_mid.add(mid)
-                    # self.ma_large.add(mid)
+                    # self.mids.add(mid)
 
                     if mid != self.book.mid:
                         # self.micro_ma_ok = bool(
@@ -190,7 +194,7 @@ class BinancePub(PublisherBase):
 
                 self.slope.down = bool(diff_bps < 0.5)
 
-                self.slope.up = bool(diff_bps >= 3 and uptrend)
+                self.slope.up = bool(diff_bps >= 5 and uptrend)
 
                 self.slope.diff_bps = diff_bps
 
