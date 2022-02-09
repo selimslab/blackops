@@ -21,17 +21,17 @@ class SleepSeconds(BaseModel):
 
     update_balances: float = 0.72  # 90/min
 
-    refresh_open_orders: float = 0.3
+    refresh_open_orders: float = 0.2
 
     broadcast_stats: float = 1
 
     wait_before_cancel: float = 0.12
     wait_after_deliver_sell: float = 0.12
-    wait_after_deliver_buy: float = 0.24
+    wait_after_deliver_buy: float = 0.42
 
     wait_after_failed_order: float = 0.24
 
-    poll_for_lock: float = 0.07
+    poll_for_lock: float = 0.05
 
 
 sleep_seconds = SleepSeconds()
