@@ -24,7 +24,7 @@ class Settings(BaseModel):
         buy=Decimal(15) * BPS,
         sell=Decimal(5) * BPS,
         step=Decimal(1) * BPS,
-        slope_risk=Decimal(8) * BPS,
+        slope_risk=Decimal(10) * BPS,
     )
 
     max_spread_bps: Decimal = Decimal(10)
